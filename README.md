@@ -1,5 +1,11 @@
 # Picks
 
+[![Floxum](https://floxum.com/extension/ernestdefoe/picks/badge/name)](https://floxum.com/extension/ernestdefoe/picks)
+[![Version](https://floxum.com/extension/ernestdefoe/picks/badge/highest-version)](https://floxum.com/extension/ernestdefoe/picks)
+[![Downloads](https://floxum.com/extension/ernestdefoe/picks/badge/downloads)](https://floxum.com/extension/ernestdefoe/picks)
+[![Review](https://floxum.com/extension/ernestdefoe/picks/badge/review)](https://floxum.com/extension/ernestdefoe/picks)
+[![License](https://floxum.com/extension/ernestdefoe/picks/badge/license)](https://floxum.com/extension/ernestdefoe/picks)
+
 A [Flarum](https://flarum.org) 2.x extension that adds a college-football
 **pick'em** game to your forum. Members predict the winners of each week's games,
 earn points, and compete on a season leaderboard. Schedules and teams are synced
