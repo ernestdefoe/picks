@@ -23,11 +23,11 @@ export default class SyncSettingsTab extends Component {
   oninit(vnode: Mithril.Vnode) {
     super.oninit(vnode);
     const s = app.data.settings;
-    this.cfbdApiKey        = s['resofire-picks.cfbd_api_key']        || '';
-    this.seasonYear        = s['resofire-picks.season_year']         || String(new Date().getFullYear());
-    this.conferenceFilter  = s['resofire-picks.conference_filter']   || '';
-    this.syncRegularSeason = s['resofire-picks.sync_regular_season'] !== '0';
-    this.syncPostseason    = s['resofire-picks.sync_postseason']     !== '0';
+    this.cfbdApiKey        = s['ernestdefoe-picks.cfbd_api_key']        || '';
+    this.seasonYear        = s['ernestdefoe-picks.season_year']         || String(new Date().getFullYear());
+    this.conferenceFilter  = s['ernestdefoe-picks.conference_filter']   || '';
+    this.syncRegularSeason = s['ernestdefoe-picks.sync_regular_season'] !== '0';
+    this.syncPostseason    = s['ernestdefoe-picks.sync_postseason']     !== '0';
     this._orig = {
       cfbdApiKey: this.cfbdApiKey,
       seasonYear: this.seasonYear,
@@ -57,19 +57,19 @@ export default class SyncSettingsTab extends Component {
       method: 'POST',
       url: app.forum.attribute('apiUrl') + '/settings',
       body: {
-        'resofire-picks.cfbd_api_key':       this.cfbdApiKey,
-        'resofire-picks.season_year':        this.seasonYear,
-        'resofire-picks.conference_filter':  this.conferenceFilter,
-        'resofire-picks.sync_regular_season': this.syncRegularSeason ? '1' : '0',
-        'resofire-picks.sync_postseason':    this.syncPostseason ? '1' : '0',
+        'ernestdefoe-picks.cfbd_api_key':       this.cfbdApiKey,
+        'ernestdefoe-picks.season_year':        this.seasonYear,
+        'ernestdefoe-picks.conference_filter':  this.conferenceFilter,
+        'ernestdefoe-picks.sync_regular_season': this.syncRegularSeason ? '1' : '0',
+        'ernestdefoe-picks.sync_postseason':    this.syncPostseason ? '1' : '0',
       },
     }).then(() => {
       // Update in-memory settings
-      app.data.settings['resofire-picks.cfbd_api_key']        = this.cfbdApiKey;
-      app.data.settings['resofire-picks.season_year']         = this.seasonYear;
-      app.data.settings['resofire-picks.conference_filter']   = this.conferenceFilter;
-      app.data.settings['resofire-picks.sync_regular_season'] = this.syncRegularSeason ? '1' : '0';
-      app.data.settings['resofire-picks.sync_postseason']     = this.syncPostseason ? '1' : '0';
+      app.data.settings['ernestdefoe-picks.cfbd_api_key']        = this.cfbdApiKey;
+      app.data.settings['ernestdefoe-picks.season_year']         = this.seasonYear;
+      app.data.settings['ernestdefoe-picks.conference_filter']   = this.conferenceFilter;
+      app.data.settings['ernestdefoe-picks.sync_regular_season'] = this.syncRegularSeason ? '1' : '0';
+      app.data.settings['ernestdefoe-picks.sync_postseason']     = this.syncPostseason ? '1' : '0';
       this.saving = false;
       this.dirty = false;
       this._orig = {
@@ -143,9 +143,9 @@ export default class SyncSettingsTab extends Component {
 
   view() {
     const s = app.data.settings;
-    const lastTeams    = s['resofire-picks.last_teams_sync']    || null;
-    const lastSchedule = s['resofire-picks.last_schedule_sync'] || null;
-    const lastScores   = s['resofire-picks.last_scores_sync']   || null;
+    const lastTeams    = s['ernestdefoe-picks.last_teams_sync']    || null;
+    const lastSchedule = s['ernestdefoe-picks.last_schedule_sync'] || null;
+    const lastScores   = s['ernestdefoe-picks.last_scores_sync']   || null;
 
     return (
       <div className="PicksSyncSettingsTab">
@@ -153,7 +153,7 @@ export default class SyncSettingsTab extends Component {
           <div>
             <h3>
               <i className="fas fa-sync" />
-              {' '}{app.translator.trans('resofire-picks.admin.nav.sync')}
+              {' '}{app.translator.trans('ernestdefoe-picks.admin.nav.sync')}
             </h3>
           </div>
         </div>
@@ -161,22 +161,22 @@ export default class SyncSettingsTab extends Component {
         {/* Sync Status */}
         <div className="PicksSettingsSection">
           <h4 className="PicksSettingsSection-title">
-            {app.translator.trans('resofire-picks.admin.sync.status_title')}
+            {app.translator.trans('ernestdefoe-picks.admin.sync.status_title')}
           </h4>
           <div className="PicksSyncStatus">
             <div className="PicksSyncStatus-row">
               <i className="fas fa-users" />
-              <span>{app.translator.trans('resofire-picks.admin.sync.last_teams')}</span>
+              <span>{app.translator.trans('ernestdefoe-picks.admin.sync.last_teams')}</span>
               <strong>{this.formatDate(lastTeams)}</strong>
             </div>
             <div className="PicksSyncStatus-row">
               <i className="fas fa-calendar-alt" />
-              <span>{app.translator.trans('resofire-picks.admin.sync.last_schedule')}</span>
+              <span>{app.translator.trans('ernestdefoe-picks.admin.sync.last_schedule')}</span>
               <strong>{this.formatDate(lastSchedule)}</strong>
             </div>
             <div className="PicksSyncStatus-row">
               <i className="fas fa-trophy" />
-              <span>{app.translator.trans('resofire-picks.admin.sync.last_scores')}</span>
+              <span>{app.translator.trans('ernestdefoe-picks.admin.sync.last_scores')}</span>
               <strong>{this.formatDate(lastScores)}</strong>
             </div>
           </div>
@@ -185,11 +185,11 @@ export default class SyncSettingsTab extends Component {
         {/* API Configuration */}
         <div className="PicksSettingsSection">
           <h4 className="PicksSettingsSection-title">
-            {app.translator.trans('resofire-picks.admin.sync.api_title')}
+            {app.translator.trans('ernestdefoe-picks.admin.sync.api_title')}
           </h4>
 
           <div className="Form-group">
-            <label>{app.translator.trans('resofire-picks.admin.sync.cfbd_api_key')}</label>
+            <label>{app.translator.trans('ernestdefoe-picks.admin.sync.cfbd_api_key')}</label>
             <input
               className="FormControl"
               type="password"
@@ -198,12 +198,12 @@ export default class SyncSettingsTab extends Component {
               oninput={(e: InputEvent) => { this.cfbdApiKey = (e.target as HTMLInputElement).value; this.checkDirty(); }}
             />
             <p className="helpText">
-              {app.translator.trans('resofire-picks.admin.sync.cfbd_api_key_help')}
+              {app.translator.trans('ernestdefoe-picks.admin.sync.cfbd_api_key_help')}
             </p>
           </div>
 
           <div className="Form-group">
-            <label>{app.translator.trans('resofire-picks.admin.sync.season_year')}</label>
+            <label>{app.translator.trans('ernestdefoe-picks.admin.sync.season_year')}</label>
             <input
               className="FormControl"
               type="number"
@@ -213,12 +213,12 @@ export default class SyncSettingsTab extends Component {
               oninput={(e: InputEvent) => { this.seasonYear = (e.target as HTMLInputElement).value; this.checkDirty(); }}
             />
             <p className="helpText">
-              {app.translator.trans('resofire-picks.admin.sync.season_year_help')}
+              {app.translator.trans('ernestdefoe-picks.admin.sync.season_year_help')}
             </p>
           </div>
 
           <div className="Form-group">
-            <label>{app.translator.trans('resofire-picks.admin.sync.conference_filter')}</label>
+            <label>{app.translator.trans('ernestdefoe-picks.admin.sync.conference_filter')}</label>
             <input
               className="FormControl"
               type="text"
@@ -227,7 +227,7 @@ export default class SyncSettingsTab extends Component {
               oninput={(e: InputEvent) => { this.conferenceFilter = (e.target as HTMLInputElement).value; this.checkDirty(); }}
             />
             <p className="helpText">
-              {app.translator.trans('resofire-picks.admin.sync.conference_filter_help')}
+              {app.translator.trans('ernestdefoe-picks.admin.sync.conference_filter_help')}
             </p>
           </div>
         </div>
@@ -235,7 +235,7 @@ export default class SyncSettingsTab extends Component {
         {/* Sync Options */}
         <div className="PicksSettingsSection">
           <h4 className="PicksSettingsSection-title">
-            {app.translator.trans('resofire-picks.admin.sync.options_title')}
+            {app.translator.trans('ernestdefoe-picks.admin.sync.options_title')}
           </h4>
 
           <div className="Form-group">
@@ -245,7 +245,7 @@ export default class SyncSettingsTab extends Component {
                 checked={this.syncRegularSeason}
                 onchange={(e: Event) => { this.syncRegularSeason = (e.target as HTMLInputElement).checked; this.checkDirty(); }}
               />
-              {' '}{app.translator.trans('resofire-picks.admin.sync.sync_regular_season')}
+              {' '}{app.translator.trans('ernestdefoe-picks.admin.sync.sync_regular_season')}
             </label>
           </div>
 
@@ -256,7 +256,7 @@ export default class SyncSettingsTab extends Component {
                 checked={this.syncPostseason}
                 onchange={(e: Event) => { this.syncPostseason = (e.target as HTMLInputElement).checked; this.checkDirty(); }}
               />
-              {' '}{app.translator.trans('resofire-picks.admin.sync.sync_postseason')}
+              {' '}{app.translator.trans('ernestdefoe-picks.admin.sync.sync_postseason')}
             </label>
           </div>
         </div>
@@ -272,7 +272,7 @@ export default class SyncSettingsTab extends Component {
             disabled={!this.dirty}
             onclick={() => this.save()}
           >
-            {app.translator.trans('resofire-picks.admin.common.save')}
+            {app.translator.trans('ernestdefoe-picks.admin.common.save')}
           </Button>
         </div>
 
@@ -280,17 +280,17 @@ export default class SyncSettingsTab extends Component {
         <div className="PicksDangerZone">
           <h4 className="PicksDangerZone-title">
             <i className="fas fa-exclamation-triangle" />
-            {' '}{app.translator.trans('resofire-picks.admin.sync.danger_title')}
+            {' '}{app.translator.trans('ernestdefoe-picks.admin.sync.danger_title')}
           </h4>
           <p className="PicksDangerZone-description">
-            {app.translator.trans('resofire-picks.admin.sync.danger_description')}
+            {app.translator.trans('ernestdefoe-picks.admin.sync.danger_description')}
           </p>
 
           <div className="PicksDangerZone-actions">
             <div className="PicksDangerZone-action">
               <div>
-                <strong>{app.translator.trans('resofire-picks.admin.sync.reset_schedule_title')}</strong>
-                <p>{app.translator.trans('resofire-picks.admin.sync.reset_schedule_description')}</p>
+                <strong>{app.translator.trans('ernestdefoe-picks.admin.sync.reset_schedule_title')}</strong>
+                <p>{app.translator.trans('ernestdefoe-picks.admin.sync.reset_schedule_description')}</p>
               </div>
               <Button
                 className="Button Button--danger"
@@ -298,14 +298,14 @@ export default class SyncSettingsTab extends Component {
                 disabled={this.resetting !== null}
                 onclick={() => this.reset('schedule')}
               >
-                {app.translator.trans('resofire-picks.admin.sync.reset_schedule_button')}
+                {app.translator.trans('ernestdefoe-picks.admin.sync.reset_schedule_button')}
               </Button>
             </div>
 
             <div className="PicksDangerZone-action PicksDangerZone-action--severe">
               <div>
-                <strong>{app.translator.trans('resofire-picks.admin.sync.reset_all_title')}</strong>
-                <p>{app.translator.trans('resofire-picks.admin.sync.reset_all_description')}</p>
+                <strong>{app.translator.trans('ernestdefoe-picks.admin.sync.reset_all_title')}</strong>
+                <p>{app.translator.trans('ernestdefoe-picks.admin.sync.reset_all_description')}</p>
               </div>
               <Button
                 className="Button Button--danger"
@@ -313,7 +313,7 @@ export default class SyncSettingsTab extends Component {
                 disabled={this.resetting !== null}
                 onclick={() => this.reset('all')}
               >
-                {app.translator.trans('resofire-picks.admin.sync.reset_all_button')}
+                {app.translator.trans('ernestdefoe-picks.admin.sync.reset_all_button')}
               </Button>
             </div>
           </div>

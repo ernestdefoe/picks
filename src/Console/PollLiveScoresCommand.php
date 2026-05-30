@@ -31,7 +31,7 @@ class PollLiveScoresCommand extends AbstractCommand
         $force = $this->input->getOption('force');
 
         // Check admin toggle unless forced
-        if (! $force && ! $this->settings->get('resofire-picks.espn_polling_enabled', false)) {
+        if (! $force && ! $this->settings->get('ernestdefoe-picks.espn_polling_enabled', false)) {
             $this->info('ESPN score polling is disabled. Enable it in Picks Settings.');
             return 0;
         }

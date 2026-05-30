@@ -17,7 +17,7 @@ export default [
     .permission(
       () => ({
         icon: 'fas fa-football',
-        label: app.translator.trans('resofire-picks.admin.permissions.manage'),
+        label: app.translator.trans('ernestdefoe-picks.admin.permissions.manage'),
         permission: 'picks.manage',
       }),
       'moderate'
@@ -25,7 +25,7 @@ export default [
     .permission(
       () => ({
         icon: 'fas fa-check-circle',
-        label: app.translator.trans('resofire-picks.admin.permissions.make_picks'),
+        label: app.translator.trans('ernestdefoe-picks.admin.permissions.make_picks'),
         permission: 'picks.makePicks',
       }),
       'start'
@@ -33,7 +33,7 @@ export default [
     .permission(
       () => ({
         icon: 'fas fa-eye',
-        label: app.translator.trans('resofire-picks.admin.permissions.view'),
+        label: app.translator.trans('ernestdefoe-picks.admin.permissions.view'),
         permission: 'picks.view',
         allowGuest: true,
       }),
@@ -43,7 +43,7 @@ export default [
     .permission(
       () => ({
         icon: 'fas fa-history',
-        label: app.translator.trans('resofire-picks.admin.permissions.view_history'),
+        label: app.translator.trans('ernestdefoe-picks.admin.permissions.view_history'),
         permission: 'picks.viewHistory',
       }),
       'view'

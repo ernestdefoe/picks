@@ -24,7 +24,7 @@ export default class TeamsTab extends Component {
 
   oninit(vnode: Mithril.Vnode) {
     super.oninit(vnode);
-    this.lastSync = app.data.settings['resofire-picks.last_teams_sync'] || null;
+    this.lastSync = app.data.settings['ernestdefoe-picks.last_teams_sync'] || null;
     this.loadTeams();
   }
 
@@ -191,22 +191,22 @@ export default class TeamsTab extends Component {
           <div>
             <h3>
               <i className="fas fa-users" />
-              {' '}{app.translator.trans('resofire-picks.admin.nav.teams')}
+              {' '}{app.translator.trans('ernestdefoe-picks.admin.nav.teams')}
             </h3>
             <p className="PicksTab-meta">
-              {this.teams.length} {app.translator.trans('resofire-picks.admin.teams.total_label')}
+              {this.teams.length} {app.translator.trans('ernestdefoe-picks.admin.teams.total_label')}
               {this.lastSync && (
-                <span>{' · '}{app.translator.trans('resofire-picks.admin.common.last_sync')}: {new Date(this.lastSync).toLocaleString()}</span>
+                <span>{' · '}{app.translator.trans('ernestdefoe-picks.admin.common.last_sync')}: {new Date(this.lastSync).toLocaleString()}</span>
               )}
             </p>
           </div>
           <div className="PicksTab-actions">
             <Button className="Button Button--primary" icon="fas fa-sync" loading={this.syncing} onclick={() => this.syncTeams()}>
-              {app.translator.trans('resofire-picks.admin.teams.sync_button')}
+              {app.translator.trans('ernestdefoe-picks.admin.teams.sync_button')}
             </Button>
             {missingLogos > 0 && (
               <Button className="Button" icon="fas fa-images" loading={this.syncingLogos} onclick={() => this.syncLogosBatch()}>
-                {app.translator.trans('resofire-picks.admin.teams.sync_logos_button')} ({missingLogos})
+                {app.translator.trans('ernestdefoe-picks.admin.teams.sync_logos_button')} ({missingLogos})
               </Button>
             )}
           </div>
@@ -231,19 +231,19 @@ export default class TeamsTab extends Component {
           <input
             className="FormControl"
             type="text"
-            placeholder={app.translator.trans('resofire-picks.admin.teams.search_placeholder')}
+            placeholder={app.translator.trans('ernestdefoe-picks.admin.teams.search_placeholder')}
             value={this.search}
             oninput={(e: InputEvent) => { this.search = (e.target as HTMLInputElement).value; }}
           />
           <select className="FormControl" value={this.filterConference} onchange={(e: Event) => { this.filterConference = (e.target as HTMLSelectElement).value; }}>
-            <option value="all">{app.translator.trans('resofire-picks.admin.teams.all_conferences')}</option>
+            <option value="all">{app.translator.trans('ernestdefoe-picks.admin.teams.all_conferences')}</option>
             {conferences.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
           <select className="FormControl" value={this.filterLogo} onchange={(e: Event) => { this.filterLogo = (e.target as HTMLSelectElement).value; }}>
-            <option value="all">{app.translator.trans('resofire-picks.admin.teams.logo_filter_all')}</option>
-            <option value="has">{app.translator.trans('resofire-picks.admin.teams.logo_filter_has')}</option>
-            <option value="missing">{app.translator.trans('resofire-picks.admin.teams.logo_filter_missing')}</option>
-            <option value="custom">{app.translator.trans('resofire-picks.admin.teams.logo_filter_custom')}</option>
+            <option value="all">{app.translator.trans('ernestdefoe-picks.admin.teams.logo_filter_all')}</option>
+            <option value="has">{app.translator.trans('ernestdefoe-picks.admin.teams.logo_filter_has')}</option>
+            <option value="missing">{app.translator.trans('ernestdefoe-picks.admin.teams.logo_filter_missing')}</option>
+            <option value="custom">{app.translator.trans('ernestdefoe-picks.admin.teams.logo_filter_custom')}</option>
           </select>
         </div>
 
@@ -252,16 +252,16 @@ export default class TeamsTab extends Component {
         ) : (
           <div className="PicksCardList">
             <div className="PicksCardList-header">
-              <div>{app.translator.trans('resofire-picks.admin.teams.col_logo')}</div>
-              <div>{app.translator.trans('resofire-picks.admin.teams.col_name')}</div>
-              <div>{app.translator.trans('resofire-picks.admin.teams.col_conference')}</div>
-              <div>{app.translator.trans('resofire-picks.admin.teams.col_abbrev')}</div>
-              <div>{app.translator.trans('resofire-picks.admin.teams.col_logo_status')}</div>
+              <div>{app.translator.trans('ernestdefoe-picks.admin.teams.col_logo')}</div>
+              <div>{app.translator.trans('ernestdefoe-picks.admin.teams.col_name')}</div>
+              <div>{app.translator.trans('ernestdefoe-picks.admin.teams.col_conference')}</div>
+              <div>{app.translator.trans('ernestdefoe-picks.admin.teams.col_abbrev')}</div>
+              <div>{app.translator.trans('ernestdefoe-picks.admin.teams.col_logo_status')}</div>
               <div></div>
             </div>
 
             {filtered.length === 0 ? (
-              <div className="PicksEmptyState">{app.translator.trans('resofire-picks.admin.teams.no_teams')}</div>
+              <div className="PicksEmptyState">{app.translator.trans('ernestdefoe-picks.admin.teams.no_teams')}</div>
             ) : (
               filtered.map((team) => {
                 const id = parseInt(String(team.id()));
@@ -291,14 +291,14 @@ export default class TeamsTab extends Component {
                       <Button
                         className="Button Button--icon"
                         icon="fas fa-edit"
-                        title={app.translator.trans('resofire-picks.admin.common.edit')}
+                        title={app.translator.trans('ernestdefoe-picks.admin.common.edit')}
                         onclick={() => app.modal.show(TeamEditModal, { team, onsave: () => this.loadTeams() })}
                       />
                       {!team.logoCustom() && team.espnId() && (
                         <Button
                           className="Button Button--icon"
                           icon="fas fa-sync"
-                          title={app.translator.trans('resofire-picks.admin.teams.refresh_logo')}
+                          title={app.translator.trans('ernestdefoe-picks.admin.teams.refresh_logo')}
                           loading={this.refreshingId === id}
                           onclick={() => this.refreshLogo(team)}
                         />

@@ -135,7 +135,7 @@ class TeamSyncService
         }
 
         $this->settings->set(
-            'resofire-picks.last_teams_sync',
+            'ernestdefoe-picks.last_teams_sync',
             Carbon::now()->toIso8601String()
         );
 

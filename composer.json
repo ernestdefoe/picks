@@ -1,5 +1,5 @@
 {
-    "name": "resofire/picks",
+    "name": "ernestdefoe/picks",
     "description": "College football pick'em game for Flarum.",
     "type": "flarum-extension",
     "keywords": [
@@ -12,8 +12,8 @@
     ],
     "license": "MIT",
     "support": {
-        "issues": "https://github.com/resofire/picks/issues",
-        "source": "https://github.com/resofire/picks"
+        "issues": "https://github.com/ernestdefoe/picks/issues",
+        "source": "https://github.com/ernestdefoe/picks"
     },
     "require": {
         "flarum/core": "^2.0.0-beta.8"

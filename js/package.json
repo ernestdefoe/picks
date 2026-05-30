@@ -1,6 +1,6 @@
 {
     "private": true,
-    "name": "@resofire/picks",
+    "name": "@ernestdefoe/picks",
     "version": "0.0.0",
     "devDependencies": {
         "flarum-tsconfig": "^2.0.0",

@@ -22,7 +22,7 @@ class CfbdService
      */
     public function fetchTeams(): array
     {
-        $apiKey = $this->settings->get('resofire-picks.cfbd_api_key');
+        $apiKey = $this->settings->get('ernestdefoe-picks.cfbd_api_key');
 
         if (empty($apiKey)) {
             throw new RuntimeException('CFBD API key is not configured.');
@@ -30,7 +30,7 @@ class CfbdService
 
         $params = ['classification' => 'fbs'];
 
-        $conferenceFilter = trim((string) $this->settings->get('resofire-picks.conference_filter', ''));
+        $conferenceFilter = trim((string) $this->settings->get('ernestdefoe-picks.conference_filter', ''));
         if ($conferenceFilter !== '') {
             $params['conference'] = $conferenceFilter;
         }
@@ -45,7 +45,7 @@ class CfbdService
      */
     public function fetchGames(int $year, string $seasonType, ?int $week = null, ?string $conference = null): array
     {
-        $apiKey = $this->settings->get('resofire-picks.cfbd_api_key');
+        $apiKey = $this->settings->get('ernestdefoe-picks.cfbd_api_key');
 
         if (empty($apiKey)) {
             throw new RuntimeException('CFBD API key is not configured.');
@@ -75,7 +75,7 @@ class CfbdService
      */
     public function fetchCalendar(int $year): array
     {
-        $apiKey = $this->settings->get('resofire-picks.cfbd_api_key');
+        $apiKey = $this->settings->get('ernestdefoe-picks.cfbd_api_key');
 
         if (empty($apiKey)) {
             throw new RuntimeException('CFBD API key is not configured.');

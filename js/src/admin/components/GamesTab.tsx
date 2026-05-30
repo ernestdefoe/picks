@@ -209,10 +209,10 @@ export default class GamesTab extends Component {
           <div>
             <h3>
               <i className="fas fa-football" />
-              {' '}{app.translator.trans('resofire-picks.admin.nav.games')}
+              {' '}{app.translator.trans('ernestdefoe-picks.admin.nav.games')}
             </h3>
             <p className="PicksTab-meta">
-              {total} {app.translator.trans('resofire-picks.admin.games.total_label')}
+              {total} {app.translator.trans('ernestdefoe-picks.admin.games.total_label')}
             </p>
           </div>
           <div className="PicksTab-actions">
@@ -222,7 +222,7 @@ export default class GamesTab extends Component {
               loading={this.syncing}
               onclick={() => this.syncScores()}
             >
-              {app.translator.trans('resofire-picks.admin.games.sync_scores_button')}
+              {app.translator.trans('ernestdefoe-picks.admin.games.sync_scores_button')}
             </Button>
           </div>
         </div>
@@ -240,7 +240,7 @@ export default class GamesTab extends Component {
               this.load(1);
             }}
           >
-            <option value="">{app.translator.trans('resofire-picks.admin.games.all_weeks')}</option>
+            <option value="">{app.translator.trans('ernestdefoe-picks.admin.games.all_weeks')}</option>
             {weeks.map(w => (
               <option key={String(w.id())} value={String(w.id())}>
                 {w.name()}
@@ -256,10 +256,10 @@ export default class GamesTab extends Component {
               this.load(1);
             }}
           >
-            <option value="">{app.translator.trans('resofire-picks.admin.games.all_statuses')}</option>
-            <option value="scheduled">{app.translator.trans('resofire-picks.lib.status.scheduled')}</option>
-            <option value="closed">{app.translator.trans('resofire-picks.lib.status.closed')}</option>
-            <option value="finished">{app.translator.trans('resofire-picks.lib.status.finished')}</option>
+            <option value="">{app.translator.trans('ernestdefoe-picks.admin.games.all_statuses')}</option>
+            <option value="scheduled">{app.translator.trans('ernestdefoe-picks.lib.status.scheduled')}</option>
+            <option value="closed">{app.translator.trans('ernestdefoe-picks.lib.status.closed')}</option>
+            <option value="finished">{app.translator.trans('ernestdefoe-picks.lib.status.finished')}</option>
           </select>
 
           <select
@@ -270,15 +270,15 @@ export default class GamesTab extends Component {
               this.load(1);
             }}
           >
-            <option value="date_asc">{app.translator.trans('resofire-picks.admin.games.sort_date_asc')}</option>
-            <option value="date_desc">{app.translator.trans('resofire-picks.admin.games.sort_date_desc')}</option>
-            <option value="status">{app.translator.trans('resofire-picks.admin.games.sort_status')}</option>
+            <option value="date_asc">{app.translator.trans('ernestdefoe-picks.admin.games.sort_date_asc')}</option>
+            <option value="date_desc">{app.translator.trans('ernestdefoe-picks.admin.games.sort_date_desc')}</option>
+            <option value="status">{app.translator.trans('ernestdefoe-picks.admin.games.sort_status')}</option>
           </select>
 
           <input
             className="FormControl"
             type="text"
-            placeholder={app.translator.trans('resofire-picks.admin.games.search_placeholder')}
+            placeholder={app.translator.trans('ernestdefoe-picks.admin.games.search_placeholder')}
             value={this.search}
             oninput={(e: InputEvent) => this.onSearchInput((e.target as HTMLInputElement).value)}
           />
@@ -288,17 +288,17 @@ export default class GamesTab extends Component {
           <LoadingIndicator />
         ) : this.games.length === 0 ? (
           <div className="PicksEmptyState">
-            {app.translator.trans('resofire-picks.admin.games.no_games')}
+            {app.translator.trans('ernestdefoe-picks.admin.games.no_games')}
           </div>
         ) : (
           <>
             <div className="PicksCardList">
               <div className="PicksCardList-header PicksCardList-header--games">
-                <div>{app.translator.trans('resofire-picks.admin.games.col_home')}</div>
-                <div>{app.translator.trans('resofire-picks.admin.games.col_away')}</div>
-                <div>{app.translator.trans('resofire-picks.admin.games.col_date')}</div>
-                <div>{app.translator.trans('resofire-picks.admin.games.col_status')}</div>
-                <div>{app.translator.trans('resofire-picks.admin.games.col_score')}</div>
+                <div>{app.translator.trans('ernestdefoe-picks.admin.games.col_home')}</div>
+                <div>{app.translator.trans('ernestdefoe-picks.admin.games.col_away')}</div>
+                <div>{app.translator.trans('ernestdefoe-picks.admin.games.col_date')}</div>
+                <div>{app.translator.trans('ernestdefoe-picks.admin.games.col_status')}</div>
+                <div>{app.translator.trans('ernestdefoe-picks.admin.games.col_score')}</div>
                 <div></div>
               </div>
 
@@ -332,7 +332,7 @@ export default class GamesTab extends Component {
                     <Button
                       className="Button Button--primary Button--icon"
                       icon="fas fa-check"
-                      title={app.translator.trans('resofire-picks.admin.games.enter_result')}
+                      title={app.translator.trans('ernestdefoe-picks.admin.games.enter_result')}
                       onclick={() =>
                         app.modal.show(ResultModal, {
                           game,

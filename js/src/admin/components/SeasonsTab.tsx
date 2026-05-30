@@ -19,7 +19,7 @@ export default class SeasonsTab extends Component {
 
   oninit(vnode: Mithril.Vnode) {
     super.oninit(vnode);
-    this.lastSync = app.data.settings['resofire-picks.last_schedule_sync'] || null;
+    this.lastSync = app.data.settings['ernestdefoe-picks.last_schedule_sync'] || null;
     this.loadSeasons();
   }
 
@@ -145,12 +145,12 @@ export default class SeasonsTab extends Component {
           <div>
             <h3>
               <i className="fas fa-calendar-alt" />
-              {' '}{app.translator.trans('resofire-picks.admin.nav.seasons')}
+              {' '}{app.translator.trans('ernestdefoe-picks.admin.nav.seasons')}
             </h3>
             <p className="PicksTab-meta">
-              {this.seasons.length} {app.translator.trans('resofire-picks.admin.seasons.seasons_label')}
+              {this.seasons.length} {app.translator.trans('ernestdefoe-picks.admin.seasons.seasons_label')}
               {this.lastSync && (
-                <span>{' · '}{app.translator.trans('resofire-picks.admin.common.last_sync')}: {new Date(this.lastSync).toLocaleString()}</span>
+                <span>{' · '}{app.translator.trans('ernestdefoe-picks.admin.common.last_sync')}: {new Date(this.lastSync).toLocaleString()}</span>
               )}
             </p>
           </div>
@@ -161,7 +161,7 @@ export default class SeasonsTab extends Component {
               loading={this.syncing}
               onclick={() => this.syncSchedule()}
             >
-              {app.translator.trans('resofire-picks.admin.seasons.sync_button')}
+              {app.translator.trans('ernestdefoe-picks.admin.seasons.sync_button')}
             </Button>
           </div>
         </div>
@@ -194,15 +194,15 @@ export default class SeasonsTab extends Component {
           <LoadingIndicator />
         ) : this.weeks.length === 0 ? (
           <div className="PicksEmptyState">
-            {app.translator.trans('resofire-picks.admin.seasons.no_weeks')}
+            {app.translator.trans('ernestdefoe-picks.admin.seasons.no_weeks')}
           </div>
         ) : (
           <div className="PicksCardList">
             <div className="PicksCardList-header PicksCardList-header--seasons">
-              <div>{app.translator.trans('resofire-picks.admin.seasons.col_week')}</div>
-              <div>{app.translator.trans('resofire-picks.admin.seasons.col_type')}</div>
-              <div>{app.translator.trans('resofire-picks.admin.seasons.col_dates')}</div>
-              <div>{app.translator.trans('resofire-picks.admin.seasons.col_name')}</div>
+              <div>{app.translator.trans('ernestdefoe-picks.admin.seasons.col_week')}</div>
+              <div>{app.translator.trans('ernestdefoe-picks.admin.seasons.col_type')}</div>
+              <div>{app.translator.trans('ernestdefoe-picks.admin.seasons.col_dates')}</div>
+              <div>{app.translator.trans('ernestdefoe-picks.admin.seasons.col_name')}</div>
               <div></div>
             </div>
 
@@ -273,7 +273,7 @@ export default class SeasonsTab extends Component {
                       <Button
                         className="Button Button--icon"
                         icon="fas fa-edit"
-                        title={app.translator.trans('resofire-picks.admin.common.edit')}
+                        title={app.translator.trans('ernestdefoe-picks.admin.common.edit')}
                         onclick={() => {
                           this.editingWeekId = String(week.id());
                           this.editingWeekName = week.name() || '';

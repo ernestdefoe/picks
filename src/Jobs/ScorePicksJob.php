@@ -23,8 +23,8 @@ class ScorePicksJob extends AbstractJob
             return;
         }
 
-        $confidenceMode    = (bool) $settings->get('resofire-picks.confidence_mode', false);
-        $confidencePenalty = $settings->get('resofire-picks.confidence_penalty', 'none');
+        $confidenceMode    = (bool) $settings->get('ernestdefoe-picks.confidence_mode', false);
+        $confidencePenalty = $settings->get('ernestdefoe-picks.confidence_penalty', 'none');
 
         $picks = Pick::where('event_id', $this->eventId)
             ->with('user')

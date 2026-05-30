@@ -31,9 +31,9 @@ class SyncScoresService
      */
     public function sync(): array
     {
-        $year           = (int) $this->settings->get('resofire-picks.season_year', (int) date('Y'));
-        $syncRegular    = (bool) $this->settings->get('resofire-picks.sync_regular_season', true);
-        $syncPostseason = (bool) $this->settings->get('resofire-picks.sync_postseason', true);
+        $year           = (int) $this->settings->get('ernestdefoe-picks.season_year', (int) date('Y'));
+        $syncRegular    = (bool) $this->settings->get('ernestdefoe-picks.sync_regular_season', true);
+        $syncPostseason = (bool) $this->settings->get('ernestdefoe-picks.sync_postseason', true);
 
         $updated = 0;
         $scored  = 0;
@@ -109,7 +109,7 @@ class SyncScoresService
         }
 
         $this->settings->set(
-            'resofire-picks.last_scores_sync',
+            'ernestdefoe-picks.last_scores_sync',
             Carbon::now()->toIso8601String()
         );
 
@@ -217,7 +217,7 @@ class SyncScoresService
         }
 
         $this->settings->set(
-            'resofire-picks.last_scores_sync',
+            'ernestdefoe-picks.last_scores_sync',
             Carbon::now()->toIso8601String()
         );
 
@@ -230,7 +230,7 @@ class SyncScoresService
      */
     public function maybeUnlockNextWeek(int $weekId): bool
     {
-        if (! $this->settings->get('resofire-picks.auto_unlock_weeks', false)) {
+        if (! $this->settings->get('ernestdefoe-picks.auto_unlock_weeks', false)) {
             return false;
         }
 
@@ -283,7 +283,7 @@ class SyncScoresService
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => 15,
-            CURLOPT_USERAGENT      => 'resofire/picks',
+            CURLOPT_USERAGENT      => 'ernestdefoe/picks',
         ]);
 
         $body     = curl_exec($ch);
@@ -312,7 +312,7 @@ class SyncScoresService
 
         return \Resofire\Picks\Week::where('season_type', 'regular')
             ->whereHas('season', function ($q) {
-                $year = (int) $this->settings->get('resofire-picks.season_year', (int) date('Y'));
+                $year = (int) $this->settings->get('ernestdefoe-picks.season_year', (int) date('Y'));
                 $q->where('year', $year);
             })
             ->pluck('week_number')

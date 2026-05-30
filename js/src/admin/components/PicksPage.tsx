@@ -29,13 +29,13 @@ export default class PicksPage extends ExtensionPage {
         <div className="container">
           <div className="PicksAdminPage">
             <div className="PicksAdminPage-tabs">
-              {this.renderTab('teams',    'fas fa-users',        'resofire-picks.admin.nav.teams')}
-              {this.renderTab('sync',     'fas fa-sync',         'resofire-picks.admin.nav.sync')}
-              {this.renderTab('seasons',  'fas fa-calendar-alt', 'resofire-picks.admin.nav.seasons')}
-              {this.renderTab('games',    'fas fa-football',     'resofire-picks.admin.nav.games')}
-              {this.renderTab('scores',   'fas fa-trophy',       'resofire-picks.admin.nav.scores')}
-              {this.renderTab('stats',    'fas fa-chart-bar',    'resofire-picks.admin.nav.stats')}
-              {this.renderTab('settings', 'fas fa-cog',          'resofire-picks.admin.nav.settings')}
+              {this.renderTab('teams',    'fas fa-users',        'ernestdefoe-picks.admin.nav.teams')}
+              {this.renderTab('sync',     'fas fa-sync',         'ernestdefoe-picks.admin.nav.sync')}
+              {this.renderTab('seasons',  'fas fa-calendar-alt', 'ernestdefoe-picks.admin.nav.seasons')}
+              {this.renderTab('games',    'fas fa-football',     'ernestdefoe-picks.admin.nav.games')}
+              {this.renderTab('scores',   'fas fa-trophy',       'ernestdefoe-picks.admin.nav.scores')}
+              {this.renderTab('stats',    'fas fa-chart-bar',    'ernestdefoe-picks.admin.nav.stats')}
+              {this.renderTab('settings', 'fas fa-cog',          'ernestdefoe-picks.admin.nav.settings')}
             </div>
 
             <div className="PicksAdminPage-content">

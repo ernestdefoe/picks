@@ -33,12 +33,12 @@ class ForumPicksAttributes
 
             Schema\Boolean::make('picksConfidenceMode')
                 ->get(fn (object $model, Context $context) =>
-                    (bool) app('flarum.settings')->get('resofire-picks.confidence_mode', false)
+                    (bool) app('flarum.settings')->get('ernestdefoe-picks.confidence_mode', false)
                 ),
 
             Schema\Str::make('picksConfidencePenalty')
                 ->get(fn (object $model, Context $context) =>
-                    app('flarum.settings')->get('resofire-picks.confidence_penalty', 'none')
+                    app('flarum.settings')->get('ernestdefoe-picks.confidence_penalty', 'none')
                 ),
 
             // ── New: whether the current actor can view other members' pick history ──

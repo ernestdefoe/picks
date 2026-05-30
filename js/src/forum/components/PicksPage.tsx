@@ -120,7 +120,7 @@ export default class PicksPage extends Page {
   oninit(vnode: Mithril.Vnode) {
     super.oninit(vnode);
 
-    app.setTitle(app.forum.attribute('picksNavLabel') || app.translator.trans('resofire-picks.lib.nav.picks'));
+    app.setTitle(app.forum.attribute('picksNavLabel') || app.translator.trans('ernestdefoe-picks.lib.nav.picks'));
 
     const weekIdParam = parseInt(m.route.param('weekId'));
 
@@ -498,7 +498,7 @@ export default class PicksPage extends Page {
 
         {app.session.user && total > 0 && (
           <div className="PicksStatusBar">
-            <span>{app.translator.trans('resofire-picks.lib.common.picked')}: <strong>{picked} / {total}</strong></span>
+            <span>{app.translator.trans('ernestdefoe-picks.lib.common.picked')}: <strong>{picked} / {total}</strong></span>
           </div>
         )}
 
@@ -512,7 +512,7 @@ export default class PicksPage extends Page {
         {this.gamesLoading
           ? <LoadingIndicator />
           : this.games.length === 0
-            ? <div className="PicksEmpty">{app.translator.trans('resofire-picks.lib.messages.no_matches')}</div>
+            ? <div className="PicksEmpty">{app.translator.trans('ernestdefoe-picks.lib.messages.no_matches')}</div>
             : this.games.map(game => this.renderGameCard(game))
         }
       </div>
@@ -530,7 +530,7 @@ export default class PicksPage extends Page {
       <div className="PicksTab">
         <div className="PicksWeekNav">
           <div>
-            <div className="PicksWeekNav-title">{app.translator.trans('resofire-picks.lib.nav.my_picks')} · {week?.name}</div>
+            <div className="PicksWeekNav-title">{app.translator.trans('ernestdefoe-picks.lib.nav.my_picks')} · {week?.name}</div>
           </div>
           <div className="PicksWeekNav-arrows">
             <Button className="Button Button--icon" icon="fas fa-chevron-left" disabled={idx <= 0} onclick={() => this.prevWeek()} />
@@ -540,17 +540,17 @@ export default class PicksPage extends Page {
 
         {myGames.length > 0 && (
           <div className="PicksStatusBar">
-            <span>{app.translator.trans('resofire-picks.lib.common.picked')}: <strong>{myGames.length}</strong></span>
+            <span>{app.translator.trans('ernestdefoe-picks.lib.common.picked')}: <strong>{myGames.length}</strong></span>
             <span>✓ <strong>{correct}</strong></span>
             <span>✗ <strong>{incorrect}</strong></span>
-            <span>{app.translator.trans('resofire-picks.lib.common.points')}: <strong>{correct}</strong></span>
+            <span>{app.translator.trans('ernestdefoe-picks.lib.common.points')}: <strong>{correct}</strong></span>
           </div>
         )}
 
         {this.gamesLoading
           ? <LoadingIndicator />
           : myGames.length === 0
-            ? <div className="PicksEmpty">{app.translator.trans('resofire-picks.lib.messages.no_data')}</div>
+            ? <div className="PicksEmpty">{app.translator.trans('ernestdefoe-picks.lib.messages.no_data')}</div>
             : myGames.map(game => {
                 const side = game.my_pick!.selected_outcome;
                 const team = side === 'home' ? game.home_team : game.away_team;
@@ -578,7 +578,7 @@ export default class PicksPage extends Page {
                     <div className="PicksMyPickRow-info">
                       <div className="PicksMyPickRow-matchup">{team?.name} vs {oppTeam?.name}</div>
                       <div className="PicksMyPickRow-pick">
-                        {app.translator.trans('resofire-picks.lib.common.picked')}: <strong>{team?.name}</strong>
+                        {app.translator.trans('ernestdefoe-picks.lib.common.picked')}: <strong>{team?.name}</strong>
                         {game.status === 'finished' && game.home_score !== null && <span> · {game.home_score}–{game.away_score}</span>}
                       </div>
                     </div>
@@ -607,8 +607,8 @@ export default class PicksPage extends Page {
     const noSchedule       = !this.currentWeekId && !isOffSeason;
 
     const scopes = [
-      { key: 'week',    label: app.translator.trans('resofire-picks.lib.common.week') },
-      { key: 'season',  label: app.translator.trans('resofire-picks.lib.common.season') },
+      { key: 'week',    label: app.translator.trans('ernestdefoe-picks.lib.common.week') },
+      { key: 'season',  label: app.translator.trans('ernestdefoe-picks.lib.common.season') },
       { key: 'alltime', label: 'All Time' },
     ];
 
@@ -617,12 +617,12 @@ export default class PicksPage extends Page {
       if (isOffSeason && !retentionExpired && key !== 'alltime') {
         return key === 'week'
           ? 'Final Week'
-          : (lastSeasonName ?? app.translator.trans('resofire-picks.lib.common.season'));
+          : (lastSeasonName ?? app.translator.trans('ernestdefoe-picks.lib.common.season'));
       }
       return key === 'week'
-        ? app.translator.trans('resofire-picks.lib.common.week')
+        ? app.translator.trans('ernestdefoe-picks.lib.common.week')
         : key === 'season'
-          ? app.translator.trans('resofire-picks.lib.common.season')
+          ? app.translator.trans('ernestdefoe-picks.lib.common.season')
           : 'All Time';
     };
 
@@ -634,7 +634,7 @@ export default class PicksPage extends Page {
       if (isOffSeason && !retentionExpired && daysSinceEnded !== null) {
         return `Final standings · ${lastSeasonName ?? 'Season'} ended ${daysSinceEnded} day${daysSinceEnded !== 1 ? 's' : ''} ago`;
       }
-      return app.translator.trans('resofire-picks.lib.messages.no_data') as string;
+      return app.translator.trans('ernestdefoe-picks.lib.messages.no_data') as string;
     };
 
     return (
@@ -667,7 +667,7 @@ export default class PicksPage extends Page {
               <div className="PicksLeaderboard">
                 <div className="PicksLeaderboard-head">
                   <div>#</div>
-                  <div>{app.translator.trans('resofire-picks.lib.common.team')}</div>
+                  <div>{app.translator.trans('ernestdefoe-picks.lib.common.team')}</div>
                   <div className="PicksLeaderboard-right">Pts</div>
                   <div className="PicksLeaderboard-right">W–L</div>
                   <div className="PicksLeaderboard-right">Acc</div>
@@ -810,7 +810,7 @@ export default class PicksPage extends Page {
                         <div className="PicksLeaderboard">
                           <div className="PicksLeaderboard-head">
                             <div>#</div>
-                            <div>{app.translator.trans('resofire-picks.lib.common.team')}</div>
+                            <div>{app.translator.trans('ernestdefoe-picks.lib.common.team')}</div>
                             <div className="PicksLeaderboard-right">Pts</div>
                             <div className="PicksLeaderboard-right">W–L</div>
                             <div className="PicksLeaderboard-right">Acc</div>
@@ -860,10 +860,10 @@ export default class PicksPage extends Page {
         <div className="PicksPage-inner">
           <div className="PicksPage-tabs">
             {[
-              { key: 'matches',     label: app.translator.trans('resofire-picks.lib.nav.matches'),     icon: 'fas fa-football' },
-              { key: 'mypicks',     label: app.translator.trans('resofire-picks.lib.nav.my_picks'),    icon: 'fas fa-check-circle' },
-              { key: 'leaderboard', label: app.translator.trans('resofire-picks.lib.nav.leaderboard'), icon: 'fas fa-trophy' },
-              { key: 'history',     label: app.translator.trans('resofire-picks.lib.nav.history'),     icon: 'fas fa-history' },
+              { key: 'matches',     label: app.translator.trans('ernestdefoe-picks.lib.nav.matches'),     icon: 'fas fa-football' },
+              { key: 'mypicks',     label: app.translator.trans('ernestdefoe-picks.lib.nav.my_picks'),    icon: 'fas fa-check-circle' },
+              { key: 'leaderboard', label: app.translator.trans('ernestdefoe-picks.lib.nav.leaderboard'), icon: 'fas fa-trophy' },
+              { key: 'history',     label: app.translator.trans('ernestdefoe-picks.lib.nav.history'),     icon: 'fas fa-history' },
             ].map(tab => (
               <button
                 key={tab.key}
@@ -886,7 +886,7 @@ export default class PicksPage extends Page {
           </div>
 
           {!canView ? (
-            <div className="PicksEmpty">{app.translator.trans('resofire-picks.lib.messages.login_required')}</div>
+            <div className="PicksEmpty">{app.translator.trans('ernestdefoe-picks.lib.messages.login_required')}</div>
           ) : !this.weeksLoaded ? (
             <LoadingIndicator />
           ) : this.weeks.length === 0 && this.activeTab !== 'history' ? (

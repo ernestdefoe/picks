@@ -6,7 +6,7 @@ import UserPage from 'flarum/forum/components/UserPage';
 
 export { default as extend } from './extend.tsx';
 
-app.initializers.add('resofire/picks', () => {
+app.initializers.add('ernestdefoe/picks', () => {
   // Forum sidebar nav item
   extend(IndexSidebar.prototype, 'navItems', function (items) {
     if (!app.forum.attribute('picksCanView') && !app.session.user?.isAdmin()) return;
@@ -14,7 +14,7 @@ app.initializers.add('resofire/picks', () => {
     items.add(
       'picks',
       <LinkButton href={app.route('picks')} icon="fas fa-football">
-        {app.forum.attribute('picksNavLabel') || app.translator.trans('resofire-picks.lib.nav.picks')}
+        {app.forum.attribute('picksNavLabel') || app.translator.trans('ernestdefoe-picks.lib.nav.picks')}
       </LinkButton>,
       80
     );

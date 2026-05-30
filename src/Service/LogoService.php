@@ -88,7 +88,7 @@ class LogoService
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_TIMEOUT        => self::TIMEOUT,
-            CURLOPT_USERAGENT      => 'resofire/picks',
+            CURLOPT_USERAGENT      => 'ernestdefoe/picks',
         ]);
 
         $body     = curl_exec($ch);

@@ -121,7 +121,7 @@ export default class LeaderboardTab extends Component {
           <div>
             <h3>
               <i className="fas fa-trophy" />
-              {' '}{app.translator.trans('resofire-picks.admin.nav.scores')}
+              {' '}{app.translator.trans('ernestdefoe-picks.admin.nav.scores')}
             </h3>
           </div>
         </div>

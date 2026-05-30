@@ -35,7 +35,7 @@ export default class TeamEditModal extends Modal<TeamEditModalAttrs> {
   }
 
   title() {
-    return app.translator.trans('resofire-picks.admin.teams.edit_title');
+    return app.translator.trans('ernestdefoe-picks.admin.teams.edit_title');
   }
 
   content() {
@@ -47,7 +47,7 @@ export default class TeamEditModal extends Modal<TeamEditModalAttrs> {
         <div className="Form">
 
           <div className="Form-group">
-            <label>{app.translator.trans('resofire-picks.admin.teams.fields.name')}</label>
+            <label>{app.translator.trans('ernestdefoe-picks.admin.teams.fields.name')}</label>
             <input
               className="FormControl"
               type="text"
@@ -57,7 +57,7 @@ export default class TeamEditModal extends Modal<TeamEditModalAttrs> {
           </div>
 
           <div className="Form-group">
-            <label>{app.translator.trans('resofire-picks.admin.teams.fields.abbreviation')}</label>
+            <label>{app.translator.trans('ernestdefoe-picks.admin.teams.fields.abbreviation')}</label>
             <input
               className="FormControl"
               type="text"
@@ -68,7 +68,7 @@ export default class TeamEditModal extends Modal<TeamEditModalAttrs> {
           </div>
 
           <div className="Form-group">
-            <label>{app.translator.trans('resofire-picks.admin.teams.fields.conference')}</label>
+            <label>{app.translator.trans('ernestdefoe-picks.admin.teams.fields.conference')}</label>
             <input
               className="FormControl"
               type="text"
@@ -78,7 +78,7 @@ export default class TeamEditModal extends Modal<TeamEditModalAttrs> {
           </div>
 
           <div className="Form-group">
-            <label>{app.translator.trans('resofire-picks.admin.teams.fields.logo_standard')}</label>
+            <label>{app.translator.trans('ernestdefoe-picks.admin.teams.fields.logo_standard')}</label>
             {logoUrl && (
               <div className="TeamEditModal-logoPreview">
                 <img src={logoUrl} alt={this.name} />
@@ -94,7 +94,7 @@ export default class TeamEditModal extends Modal<TeamEditModalAttrs> {
           </div>
 
           <div className="Form-group">
-            <label>{app.translator.trans('resofire-picks.admin.teams.fields.logo_dark')}</label>
+            <label>{app.translator.trans('ernestdefoe-picks.admin.teams.fields.logo_dark')}</label>
             {logoDarkUrl && (
               <div className="TeamEditModal-logoPreview TeamEditModal-logoPreview--dark">
                 <img src={logoDarkUrl} alt={this.name + ' dark'} />
@@ -116,10 +116,10 @@ export default class TeamEditModal extends Modal<TeamEditModalAttrs> {
                 checked={this.logoCustom}
                 onchange={(e: InputEvent) => { this.logoCustom = (e.target as HTMLInputElement).checked; }}
               />
-              {app.translator.trans('resofire-picks.admin.teams.fields.logo_custom')}
+              {app.translator.trans('ernestdefoe-picks.admin.teams.fields.logo_custom')}
             </label>
             <p className="helpText">
-              {app.translator.trans('resofire-picks.admin.teams.fields.logo_custom_help')}
+              {app.translator.trans('ernestdefoe-picks.admin.teams.fields.logo_custom_help')}
             </p>
           </div>
 
@@ -129,7 +129,7 @@ export default class TeamEditModal extends Modal<TeamEditModalAttrs> {
               type="submit"
               loading={this.loading}
             >
-              {app.translator.trans('resofire-picks.admin.common.save')}
+              {app.translator.trans('ernestdefoe-picks.admin.common.save')}
             </Button>
           </div>
         </div>

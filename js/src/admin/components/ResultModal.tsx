@@ -39,7 +39,7 @@ export default class ResultModal extends Modal<ResultModalAttrs> {
   }
 
   title() {
-    return app.translator.trans('resofire-picks.admin.games.enter_result');
+    return app.translator.trans('ernestdefoe-picks.admin.games.enter_result');
   }
 
   content() {
@@ -85,7 +85,7 @@ export default class ResultModal extends Modal<ResultModalAttrs> {
           {resultPreview && (
             <div className="Form-group">
               <p className="PicksResultPreview">
-                <strong>{app.translator.trans('resofire-picks.admin.games.result_preview')}:</strong>{' '}
+                <strong>{app.translator.trans('ernestdefoe-picks.admin.games.result_preview')}:</strong>{' '}
                 {resultPreview}
               </p>
             </div>
@@ -97,7 +97,7 @@ export default class ResultModal extends Modal<ResultModalAttrs> {
               loading={this.loading}
               onclick={() => this.save()}
             >
-              {app.translator.trans('resofire-picks.admin.common.save')}
+              {app.translator.trans('ernestdefoe-picks.admin.common.save')}
             </Button>
           </div>
         </div>

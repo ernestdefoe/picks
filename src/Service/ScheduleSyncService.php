@@ -29,10 +29,10 @@ class ScheduleSyncService
      */
     public function sync(): array
     {
-        $year = (int) $this->settings->get('resofire-picks.season_year', (int) date('Y'));
+        $year = (int) $this->settings->get('ernestdefoe-picks.season_year', (int) date('Y'));
 
-        $syncRegular    = (bool) $this->settings->get('resofire-picks.sync_regular_season', true);
-        $syncPostseason = (bool) $this->settings->get('resofire-picks.sync_postseason', true);
+        $syncRegular    = (bool) $this->settings->get('ernestdefoe-picks.sync_regular_season', true);
+        $syncPostseason = (bool) $this->settings->get('ernestdefoe-picks.sync_postseason', true);
 
         $season = $this->syncSeason($year);
 
@@ -118,7 +118,7 @@ class ScheduleSyncService
         }
 
         $this->settings->set(
-            'resofire-picks.last_schedule_sync',
+            'ernestdefoe-picks.last_schedule_sync',
             Carbon::now()->toIso8601String()
         );
 
@@ -277,7 +277,7 @@ class ScheduleSyncService
         }
 
         $offsetMinutes = (int) $this->settings->get(
-            'resofire-picks.picks_lock_offset_minutes',
+            'ernestdefoe-picks.picks_lock_offset_minutes',
             0
         );
 

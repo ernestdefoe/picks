@@ -39,7 +39,7 @@ class SubmitPickController implements RequestHandlerInterface
         }
 
         // Validate confidence if provided
-        $confidenceMode = (bool) $this->settings->get('resofire-picks.confidence_mode', false);
+        $confidenceMode = (bool) $this->settings->get('ernestdefoe-picks.confidence_mode', false);
 
         if ($confidence !== null) {
             $confidence = (int) $confidence;
