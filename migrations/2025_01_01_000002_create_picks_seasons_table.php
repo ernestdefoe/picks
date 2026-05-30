@@ -3,7 +3,7 @@
 use Flarum\Database\Migration;
 use Illuminate\Database\Schema\Blueprint;
 
-return Migration::createTable(
+return Migration::createTableIfNotExists(
     'picks_seasons',
     function (Blueprint $table) {
         $table->increments('id');

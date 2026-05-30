@@ -5,6 +5,9 @@ use Illuminate\Database\Schema\Builder;
 
 return [
     'up' => function (Builder $schema) {
+        if ($schema->hasTable('picks_events')) {
+            return;
+        }
         $schema->create('picks_events', function (Blueprint $table) {
             $table->increments('id');
             $table->unsignedInteger('week_id')->nullable();

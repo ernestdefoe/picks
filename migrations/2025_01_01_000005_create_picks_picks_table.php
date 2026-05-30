@@ -5,6 +5,9 @@ use Illuminate\Database\Schema\Builder;
 
 return [
     'up' => function (Builder $schema) {
+        if ($schema->hasTable('picks_picks')) {
+            return;
+        }
         $schema->create('picks_picks', function (Blueprint $table) {
             $table->increments('id');
             $table->unsignedInteger('user_id');
