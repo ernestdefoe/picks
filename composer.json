@@ -11,6 +11,12 @@
         "sports"
     ],
     "license": "MIT",
+    "authors": [
+        {
+            "name": "Ernestdefoe",
+            "email": "ernestdefoe@gmail.com"
+        }
+    ],
     "support": {
         "issues": "https://github.com/ernestdefoe/picks/issues",
         "source": "https://github.com/ernestdefoe/picks"
