@@ -109,6 +109,13 @@ endorsed by the NCAA, CFBD, ESPN, or any team.
 Originally created by [resofire](https://github.com/resofire); now maintained by
 [ernestdefoe](https://github.com/ernestdefoe) as `ernestdefoe/picks`.
 
+## Support
+
+Questions, bug reports, and feature requests:
+
+- **Support forum:** https://ernestdefoe.online
+- **Issues:** https://github.com/ernestdefoe/picks/issues
+
 ## License
 
 MIT
