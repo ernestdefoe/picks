@@ -4,6 +4,7 @@ namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -50,6 +51,29 @@ class UserScoresController implements RequestHandlerInterface
             $currentSeasonId = $currentWeek?->season_id;
             $currentWeekName = $currentWeek?->name;
 
+            // Preload each scope's scored rows once (one query per scope) so the
+            // rank and the player total are derived in PHP — matching
+            // UserHistoryController::rankIn — instead of firing a separate COUNT
+            // for the rank and another for the total in every scope.
+            $alltimeScores = UserScore::query()
+                ->whereNull('week_id')->whereNull('season_id')
+                ->where('total_picks', '>', 0)
+                ->get(['user_id', 'total_points']);
+
+            $seasonScores = $currentSeasonId
+                ? UserScore::query()
+                    ->where('season_id', $currentSeasonId)->whereNull('week_id')
+                    ->where('total_picks', '>', 0)
+                    ->get(['user_id', 'total_points'])
+                : collect();
+
+            $weekScores = $currentWeekId
+                ? UserScore::query()
+                    ->where('week_id', $currentWeekId)
+                    ->where('total_picks', '>', 0)
+                    ->get(['user_id', 'total_points'])
+                : collect();
+
             // ── All-time scores ───────────────────────────────────────────────
             $alltime = UserScore::query()
                 ->where('user_id', $userId)
@@ -57,25 +81,16 @@ class UserScoresController implements RequestHandlerInterface
                 ->whereNull('season_id')
                 ->first();
 
-            $alltimeRank = null;
+            $alltimeRank  = null;
+            $totalAlltime = $alltimeScores->count();
             if ($alltime && $alltime->total_picks > 0) {
-                $above = UserScore::query()
-                    ->whereNull('week_id')
-                    ->whereNull('season_id')
-                    ->where('total_picks', '>', 0)
-                    ->where('total_points', '>', $alltime->total_points)
-                    ->count();
-                $alltimeRank = $above + 1;
+                $alltimeRank = $this->rankIn($alltimeScores, $alltime->total_points);
             }
 
-            $totalAlltime = UserScore::query()
-                ->whereNull('week_id')->whereNull('season_id')
-                ->where('total_picks', '>', 0)->count();
-
             // ── Season scores ─────────────────────────────────────────────────
-            $season     = null;
-            $seasonRank = null;
-            $totalSeason = 0;
+            $season      = null;
+            $seasonRank  = null;
+            $totalSeason = $seasonScores->count();
 
             if ($currentSeasonId) {
                 $season = UserScore::query()
@@ -85,24 +100,14 @@ class UserScoresController implements RequestHandlerInterface
                     ->first();
 
                 if ($season && $season->total_picks > 0) {
-                    $above = UserScore::query()
-                        ->where('season_id', $currentSeasonId)
-                        ->whereNull('week_id')
-                        ->where('total_picks', '>', 0)
-                        ->where('total_points', '>', $season->total_points)
-                        ->count();
-                    $seasonRank = $above + 1;
+                    $seasonRank = $this->rankIn($seasonScores, $season->total_points);
                 }
-
-                $totalSeason = UserScore::query()
-                    ->where('season_id', $currentSeasonId)->whereNull('week_id')
-                    ->where('total_picks', '>', 0)->count();
             }
 
             // ── Week scores ───────────────────────────────────────────────────
             $week      = null;
             $weekRank  = null;
-            $totalWeek = 0;
+            $totalWeek = $weekScores->count();
 
             if ($currentWeekId) {
                 $week = UserScore::query()
@@ -111,17 +116,8 @@ class UserScoresController implements RequestHandlerInterface
                     ->first();
 
                 if ($week && $week->total_picks > 0) {
-                    $above = UserScore::query()
-                        ->where('week_id', $currentWeekId)
-                        ->where('total_picks', '>', 0)
-                        ->where('total_points', '>', $week->total_points)
-                        ->count();
-                    $weekRank = $above + 1;
+                    $weekRank = $this->rankIn($weekScores, $week->total_points);
                 }
-
-                $totalWeek = UserScore::query()
-                    ->where('week_id', $currentWeekId)
-                    ->where('total_picks', '>', 0)->count();
             }
 
             return new JsonResponse([
@@ -160,5 +156,15 @@ class UserScoresController implements RequestHandlerInterface
 
             return new JsonResponse(['error' => 'Failed to load user scores.'], 500);
         }
+    }
+
+    /**
+     * The 1-based rank of $points within a pre-loaded collection of scored rows
+     * (each having a `total_points`), computed in PHP so the handler avoids a
+     * COUNT query per scope. Mirrors UserHistoryController::rankIn.
+     */
+    private function rankIn(Collection $scores, $points): int
+    {
+        return $scores->where('total_points', '>', $points)->count() + 1;
     }
 }

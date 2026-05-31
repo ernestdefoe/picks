@@ -7,22 +7,24 @@ use Flarum\Settings\SettingsRepositoryInterface;
 use GuzzleHttp\Client as HttpClient;
 use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
 use Illuminate\Contracts\Queue\Queue;
-use Resofire\Picks\Api\Controller\EnterResultController;
-use Resofire\Picks\Api\Controller\ListEventsController;
-use Resofire\Picks\Api\Controller\ListPicksController;
-use Resofire\Picks\Api\Controller\SubmitPickController;
-use Resofire\Picks\Api\Controller\SyncScoresController;
-use Resofire\Picks\Console\PollLiveScoresCommand;
-use Resofire\Picks\Service\SyncScoresService;
+use Psr\Log\LoggerInterface;
 use Resofire\Picks\Service\CfbdService;
 use Resofire\Picks\Service\LogoService;
-use Resofire\Picks\Service\ScheduleSyncService;
-use Resofire\Picks\Service\TeamSyncService;
+use Resofire\Picks\Service\SyncScoresService;
 
 class PicksServiceProvider extends AbstractServiceProvider
 {
     public function register(): void
     {
+        // Only the two services with a dependency the container can't auto-wire
+        // need an explicit binding. Every other controller/service in this
+        // extension has a fully type-hinted constructor whose parameters are
+        // interfaces/classes already bound (SettingsRepositoryInterface, Queue,
+        // CfbdService, etc.) or auto-instantiable (GuzzleHttp\Client), so Flarum
+        // resolves them automatically — no closure required.
+
+        // SyncScoresService: the concrete Guzzle client + queue are passed
+        // explicitly so the wiring is unambiguous.
         $this->container->singleton(SyncScoresService::class, function ($container) {
             return new SyncScoresService(
                 $container->make(CfbdService::class),
@@ -32,72 +34,15 @@ class PicksServiceProvider extends AbstractServiceProvider
             );
         });
 
-        $this->container->singleton(SyncScoresController::class, function ($container) {
-            return new SyncScoresController(
-                $container->make(SyncScoresService::class)
-            );
-        });
-
-        $this->container->singleton(PollLiveScoresCommand::class, function ($container) {
-            return new PollLiveScoresCommand(
-                $container->make(SyncScoresService::class),
-                $container->make(SettingsRepositoryInterface::class)
-            );
-        });
-
-        $this->container->singleton(ListPicksController::class, function ($container) {
-            return new ListPicksController(
-                $container->make(SettingsRepositoryInterface::class)
-            );
-        });
-
-        $this->container->singleton(SubmitPickController::class, function ($container) {
-            return new SubmitPickController(
-                $container->make(SettingsRepositoryInterface::class)
-            );
-        });
-
-        $this->container->singleton(EnterResultController::class, function ($container) {
-            return new EnterResultController(
-                $container->make(Queue::class),
-                $container->make(SyncScoresService::class)
-            );
-        });
-
-        $this->container->singleton(ListEventsController::class, function ($container) {
-            return new ListEventsController(
-                $container->make(SettingsRepositoryInterface::class)
-            );
-        });
-
-        $this->container->singleton(CfbdService::class, function ($container) {
-            return new CfbdService(
-                $container->make(SettingsRepositoryInterface::class),
-                $container->make(HttpClient::class)
-            );
-        });
-
+        // LogoService: the 'image' ImageManager is bound by string key, not by
+        // class name, so auto-wiring `ImageManager $imageManager` would fail.
         $this->container->singleton(LogoService::class, function ($container) {
             return new LogoService(
                 $container->make('image'),
                 $container->make(FilesystemFactory::class),
                 $container->make(HttpClient::class),
-                $container->make(SettingsRepositoryInterface::class)
-            );
-        });
-
-        $this->container->singleton(TeamSyncService::class, function ($container) {
-            return new TeamSyncService(
-                $container->make(CfbdService::class),
-                $container->make(LogoService::class),
-                $container->make(SettingsRepositoryInterface::class)
-            );
-        });
-
-        $this->container->singleton(ScheduleSyncService::class, function ($container) {
-            return new ScheduleSyncService(
-                $container->make(CfbdService::class),
-                $container->make(SettingsRepositoryInterface::class)
+                $container->make(SettingsRepositoryInterface::class),
+                $container->make(LoggerInterface::class)
             );
         });
     }

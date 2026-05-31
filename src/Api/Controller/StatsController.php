@@ -192,18 +192,30 @@ class StatsController implements RequestHandlerInterface
         }
 
         // Most contested = closest to a 50/50 split. Resolve team names only for
-        // the top 3 we actually return (instead of every picked event).
+        // the top 3 we actually return (instead of every picked event), and in a
+        // single whereIn batch rather than two Team::find() calls per game.
         usort($contested, fn ($a, $b) => $a['split'] <=> $b['split']);
-        $mostContested = array_map(function ($g) {
+        $top = array_slice($contested, 0, 3);
+
+        $teamIds = [];
+        foreach ($top as $g) {
+            $teamIds[] = $g['home_team_id'];
+            $teamIds[] = $g['away_team_id'];
+        }
+        $teams = Team::whereIn('id', array_values(array_unique(array_filter($teamIds))))
+            ->get()
+            ->keyBy('id');
+
+        $mostContested = array_map(function ($g) use ($teams) {
             return [
                 'event_id'  => $g['event_id'],
-                'home_team' => Team::find($g['home_team_id'])?->abbreviation ?? '?',
-                'away_team' => Team::find($g['away_team_id'])?->abbreviation ?? '?',
+                'home_team' => $teams->get($g['home_team_id'])?->abbreviation ?? '?',
+                'away_team' => $teams->get($g['away_team_id'])?->abbreviation ?? '?',
                 'home_pct'  => $g['home_pct'],
                 'away_pct'  => $g['away_pct'],
                 'total'     => $g['total'],
             ];
-        }, array_slice($contested, 0, 3));
+        }, $top);
 
         return [
             'total_finished'  => PickEvent::query()->where('status', PickEvent::STATUS_FINISHED)->count(),

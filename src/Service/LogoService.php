@@ -6,6 +6,7 @@ use Flarum\Settings\SettingsRepositoryInterface;
 use GuzzleHttp\Client as HttpClient;
 use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
 use Intervention\Image\ImageManager;
+use Psr\Log\LoggerInterface;
 
 class LogoService
 {
@@ -19,7 +20,8 @@ class LogoService
         protected ImageManager $imageManager,
         protected FilesystemFactory $filesystem,
         protected HttpClient $http,
-        protected SettingsRepositoryInterface $settings
+        protected SettingsRepositoryInterface $settings,
+        protected LoggerInterface $log
     ) {
     }
 
@@ -124,6 +126,13 @@ class LogoService
 
             return 'assets/' . self::LOGO_DIRECTORY . '/' . $filename;
         } catch (\Throwable $e) {
+            // Image decode/encode or filesystem write failed. Log it so operators
+            // can diagnose missing logos after a sync instead of seeing a silent
+            // null. Returning null keeps the sync resilient to one bad image.
+            $this->log->warning(
+                '[Picks] Logo convert/save failed for ' . $slug . $suffix . ': ' . $e->getMessage()
+            );
+
             return null;
         }
     }

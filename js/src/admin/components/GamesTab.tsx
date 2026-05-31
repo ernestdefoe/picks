@@ -61,12 +61,15 @@ export default class GamesTab extends Component {
       this.load(1);
     } else {
       // Weeks not in store yet — fetch them first
-      app.store.find<Week[]>('picks-weeks').then(() => {
-        this.setDefaultWeek();
-        this.load(1);
-      }).catch(() => {
-        this.load(1);
-      });
+      app.store
+        .find<Week[]>('picks-weeks')
+        .then(() => {
+          this.setDefaultWeek();
+          this.load(1);
+        })
+        .catch(() => {
+          this.load(1);
+        });
     }
   }
 
@@ -92,22 +95,25 @@ export default class GamesTab extends Component {
     };
 
     if (this.filterWeekId) params.week_id = this.filterWeekId;
-    if (this.filterStatus)  params.status  = this.filterStatus;
-    if (this.search)        params.search  = this.search;
+    if (this.filterStatus) params.status = this.filterStatus;
+    if (this.search) params.search = this.search;
 
-    app.request<{ data: Game[]; meta: GamesMeta }>({
-      method: 'GET',
-      url: app.forum.attribute('apiUrl') + '/picks/events',
-      params,
-    }).then((r) => {
-      this.games   = r.data || [];
-      this.meta    = r.meta || null;
-      this.loading = false;
-      m.redraw();
-    }).catch(() => {
-      this.loading = false;
-      m.redraw();
-    });
+    app
+      .request<{ data: Game[]; meta: GamesMeta }>({
+        method: 'GET',
+        url: app.forum.attribute('apiUrl') + '/picks/events',
+        params,
+      })
+      .then((r) => {
+        this.games = r.data || [];
+        this.meta = r.meta || null;
+        this.loading = false;
+        m.redraw();
+      })
+      .catch(() => {
+        this.loading = false;
+        m.redraw();
+      });
   }
 
   private onSearchInput(value: string) {
@@ -118,22 +124,18 @@ export default class GamesTab extends Component {
 
   private statusBadge(status: string): Mithril.Children {
     const classes: Record<string, string> = {
-      scheduled:   'PicksBadge--scheduled',
+      scheduled: 'PicksBadge--scheduled',
       in_progress: 'PicksBadge--in_progress',
-      closed:      'PicksBadge--closed',
-      finished:    'PicksBadge--finished',
+      closed: 'PicksBadge--closed',
+      finished: 'PicksBadge--finished',
     };
     const labels: Record<string, string> = {
-      scheduled:   'Scheduled',
+      scheduled: 'Scheduled',
       in_progress: '● Live',
-      closed:      'Closed',
-      finished:    'Final',
+      closed: 'Closed',
+      finished: 'Final',
     };
-    return (
-      <span className={`PicksBadge ${classes[status] || ''}`}>
-        {labels[status] || status}
-      </span>
-    );
+    return <span className={`PicksBadge ${classes[status] || ''}`}>{labels[status] || status}</span>;
   }
 
   private renderTeamLogo(team: GameTeam | null): Mithril.Children {
@@ -143,8 +145,12 @@ export default class GamesTab extends Component {
       const darkUrl = team.logo_dark_url || team.logo_url;
       return (
         <>
-          <img src={team.logo_url} alt={team.name} className="PicksTeamLogo PicksTeamLogo--small PicksTeamLogo--light" />
-          <img src={darkUrl}       alt={team.name} className="PicksTeamLogo PicksTeamLogo--small PicksTeamLogo--dark" />
+          <img
+            src={team.logo_url}
+            alt={team.name}
+            className="PicksTeamLogo PicksTeamLogo--small PicksTeamLogo--light"
+          />
+          <img src={darkUrl} alt={team.name} className="PicksTeamLogo PicksTeamLogo--small PicksTeamLogo--dark" />
         </>
       );
     }
@@ -160,7 +166,9 @@ export default class GamesTab extends Component {
     if (!dateStr) return '—';
     try {
       return new Date(dateStr).toLocaleDateString(undefined, {
-        month: 'short', day: 'numeric', year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
       });
     } catch {
       return dateStr;
@@ -172,23 +180,62 @@ export default class GamesTab extends Component {
     this.syncResult = null;
     m.redraw();
 
-    app.request<{ status: string; updated: number; scored: number; skipped: number; message?: string }>({
-      method: 'POST',
-      url: app.forum.attribute('apiUrl') + '/picks/sync/scores',
-    }).then((r) => {
-      if (r.status === 'error') {
-        this.syncResult = '❌ ' + (r.message || 'Sync failed.');
-      } else {
-        this.syncResult = `✅ Sync complete. Updated: ${r.updated} games, Scored: ${r.scored} picks batches, Skipped: ${r.skipped}.`;
-        this.load(this.page);
-      }
+    // The sync now runs as a background job (the multi-week CFBD fetch can take
+    // minutes); dispatch it, then poll the status endpoint for the result.
+    app
+      .request({
+        method: 'POST',
+        url: app.forum.attribute('apiUrl') + '/picks/sync/scores',
+      })
+      .then(() => {
+        this.pollSyncStatus(0);
+      })
+      .catch(() => {
+        this.syncResult = '❌ Score sync failed to start. Check API key and server logs.';
+        this.syncing = false;
+        m.redraw();
+      });
+  }
+
+  private pollSyncStatus(attempt: number) {
+    // Cap polling so a stuck/crashed worker doesn't spin the UI forever
+    // (~5 minutes at 2s intervals).
+    if (attempt > 150) {
+      this.syncResult = '⏳ Sync is still running. Refresh in a moment to see the result.';
       this.syncing = false;
       m.redraw();
-    }).catch(() => {
-      this.syncResult = '❌ Score sync failed. Check API key and server logs.';
-      this.syncing = false;
-      m.redraw();
-    });
+      return;
+    }
+
+    app
+      .request<{
+        status: string;
+        result: { status?: string; updated?: number; scored?: number; skipped?: number; message?: string } | null;
+      }>({
+        method: 'GET',
+        url: app.forum.attribute('apiUrl') + '/picks/sync/scores/status',
+      })
+      .then((r) => {
+        if (r.status === 'done') {
+          const res = r.result || {};
+          this.syncResult = `✅ Sync complete. Updated: ${res.updated ?? 0} games, Scored: ${res.scored ?? 0} picks batches, Skipped: ${res.skipped ?? 0}.`;
+          this.syncing = false;
+          this.load(this.page);
+          m.redraw();
+        } else if (r.status === 'failed') {
+          this.syncResult = '❌ ' + (r.result?.message || 'Sync failed.');
+          this.syncing = false;
+          m.redraw();
+        } else {
+          // running / idle — keep polling
+          setTimeout(() => this.pollSyncStatus(attempt + 1), 2000);
+        }
+      })
+      .catch(() => {
+        this.syncResult = '❌ Failed to check sync status. Check server logs.';
+        this.syncing = false;
+        m.redraw();
+      });
   }
 
   private sortedWeeks(): Week[] {
@@ -199,17 +246,16 @@ export default class GamesTab extends Component {
   }
 
   view() {
-    const weeks    = this.sortedWeeks();
-    const total     = this.meta?.total ?? 0;
-    const lastPage  = this.meta?.last_page ?? 1;
+    const weeks = this.sortedWeeks();
+    const total = this.meta?.total ?? 0;
+    const lastPage = this.meta?.last_page ?? 1;
 
     return (
       <div className="PicksGamesTab">
         <div className="PicksTab-header">
           <div>
             <h3>
-              <i className="fas fa-football" />
-              {' '}{app.translator.trans('ernestdefoe-picks.admin.nav.games')}
+              <i className="fas fa-football" /> {app.translator.trans('ernestdefoe-picks.admin.nav.games')}
             </h3>
             <p className="PicksTab-meta">
               {total} {app.translator.trans('ernestdefoe-picks.admin.games.total_label')}
@@ -227,9 +273,7 @@ export default class GamesTab extends Component {
           </div>
         </div>
 
-        {this.syncResult && (
-          <div className="PicksAlert PicksAlert--info">{this.syncResult}</div>
-        )}
+        {this.syncResult && <div className="PicksAlert PicksAlert--info">{this.syncResult}</div>}
 
         <div className="PicksTab-filters">
           <select
@@ -241,7 +285,7 @@ export default class GamesTab extends Component {
             }}
           >
             <option value="">{app.translator.trans('ernestdefoe-picks.admin.games.all_weeks')}</option>
-            {weeks.map(w => (
+            {weeks.map((w) => (
               <option key={String(w.id())} value={String(w.id())}>
                 {w.name()}
               </option>
@@ -287,9 +331,7 @@ export default class GamesTab extends Component {
         {this.loading ? (
           <LoadingIndicator />
         ) : this.games.length === 0 ? (
-          <div className="PicksEmptyState">
-            {app.translator.trans('ernestdefoe-picks.admin.games.no_games')}
-          </div>
+          <div className="PicksEmptyState">{app.translator.trans('ernestdefoe-picks.admin.games.no_games')}</div>
         ) : (
           <>
             <div className="PicksCardList">
@@ -314,13 +356,9 @@ export default class GamesTab extends Component {
                     <span>{game.away_team?.name ?? '—'}</span>
                   </div>
 
-                  <div className="PicksCardList-cell PicksCardList-cell--muted">
-                    {this.formatDate(game.match_date)}
-                  </div>
+                  <div className="PicksCardList-cell PicksCardList-cell--muted">{this.formatDate(game.match_date)}</div>
 
-                  <div className="PicksCardList-cell">
-                    {this.statusBadge(game.status)}
-                  </div>
+                  <div className="PicksCardList-cell">{this.statusBadge(game.status)}</div>
 
                   <div className="PicksCardList-cell">
                     {game.home_score !== null && game.away_score !== null
@@ -347,21 +385,13 @@ export default class GamesTab extends Component {
 
             {lastPage > 1 && (
               <div className="PicksPagination">
-                <Button
-                  className="Button"
-                  disabled={this.page <= 1}
-                  onclick={() => this.load(this.page - 1)}
-                >
+                <Button className="Button" disabled={this.page <= 1} onclick={() => this.load(this.page - 1)}>
                   ← Prev
                 </Button>
                 <span className="PicksPagination-info">
                   Page {this.page} of {lastPage}
                 </span>
-                <Button
-                  className="Button"
-                  disabled={this.page >= lastPage}
-                  onclick={() => this.load(this.page + 1)}
-                >
+                <Button className="Button" disabled={this.page >= lastPage} onclick={() => this.load(this.page + 1)}>
                   Next →
                 </Button>
               </div>

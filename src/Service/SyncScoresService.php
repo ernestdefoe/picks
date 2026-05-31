@@ -51,6 +51,20 @@ class SyncScoresService
 
         $weekIdsToCheck = [];
 
+        // Preload every known event keyed by cfbd_id and the set of event ids
+        // that already have at least one pick, so the per-game inner loop reads
+        // from memory instead of firing two queries (a PickEvent lookup + a Pick
+        // existence check) for each of a full season's ~900 games.
+        $eventsByCfbdId = PickEvent::query()
+            ->whereNotNull('cfbd_id')
+            ->get()
+            ->keyBy('cfbd_id');
+
+        $eventIdsWithPicks = Pick::query()
+            ->distinct()
+            ->pluck('event_id')
+            ->flip();
+
         foreach ($seasonTypes as $seasonType) {
             $weekNumbers = $this->getWeekNumbers($seasonType);
 
@@ -68,7 +82,7 @@ class SyncScoresService
                         continue;
                     }
 
-                    $event = PickEvent::where('cfbd_id', $cfbdId)->first();
+                    $event = $eventsByCfbdId->get($cfbdId);
 
                     if (! $event) {
                         $skipped++;
@@ -94,7 +108,7 @@ class SyncScoresService
 
                     $updated++;
 
-                    $hasPicks = Pick::where('event_id', $event->id)->exists();
+                    $hasPicks = $eventIdsWithPicks->has($event->id);
                     if ($hasPicks) {
                         $this->queue->push(new ScorePicksJob($event->id));
                         $scored++;
@@ -146,6 +160,22 @@ class SyncScoresService
         $finished  = 0;
         $skipped   = 0;
 
+        // Bulk-load every event referenced in this scoreboard payload in ONE
+        // query (keyed by cfbd_id) rather than a SELECT per game. This command
+        // runs every 5 minutes via the scheduler; on a game Saturday with 30+
+        // concurrent games that was 30+ indexed lookups per tick.
+        $espnIds = [];
+        foreach ($events as $espnEvent) {
+            if (isset($espnEvent['id'])) {
+                $espnIds[] = (int) $espnEvent['id'];
+            }
+        }
+
+        $eventsByCfbdId = PickEvent::query()
+            ->whereIn('cfbd_id', array_values(array_unique($espnIds)))
+            ->get()
+            ->keyBy('cfbd_id');
+
         foreach ($events as $espnEvent) {
             $espnId      = $espnEvent['id'] ?? null;
             $competition = $espnEvent['competitions'][0] ?? null;
@@ -166,7 +196,7 @@ class SyncScoresService
             }
 
             // Match to our event by cfbd_id (ESPN event id = CFBD game id)
-            $event = PickEvent::where('cfbd_id', (int) $espnId)->first();
+            $event = $eventsByCfbdId->get((int) $espnId);
 
             if (! $event) {
                 $skipped++;

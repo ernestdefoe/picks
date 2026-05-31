@@ -15,6 +15,7 @@ use Resofire\Picks\Api\Controller\ResetDataController;
 use Resofire\Picks\Api\Controller\SyncLogosController;
 use Resofire\Picks\Api\Controller\SyncScheduleController;
 use Resofire\Picks\Api\Controller\SyncScoresController;
+use Resofire\Picks\Api\Controller\SyncScoresStatusController;
 use Resofire\Picks\Api\Controller\SyncTeamsController;
 use Resofire\Picks\Api\Controller\PublicStatsController;
 use Resofire\Picks\Api\Controller\StatsController;
@@ -81,6 +82,9 @@ return [
         ->default('ernestdefoe-picks.last_teams_sync', null)
         ->default('ernestdefoe-picks.last_schedule_sync', null)
         ->default('ernestdefoe-picks.last_scores_sync', null)
+        ->default('ernestdefoe-picks.scores_sync_status', null)
+        ->default('ernestdefoe-picks.scores_sync_result', null)
+        ->default('ernestdefoe-picks.scores_sync_started', null)
         ->default('ernestdefoe-picks.espn_polling_enabled', false)
         ->default('ernestdefoe-picks.espn_poll_interval_minutes', 5)
         ->default('ernestdefoe-picks.nav_label', 'Picks')
@@ -114,6 +118,7 @@ return [
         ->post('/picks/sync/logos',         'picks.sync.logos',           SyncLogosController::class)
         ->post('/picks/sync/schedule',      'picks.sync.schedule',        SyncScheduleController::class)
         ->post('/picks/sync/scores',        'picks.sync.scores',          SyncScoresController::class)
+        ->get('/picks/sync/scores/status',  'picks.sync.scores.status',   SyncScoresStatusController::class)
         ->get('/picks/stats',               'picks.stats',                StatsController::class)
         ->get('/picks/public-stats',        'picks.public-stats',         PublicStatsController::class)
         ->post('/picks/reset',              'picks.reset',                ResetDataController::class)

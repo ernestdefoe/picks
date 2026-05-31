@@ -29,6 +29,9 @@ class TestDataSeeder
     protected const EVENTS_PER_WEEK = 8;
     protected const FAKE_WEEK_COUNT = 16;
 
+    /** Bulk-insert pick rows in batches of this size instead of one INSERT each. */
+    protected const INSERT_CHUNK    = 500;
+
     // Hit rates assigned randomly across users — produces a realistic spread.
     protected const HIT_RATES = [0.82, 0.75, 0.70, 0.65, 0.60, 0.55, 0.50];
 
@@ -83,7 +86,8 @@ class TestDataSeeder
         $weeksById = Week::query()->whereIn('id', $weekIds)->get()->keyBy('id');
 
         foreach ($weekIds as $weekId) {
-            $weekEvents = $eventsByWeek[$weekId];
+            $weekEvents   = $eventsByWeek[$weekId];
+            $weekPickRows = [];
 
             foreach ($userIds as $userId) {
                 $hitRate = $hitRates[$userId];
@@ -102,7 +106,7 @@ class TestDataSeeder
                         $isCorrect = ($outcome === $event->result);
                     }
 
-                    Pick::query()->insert([
+                    $weekPickRows[] = [
                         'user_id'          => $userId,
                         'event_id'         => $event->id,
                         'selected_outcome' => $outcome,
@@ -110,10 +114,17 @@ class TestDataSeeder
                         'confidence'       => null,
                         'created_at'       => Carbon::now(),
                         'updated_at'       => Carbon::now(),
-                    ]);
+                    ];
 
                     $picksInserted++;
                 }
+            }
+
+            // Bulk-insert this week's picks in chunks instead of one INSERT per
+            // row (was ~users × events INSERTs per week — 12 800+ across a fake
+            // season). Done before score roll-up so the scores see the rows.
+            foreach (array_chunk($weekPickRows, self::INSERT_CHUNK) as $chunk) {
+                Pick::query()->insert($chunk);
             }
 
             // Roll up week scores
@@ -220,6 +231,8 @@ class TestDataSeeder
                 $gameDate->addHours(2);
             }
 
+            $weekPickRows = [];
+
             foreach ($userIds as $userId) {
                 $hitRate = $hitRates[$userId];
 
@@ -229,7 +242,7 @@ class TestDataSeeder
                         ? $results[$eventId]
                         : ($results[$eventId] === 'home' ? 'away' : 'home');
 
-                    Pick::query()->insert([
+                    $weekPickRows[] = [
                         'user_id'          => $userId,
                         'event_id'         => $eventId,
                         'selected_outcome' => $outcome,
@@ -237,11 +250,19 @@ class TestDataSeeder
                         'confidence'       => null,
                         'created_at'       => Carbon::now(),
                         'updated_at'       => Carbon::now(),
-                    ]);
+                    ];
 
                     $picksInserted++;
                 }
+            }
 
+            // Bulk-insert this week's picks in chunks instead of one INSERT per
+            // row, then roll up scores once the rows exist.
+            foreach (array_chunk($weekPickRows, self::INSERT_CHUNK) as $chunk) {
+                Pick::query()->insert($chunk);
+            }
+
+            foreach ($userIds as $userId) {
                 $this->upsertScore($userId, $week->id, $season->id);
             }
 

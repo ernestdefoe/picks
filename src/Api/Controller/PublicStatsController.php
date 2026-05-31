@@ -54,9 +54,11 @@ class PublicStatsController implements RequestHandlerInterface
         $scoredPicks = Pick::whereNotNull('is_correct');
         $avgAccuracyAllTime = null;
 
-        if ($scoredPicks->count() > 0) {
+        // Count once and reuse — the builder was previously executed twice
+        // (once for the >0 guard, once for $total), firing the same COUNT twice.
+        $total = $scoredPicks->count();
+        if ($total > 0) {
             $correct = (clone $scoredPicks)->where('is_correct', true)->count();
-            $total   = $scoredPicks->count();
             $avgAccuracyAllTime = round($correct / $total * 100, 1);
         }
 
@@ -215,11 +217,23 @@ class PublicStatsController implements RequestHandlerInterface
 
                 $baseUrl = rtrim($this->settings->get('url', ''), '/');
 
+                // Resolve every referenced team in ONE query (matched on slug OR
+                // abbreviation) instead of a lookup per fan-count row — up to 10
+                // SELECTs on this public, every-page-load endpoint.
+                $footballTeams = $fanCounts->pluck('football_team')->filter()->unique()->values()->all();
+                $teamRecords = ! empty($footballTeams)
+                    ? Team::where(function ($q) use ($footballTeams) {
+                        $q->whereIn('slug', $footballTeams)
+                          ->orWhereIn('abbreviation', $footballTeams);
+                    })->get()
+                    : collect();
+                $teamsBySlug = $teamRecords->keyBy('slug');
+                $teamsByAbbr = $teamRecords->keyBy('abbreviation');
+
                 foreach ($fanCounts as $row) {
-                    // Look up the team record by slug/abbreviation
-                    $team = Team::where('slug', $row->football_team)
-                        ->orWhere('abbreviation', $row->football_team)
-                        ->first();
+                    // Look up the team record by slug/abbreviation from the map
+                    $team = $teamsBySlug->get($row->football_team)
+                        ?? $teamsByAbbr->get($row->football_team);
 
                     $mostFollowedTeams[] = [
                         'football_team' => $row->football_team,
