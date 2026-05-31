@@ -22,7 +22,7 @@ class RefreshTeamLogoController implements RequestHandlerInterface
     {
         RequestUtil::getActor($request)->assertCan('picks.manage');
 
-        $id   = Arr::get($request->getQueryParams(), 'id');
+        $id   = (int) Arr::get($request->getAttribute('routeParameters'), 'id', 0);
         $team = Team::findOrFail($id);
 
         if ($team->logo_custom) {

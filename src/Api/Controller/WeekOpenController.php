@@ -16,7 +16,7 @@ class WeekOpenController implements RequestHandlerInterface
     {
         RequestUtil::getActor($request)->assertCan('picks.manage');
 
-        $weekId = (int) ($request->getQueryParams()['id'] ?? 0);
+        $weekId = (int) Arr::get($request->getAttribute('routeParameters'), 'id', 0);
         $week   = Week::find($weekId);
 
         if (! $week) {

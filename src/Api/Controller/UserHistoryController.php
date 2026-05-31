@@ -83,152 +83,16 @@ class UserHistoryController implements RequestHandlerInterface
                 ->get(['week_id', 'user_id', 'total_points'])
                 ->groupBy('week_id');
 
-            // ── All-time stats ────────────────────────────────────────────────
-            $alltimeRow = UserScore::query()
-                ->where('user_id', $userId)
-                ->whereNull('week_id')
-                ->whereNull('season_id')
-                ->first();
-
-            $alltimeRank         = null;
-            $alltimeTotalPlayers = 0;
-
-            if ($alltimeRow && $alltimeRow->total_picks > 0) {
-                $alltimeRank         = $this->rankIn($alltimeScores, $alltimeRow->total_points);
-                $alltimeTotalPlayers = $alltimeScores->count();
-            }
-
-            // ── Longest correct streak across all picks ───────────────────────
-            $longestStreak = $this->calculateLongestStreak($userId);
-
-            // ── Best single week ──────────────────────────────────────────────
-            $bestWeekRow = UserScore::query()
-                ->join('picks_weeks', 'picks_user_scores.week_id', '=', 'picks_weeks.id')
-                ->join('picks_seasons', 'picks_weeks.season_id', '=', 'picks_seasons.id')
-                ->where('picks_user_scores.user_id', $userId)
-                ->whereNotNull('picks_user_scores.week_id')
-                ->where('picks_user_scores.total_picks', '>', 0)
-                ->orderByDesc('picks_user_scores.accuracy')
-                ->orderByDesc('picks_user_scores.total_points')
-                ->select([
-                    'picks_user_scores.id',
-                    'picks_user_scores.user_id',
-                    'picks_user_scores.season_id',
-                    'picks_user_scores.week_id',
-                    'picks_user_scores.total_picks',
-                    'picks_user_scores.correct_picks',
-                    'picks_user_scores.total_points',
-                    'picks_user_scores.accuracy',
-                    'picks_weeks.name as week_name',
-                    'picks_seasons.year as season_year',
-                ])
-                ->first();
-
-            $bestWeek = null;
-            if ($bestWeekRow) {
-                $bestWeek = [
-                    'week_name'     => $bestWeekRow->week_name,
-                    'season_year'   => (int) $bestWeekRow->season_year,
-                    'accuracy'      => (float) $bestWeekRow->accuracy,
-                    'correct_picks' => (int) $bestWeekRow->correct_picks,
-                    'total_picks'   => (int) $bestWeekRow->total_picks,
-                    'total_points'  => (int) $bestWeekRow->total_points,
-                ];
-            }
-
-            // ── Season details ────────────────────────────────────────────────
-            $seasonsData = [];
-
-            foreach ($seasons as $season) {
-                // Season-level score for this user
-                $seasonScore = UserScore::query()
-                    ->where('user_id', $userId)
-                    ->where('season_id', $season->id)
-                    ->whereNull('week_id')
-                    ->first();
-
-                // Season rank — from the pre-loaded collection (no per-season query)
-                $seasonRank         = null;
-                $seasonTotalPlayers = 0;
-                $seasonScopeScores  = $seasonScoresBySeason->get($season->id, collect());
-
-                if ($seasonScore && $seasonScore->total_picks > 0) {
-                    $seasonRank         = $this->rankIn($seasonScopeScores, $seasonScore->total_points);
-                    $seasonTotalPlayers = $seasonScopeScores->count();
-                }
-
-                // All weeks in this season — left join user scores so every week
-                // appears regardless of whether the user has picks yet.
-                $weekScores = Week::query()
-                    ->leftJoin('picks_user_scores', function ($join) use ($userId) {
-                        $join->on('picks_user_scores.week_id', '=', 'picks_weeks.id')
-                             ->where('picks_user_scores.user_id', '=', $userId);
-                    })
-                    ->where('picks_weeks.season_id', $season->id)
-                    ->orderByRaw("CASE picks_weeks.season_type WHEN 'regular' THEN 0 ELSE 1 END")
-                    ->orderByDesc('picks_weeks.week_number')
-                    ->selectRaw(
-                        'picks_weeks.id as week_id, picks_weeks.name as week_name, picks_weeks.week_number, '
-                        . 'COALESCE(picks_user_scores.total_picks, 0) as total_picks, '
-                        . 'COALESCE(picks_user_scores.correct_picks, 0) as correct_picks, '
-                        . 'COALESCE(picks_user_scores.total_points, 0) as total_points, '
-                        . 'COALESCE(picks_user_scores.accuracy, 0.00) as accuracy'
-                    )
-                    ->get();
-
-                $weeksData = [];
-                foreach ($weekScores as $ws) {
-                    // Week rank — from the pre-loaded collection (no per-week query)
-                    $weekRank = null;
-                    if ($ws->total_picks > 0) {
-                        $weekRank = $this->rankIn(
-                            $weekScoresByWeek->get($ws->week_id, collect()),
-                            $ws->total_points
-                        );
-                    }
-
-                    $weeksData[] = [
-                        'week_id'       => (int) $ws->week_id,
-                        'week_name'     => $ws->week_name,
-                        'week_number'   => (int) $ws->week_number,
-                        'is_current'    => ((int) $ws->week_id === (int) $currentWeekId),
-                        'total_picks'   => (int) $ws->total_picks,
-                        'correct_picks' => (int) $ws->correct_picks,
-                        'total_points'  => (int) $ws->total_points,
-                        'accuracy'      => (float) $ws->accuracy,
-                        'rank'          => $weekRank,
-                    ];
-                }
-
-                $seasonsData[] = [
-                    'season_id'    => (int) $season->id,
-                    'name'         => $season->name,
-                    'year'         => (int) $season->year,
-                    'is_current'   => ((int) $season->id === (int) $currentSeasonId),
-                    'stats'        => $seasonScore ? [
-                        'total_picks'   => (int) $seasonScore->total_picks,
-                        'correct_picks' => (int) $seasonScore->correct_picks,
-                        'total_points'  => (int) $seasonScore->total_points,
-                        'accuracy'      => (float) $seasonScore->accuracy,
-                        'rank'          => $seasonRank,
-                        'total_players' => $seasonTotalPlayers,
-                    ] : null,
-                    'weeks'        => $weeksData,
-                ];
-            }
-
             return new JsonResponse([
-                'alltime' => $alltimeRow ? [
-                    'total_picks'    => (int) $alltimeRow->total_picks,
-                    'correct_picks'  => (int) $alltimeRow->correct_picks,
-                    'total_points'   => (int) $alltimeRow->total_points,
-                    'accuracy'       => (float) $alltimeRow->accuracy,
-                    'rank'           => $alltimeRank,
-                    'total_players'  => $alltimeTotalPlayers,
-                    'longest_streak' => $longestStreak,
-                    'best_week'      => $bestWeek,
-                ] : null,
-                'seasons' => $seasonsData,
+                'alltime' => $this->buildAlltimeBlock($userId, $alltimeScores),
+                'seasons' => $this->buildSeasonsBlock(
+                    $userId,
+                    $seasons,
+                    $seasonScoresBySeason,
+                    $weekScoresByWeek,
+                    $currentSeasonId,
+                    $currentWeekId
+                ),
             ]);
 
         } catch (\Exception $e) {
@@ -236,6 +100,175 @@ class UserHistoryController implements RequestHandlerInterface
 
             return new JsonResponse(['error' => 'Failed to load history.'], 500);
         }
+    }
+
+    /**
+     * All-time stats block: totals, rank, longest streak and best week.
+     * Returns null when the user has no all-time score row.
+     */
+    private function buildAlltimeBlock(int $userId, Collection $alltimeScores): ?array
+    {
+        $alltimeRow = UserScore::query()
+            ->where('user_id', $userId)
+            ->whereNull('week_id')
+            ->whereNull('season_id')
+            ->first();
+
+        if (! $alltimeRow) {
+            return null;
+        }
+
+        $alltimeRank         = null;
+        $alltimeTotalPlayers = 0;
+        if ($alltimeRow->total_picks > 0) {
+            $alltimeRank         = $this->rankIn($alltimeScores, $alltimeRow->total_points);
+            $alltimeTotalPlayers = $alltimeScores->count();
+        }
+
+        return [
+            'total_picks'    => (int) $alltimeRow->total_picks,
+            'correct_picks'  => (int) $alltimeRow->correct_picks,
+            'total_points'   => (int) $alltimeRow->total_points,
+            'accuracy'       => (float) $alltimeRow->accuracy,
+            'rank'           => $alltimeRank,
+            'total_players'  => $alltimeTotalPlayers,
+            'longest_streak' => $this->buildStreakStat($userId),
+            'best_week'      => $this->buildBestWeek($userId),
+        ];
+    }
+
+    /** The user's single best week (by accuracy then points), or null. */
+    private function buildBestWeek(int $userId): ?array
+    {
+        $bestWeekRow = UserScore::query()
+            ->join('picks_weeks', 'picks_user_scores.week_id', '=', 'picks_weeks.id')
+            ->join('picks_seasons', 'picks_weeks.season_id', '=', 'picks_seasons.id')
+            ->where('picks_user_scores.user_id', $userId)
+            ->whereNotNull('picks_user_scores.week_id')
+            ->where('picks_user_scores.total_picks', '>', 0)
+            ->orderByDesc('picks_user_scores.accuracy')
+            ->orderByDesc('picks_user_scores.total_points')
+            ->select([
+                'picks_user_scores.total_picks',
+                'picks_user_scores.correct_picks',
+                'picks_user_scores.total_points',
+                'picks_user_scores.accuracy',
+                'picks_weeks.name as week_name',
+                'picks_seasons.year as season_year',
+            ])
+            ->first();
+
+        if (! $bestWeekRow) {
+            return null;
+        }
+
+        return [
+            'week_name'     => $bestWeekRow->week_name,
+            'season_year'   => (int) $bestWeekRow->season_year,
+            'accuracy'      => (float) $bestWeekRow->accuracy,
+            'correct_picks' => (int) $bestWeekRow->correct_picks,
+            'total_picks'   => (int) $bestWeekRow->total_picks,
+            'total_points'  => (int) $bestWeekRow->total_points,
+        ];
+    }
+
+    /**
+     * Per-season blocks with their week breakdowns. The user's season-level
+     * scores are preloaded in one query (keyed by season_id) instead of a
+     * separate first() per season.
+     */
+    private function buildSeasonsBlock(
+        int $userId,
+        Collection $seasons,
+        Collection $seasonScoresBySeason,
+        Collection $weekScoresByWeek,
+        ?int $currentSeasonId,
+        ?int $currentWeekId
+    ): array {
+        // Preload this user's season-level scores (one query, not one per season).
+        $userSeasonScores = UserScore::query()
+            ->where('user_id', $userId)
+            ->whereNull('week_id')
+            ->whereNotNull('season_id')
+            ->get()
+            ->keyBy('season_id');
+
+        $seasonsData = [];
+
+        foreach ($seasons as $season) {
+            $seasonScore = $userSeasonScores->get($season->id);
+
+            // Season rank — from the pre-loaded collection (no per-season query)
+            $seasonRank         = null;
+            $seasonTotalPlayers = 0;
+            $seasonScopeScores  = $seasonScoresBySeason->get($season->id, collect());
+
+            if ($seasonScore && $seasonScore->total_picks > 0) {
+                $seasonRank         = $this->rankIn($seasonScopeScores, $seasonScore->total_points);
+                $seasonTotalPlayers = $seasonScopeScores->count();
+            }
+
+            // All weeks in this season — left join user scores so every week
+            // appears regardless of whether the user has picks yet.
+            $weekScores = Week::query()
+                ->leftJoin('picks_user_scores', function ($join) use ($userId) {
+                    $join->on('picks_user_scores.week_id', '=', 'picks_weeks.id')
+                         ->where('picks_user_scores.user_id', '=', $userId);
+                })
+                ->where('picks_weeks.season_id', $season->id)
+                ->orderByRaw("CASE picks_weeks.season_type WHEN 'regular' THEN 0 ELSE 1 END")
+                ->orderByDesc('picks_weeks.week_number')
+                ->selectRaw(
+                    'picks_weeks.id as week_id, picks_weeks.name as week_name, picks_weeks.week_number, '
+                    . 'COALESCE(picks_user_scores.total_picks, 0) as total_picks, '
+                    . 'COALESCE(picks_user_scores.correct_picks, 0) as correct_picks, '
+                    . 'COALESCE(picks_user_scores.total_points, 0) as total_points, '
+                    . 'COALESCE(picks_user_scores.accuracy, 0.00) as accuracy'
+                )
+                ->get();
+
+            $weeksData = [];
+            foreach ($weekScores as $ws) {
+                // Week rank — from the pre-loaded collection (no per-week query)
+                $weekRank = null;
+                if ($ws->total_picks > 0) {
+                    $weekRank = $this->rankIn(
+                        $weekScoresByWeek->get($ws->week_id, collect()),
+                        $ws->total_points
+                    );
+                }
+
+                $weeksData[] = [
+                    'week_id'       => (int) $ws->week_id,
+                    'week_name'     => $ws->week_name,
+                    'week_number'   => (int) $ws->week_number,
+                    'is_current'    => ((int) $ws->week_id === (int) $currentWeekId),
+                    'total_picks'   => (int) $ws->total_picks,
+                    'correct_picks' => (int) $ws->correct_picks,
+                    'total_points'  => (int) $ws->total_points,
+                    'accuracy'      => (float) $ws->accuracy,
+                    'rank'          => $weekRank,
+                ];
+            }
+
+            $seasonsData[] = [
+                'season_id'    => (int) $season->id,
+                'name'         => $season->name,
+                'year'         => (int) $season->year,
+                'is_current'   => ((int) $season->id === (int) $currentSeasonId),
+                'stats'        => $seasonScore ? [
+                    'total_picks'   => (int) $seasonScore->total_picks,
+                    'correct_picks' => (int) $seasonScore->correct_picks,
+                    'total_points'  => (int) $seasonScore->total_points,
+                    'accuracy'      => (float) $seasonScore->accuracy,
+                    'rank'          => $seasonRank,
+                    'total_players' => $seasonTotalPlayers,
+                ] : null,
+                'weeks'        => $weeksData,
+            ];
+        }
+
+        return $seasonsData;
     }
 
     /**
@@ -253,7 +286,7 @@ class UserHistoryController implements RequestHandlerInterface
      * Walks picks ordered by their event's match_date ascending. Plucks only
      * the is_correct flag, so memory stays bounded regardless of pick volume.
      */
-    private function calculateLongestStreak(int $userId): int
+    private function buildStreakStat(int $userId): int
     {
         $picks = Pick::query()
             ->join('picks_events', 'picks_picks.event_id', '=', 'picks_events.id')

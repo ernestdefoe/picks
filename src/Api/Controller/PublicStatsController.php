@@ -149,33 +149,40 @@ class PublicStatsController implements RequestHandlerInterface
 
             $baseUrl = rtrim($this->settings->get('url', ''), '/');
 
-            foreach ($gameCounts as $row) {
-                $homeTeam = Team::find($row->home_team_id);
-                $awayTeam = Team::find($row->away_team_id);
+            // Resolve every referenced team in ONE query instead of two
+            // Team::find() calls per game (up to 10 SELECTs on this public,
+            // every-page-load endpoint).
+            $teamIds = $gameCounts
+                ->flatMap(fn ($row) => [$row->home_team_id, $row->away_team_id])
+                ->filter()
+                ->unique()
+                ->all();
+            $teams = Team::whereIn('id', $teamIds)->get()->keyBy('id');
 
+            $teamPayload = function ($teamId) use ($teams, $baseUrl) {
+                $team = $teams->get($teamId);
+                if (! $team) {
+                    return null;
+                }
+
+                return [
+                    'name'          => $team->name,
+                    'abbreviation'  => $team->abbreviation,
+                    'logo_url'      => $team->logo_path
+                        ? $baseUrl . '/' . ltrim($team->logo_path, '/')
+                        : null,
+                    'logo_dark_url' => $team->logo_dark_path
+                        ? $baseUrl . '/' . ltrim($team->logo_dark_path, '/')
+                        : null,
+                ];
+            };
+
+            foreach ($gameCounts as $row) {
                 $mostPickedGames[] = [
                     'event_id'    => $row->event_id,
                     'total_picks' => (int) $row->total_picks,
-                    'home_team'   => $homeTeam ? [
-                        'name'          => $homeTeam->name,
-                        'abbreviation'  => $homeTeam->abbreviation,
-                        'logo_url'      => $homeTeam->logo_path
-                            ? $baseUrl . '/' . ltrim($homeTeam->logo_path, '/')
-                            : null,
-                        'logo_dark_url' => $homeTeam->logo_dark_path
-                            ? $baseUrl . '/' . ltrim($homeTeam->logo_dark_path, '/')
-                            : null,
-                    ] : null,
-                    'away_team'   => $awayTeam ? [
-                        'name'          => $awayTeam->name,
-                        'abbreviation'  => $awayTeam->abbreviation,
-                        'logo_url'      => $awayTeam->logo_path
-                            ? $baseUrl . '/' . ltrim($awayTeam->logo_path, '/')
-                            : null,
-                        'logo_dark_url' => $awayTeam->logo_dark_path
-                            ? $baseUrl . '/' . ltrim($awayTeam->logo_dark_path, '/')
-                            : null,
-                    ] : null,
+                    'home_team'   => $teamPayload($row->home_team_id),
+                    'away_team'   => $teamPayload($row->away_team_id),
                 ];
             }
         }

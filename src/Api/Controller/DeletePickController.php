@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
+use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -18,7 +19,7 @@ class DeletePickController implements RequestHandlerInterface
         $actor->assertRegistered();
         $actor->assertCan('picks.makePicks');
 
-        $eventId = (int) ($request->getQueryParams()['id'] ?? 0);
+        $eventId = (int) Arr::get($request->getAttribute('routeParameters'), 'id', 0);
 
         $event = PickEvent::find($eventId);
 

@@ -67,8 +67,15 @@ class ScorePicksJob extends AbstractJob
     }
 
     /**
-     * After all scores are updated, assign current ranks and store
-     * the previous rank so the leaderboard can show movement arrows.
+     * After all scores are updated, recompute each scope's ranking and record
+     * movement. The prior pass's rank (current_rank) rolls into previous_rank
+     * and this pass's rank becomes current_rank, so the leaderboard's movement
+     * arrows reflect the change since the last scoring — previous_rank used to
+     * freeze at the first-ever rank.
+     *
+     * Only rows whose stored ranks actually change are written, in a single
+     * upsert per scope (was one save() per row — up to ~600 UPDATEs for a
+     * 200-player game across the three scopes).
      */
     private function updateRankMovements(?int $weekId, ?int $seasonId): void
     {
@@ -98,17 +105,35 @@ class ScorePicksJob extends AbstractJob
 
             $scores = $query->orderByDesc('total_points')
                             ->orderByDesc('correct_picks')
-                            ->get();
+                            ->get(['id', 'user_id', 'previous_rank', 'current_rank']);
 
-            foreach ($scores as $rank => $score) {
-                $currentRank = $rank + 1;
+            $rows = [];
 
-                // Only update previous_rank when the rank actually changes
-                if ($score->previous_rank !== $currentRank) {
-                    // Store old rank as previous before overwriting
-                    $score->previous_rank = $score->previous_rank ?? $currentRank;
-                    $score->save();
+            foreach ($scores as $index => $score) {
+                $currentRank  = $index + 1;
+                $previousRank = $score->current_rank !== null ? (int) $score->current_rank : $currentRank;
+
+                $unchanged = $score->current_rank !== null
+                    && (int) $score->current_rank === $currentRank
+                    && $score->previous_rank !== null
+                    && (int) $score->previous_rank === $previousRank;
+
+                if ($unchanged) {
+                    continue;
                 }
+
+                $rows[] = [
+                    'id'            => $score->id,
+                    'user_id'       => $score->user_id,
+                    'previous_rank' => $previousRank,
+                    'current_rank'  => $currentRank,
+                ];
+            }
+
+            if (! empty($rows)) {
+                // user_id is included so the (never-taken) INSERT branch stays
+                // valid; only the two rank columns are written on conflict.
+                UserScore::query()->upsert($rows, ['id'], ['previous_rank', 'current_rank']);
             }
         }
     }

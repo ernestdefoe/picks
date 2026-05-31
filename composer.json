@@ -22,7 +22,9 @@
         "source": "https://github.com/ernestdefoe/picks"
     },
     "require": {
-        "flarum/core": "^2.0.0-beta.8"
+        "flarum/core": "^2.0.0-beta.8",
+        "guzzlehttp/guzzle": "^7.0",
+        "intervention/image": "^3.0"
     },
     "autoload": {
         "psr-4": {

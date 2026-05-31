@@ -25,7 +25,7 @@ class EnterResultController implements RequestHandlerInterface
     {
         RequestUtil::getActor($request)->assertCan('picks.manage');
 
-        $id    = Arr::get($request->getQueryParams(), 'id');
+        $id    = (int) Arr::get($request->getAttribute('routeParameters'), 'id', 0);
         $event = PickEvent::findOrFail($id);
 
         $body      = $request->getParsedBody() ?? [];
