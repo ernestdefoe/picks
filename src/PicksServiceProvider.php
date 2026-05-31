@@ -3,11 +3,12 @@
 namespace Resofire\Picks;
 
 use Flarum\Foundation\AbstractServiceProvider;
-use Flarum\Foundation\Paths;
 use Flarum\Settings\SettingsRepositoryInterface;
+use GuzzleHttp\Client as HttpClient;
+use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
 use Illuminate\Contracts\Queue\Queue;
-use Intervention\Image\ImageManager;
 use Resofire\Picks\Api\Controller\PublicStatsController;
+use Resofire\Picks\Service\CurrentSeasonService;
 use Resofire\Picks\Api\Controller\WeekOpenController;
 use Resofire\Picks\Api\Controller\DeletePickController;
 use Resofire\Picks\Api\Controller\EnterResultController;
@@ -66,7 +67,8 @@ class PicksServiceProvider extends AbstractServiceProvider
 
         $this->container->singleton(PublicStatsController::class, function ($container) {
             return new PublicStatsController(
-                $container->make(SettingsRepositoryInterface::class)
+                $container->make(SettingsRepositoryInterface::class),
+                $container->make(CurrentSeasonService::class)
             );
         });
 
@@ -93,14 +95,16 @@ class PicksServiceProvider extends AbstractServiceProvider
 
         $this->container->singleton(CfbdService::class, function ($container) {
             return new CfbdService(
-                $container->make(SettingsRepositoryInterface::class)
+                $container->make(SettingsRepositoryInterface::class),
+                $container->make(HttpClient::class)
             );
         });
 
         $this->container->singleton(LogoService::class, function ($container) {
             return new LogoService(
                 $container->make('image'),
-                $container->make(Paths::class),
+                $container->make(FilesystemFactory::class),
+                $container->make(HttpClient::class),
                 $container->make(SettingsRepositoryInterface::class)
             );
         });

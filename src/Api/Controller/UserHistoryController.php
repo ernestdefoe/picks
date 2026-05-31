@@ -3,12 +3,18 @@
 namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
-use Illuminate\Database\Capsule\Manager as DB;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
+use Resofire\Picks\Pick;
+use Resofire\Picks\Season;
+use Resofire\Picks\Service\CurrentSeasonService;
+use Resofire\Picks\UserScore;
+use Resofire\Picks\Week;
 
 /**
  * GET /picks/user-history?user_id=X
@@ -23,6 +29,12 @@ use Psr\Http\Server\RequestHandlerInterface;
  */
 class UserHistoryController implements RequestHandlerInterface
 {
+    public function __construct(
+        protected CurrentSeasonService $currentSeason,
+        protected LoggerInterface $log
+    ) {
+    }
+
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $actor  = RequestUtil::getActor($request);
@@ -42,77 +54,55 @@ class UserHistoryController implements RequestHandlerInterface
 
         try {
             // ── All seasons, newest first ─────────────────────────────────────
-            $seasons = DB::table('picks_seasons')
+            $seasons = Season::query()
                 ->orderByDesc('year')
                 ->get();
 
-            // ── Current season (has at least one unfinished game) ────────────
-            // Uses event status rather than is_open, which may stay true on
-            // past weeks after auto-unlock.
-            // Find the most recent season that has at least one unfinished game,
-            // then find the earliest unfinished week within that season.
-            // Scoping to a single season prevents future unplayed weeks in later
-            // seasons from being returned ahead of the true current week.
-            $currentSeason = DB::table('picks_seasons')
-                ->whereExists(function ($q) {
-                    $q->select(DB::raw(1))
-                      ->from('picks_weeks')
-                      ->join('picks_events', 'picks_events.week_id', '=', 'picks_weeks.id')
-                      ->whereColumn('picks_weeks.season_id', 'picks_seasons.id')
-                      ->whereIn('picks_events.status', ['scheduled', 'in_progress']);
-                })
-                ->orderByDesc('year')
-                ->first();
+            // ── Current week (shared via CurrentSeasonService) ───────────────
+            $currentWeek     = $this->currentSeason->getCurrentWeek();
+            $currentSeasonId = $currentWeek?->season_id;
+            $currentWeekId   = $currentWeek?->id;
 
-            $currentWeek = null;
-            if ($currentSeason) {
-                $currentWeek = DB::table('picks_weeks')
-                    ->where('season_id', $currentSeason->id)
-                    ->whereExists(function ($q) {
-                        $q->select(DB::raw(1))
-                          ->from('picks_events')
-                          ->whereColumn('picks_events.week_id', 'picks_weeks.id')
-                          ->whereIn('picks_events.status', ['scheduled', 'in_progress']);
-                    })
-                    ->orderByRaw("CASE season_type WHEN 'regular' THEN 0 ELSE 1 END")
-                    ->orderBy('week_number', 'asc')
-                    ->first();
-            }
+            // ── Batch-load every scored row once, grouped by scope, so ranks
+            // are computed in PHP instead of firing a COUNT query per week /
+            // per season (previously 30+ rank queries for a multi-season user).
+            $alltimeScores = UserScore::query()
+                ->whereNull('week_id')->whereNull('season_id')
+                ->where('total_picks', '>', 0)
+                ->get(['user_id', 'total_points']);
 
-            $currentSeasonId = $currentWeek?->season_id ?? null;
-            $currentWeekId   = $currentWeek?->id ?? null;
+            $seasonScoresBySeason = UserScore::query()
+                ->whereNull('week_id')->whereNotNull('season_id')
+                ->where('total_picks', '>', 0)
+                ->get(['season_id', 'user_id', 'total_points'])
+                ->groupBy('season_id');
+
+            $weekScoresByWeek = UserScore::query()
+                ->whereNotNull('week_id')
+                ->where('total_picks', '>', 0)
+                ->get(['week_id', 'user_id', 'total_points'])
+                ->groupBy('week_id');
 
             // ── All-time stats ────────────────────────────────────────────────
-            $alltimeRow = DB::table('picks_user_scores')
+            $alltimeRow = UserScore::query()
                 ->where('user_id', $userId)
                 ->whereNull('week_id')
                 ->whereNull('season_id')
                 ->first();
 
-            $alltimeRank       = null;
+            $alltimeRank         = null;
             $alltimeTotalPlayers = 0;
 
             if ($alltimeRow && $alltimeRow->total_picks > 0) {
-                $above = DB::table('picks_user_scores')
-                    ->whereNull('week_id')
-                    ->whereNull('season_id')
-                    ->where('total_picks', '>', 0)
-                    ->where('total_points', '>', $alltimeRow->total_points)
-                    ->count();
-                $alltimeRank = $above + 1;
-
-                $alltimeTotalPlayers = DB::table('picks_user_scores')
-                    ->whereNull('week_id')
-                    ->whereNull('season_id')
-                    ->where('total_picks', '>', 0)
-                    ->count();
+                $alltimeRank         = $this->rankIn($alltimeScores, $alltimeRow->total_points);
+                $alltimeTotalPlayers = $alltimeScores->count();
             }
 
             // ── Longest correct streak across all picks ───────────────────────
             $longestStreak = $this->calculateLongestStreak($userId);
 
             // ── Best single week ──────────────────────────────────────────────
-            $bestWeekRow = DB::table('picks_user_scores')
+            $bestWeekRow = UserScore::query()
                 ->join('picks_weeks', 'picks_user_scores.week_id', '=', 'picks_weeks.id')
                 ->join('picks_seasons', 'picks_weeks.season_id', '=', 'picks_seasons.id')
                 ->where('picks_user_scores.user_id', $userId)
@@ -151,35 +141,25 @@ class UserHistoryController implements RequestHandlerInterface
 
             foreach ($seasons as $season) {
                 // Season-level score for this user
-                $seasonScore = DB::table('picks_user_scores')
+                $seasonScore = UserScore::query()
                     ->where('user_id', $userId)
                     ->where('season_id', $season->id)
                     ->whereNull('week_id')
                     ->first();
 
-                // Season rank
-                $seasonRank        = null;
+                // Season rank — from the pre-loaded collection (no per-season query)
+                $seasonRank         = null;
                 $seasonTotalPlayers = 0;
+                $seasonScopeScores  = $seasonScoresBySeason->get($season->id, collect());
 
                 if ($seasonScore && $seasonScore->total_picks > 0) {
-                    $above = DB::table('picks_user_scores')
-                        ->where('season_id', $season->id)
-                        ->whereNull('week_id')
-                        ->where('total_picks', '>', 0)
-                        ->where('total_points', '>', $seasonScore->total_points)
-                        ->count();
-                    $seasonRank = $above + 1;
-
-                    $seasonTotalPlayers = DB::table('picks_user_scores')
-                        ->where('season_id', $season->id)
-                        ->whereNull('week_id')
-                        ->where('total_picks', '>', 0)
-                        ->count();
+                    $seasonRank         = $this->rankIn($seasonScopeScores, $seasonScore->total_points);
+                    $seasonTotalPlayers = $seasonScopeScores->count();
                 }
 
                 // All weeks in this season — left join user scores so every week
                 // appears regardless of whether the user has picks yet.
-                $weekScores = DB::table('picks_weeks')
+                $weekScores = Week::query()
                     ->leftJoin('picks_user_scores', function ($join) use ($userId) {
                         $join->on('picks_user_scores.week_id', '=', 'picks_weeks.id')
                              ->where('picks_user_scores.user_id', '=', $userId);
@@ -187,28 +167,24 @@ class UserHistoryController implements RequestHandlerInterface
                     ->where('picks_weeks.season_id', $season->id)
                     ->orderByRaw("CASE picks_weeks.season_type WHEN 'regular' THEN 0 ELSE 1 END")
                     ->orderByDesc('picks_weeks.week_number')
-                    ->select([
-                        'picks_weeks.id as week_id',
-                        'picks_weeks.name as week_name',
-                        'picks_weeks.week_number',
-                        DB::raw('COALESCE(picks_user_scores.total_picks, 0) as total_picks'),
-                        DB::raw('COALESCE(picks_user_scores.correct_picks, 0) as correct_picks'),
-                        DB::raw('COALESCE(picks_user_scores.total_points, 0) as total_points'),
-                        DB::raw('COALESCE(picks_user_scores.accuracy, 0.00) as accuracy'),
-                    ])
+                    ->selectRaw(
+                        'picks_weeks.id as week_id, picks_weeks.name as week_name, picks_weeks.week_number, '
+                        . 'COALESCE(picks_user_scores.total_picks, 0) as total_picks, '
+                        . 'COALESCE(picks_user_scores.correct_picks, 0) as correct_picks, '
+                        . 'COALESCE(picks_user_scores.total_points, 0) as total_points, '
+                        . 'COALESCE(picks_user_scores.accuracy, 0.00) as accuracy'
+                    )
                     ->get();
 
                 $weeksData = [];
                 foreach ($weekScores as $ws) {
-                    // Week rank — only calculated if user has picks
+                    // Week rank — from the pre-loaded collection (no per-week query)
                     $weekRank = null;
                     if ($ws->total_picks > 0) {
-                        $above = DB::table('picks_user_scores')
-                            ->where('week_id', $ws->week_id)
-                            ->where('total_picks', '>', 0)
-                            ->where('total_points', '>', $ws->total_points)
-                            ->count();
-                        $weekRank = $above + 1;
+                        $weekRank = $this->rankIn(
+                            $weekScoresByWeek->get($ws->week_id, collect()),
+                            $ws->total_points
+                        );
                     }
 
                     $weeksData[] = [
@@ -256,17 +232,30 @@ class UserHistoryController implements RequestHandlerInterface
             ]);
 
         } catch (\Exception $e) {
+            $this->log->error('[Picks] UserHistory failed: ' . $e->getMessage(), ['exception' => $e]);
+
             return new JsonResponse(['error' => 'Failed to load history.'], 500);
         }
     }
 
     /**
+     * The 1-based rank of $points within a pre-loaded collection of score rows
+     * (each having a `total_points`), computed in PHP so callers avoid a COUNT
+     * query per week / per season.
+     */
+    private function rankIn(Collection $scores, $points): int
+    {
+        return $scores->where('total_points', '>', $points)->count() + 1;
+    }
+
+    /**
      * Calculate the longest consecutive correct picks streak for a user.
-     * Walks picks ordered by their event's match_date ascending.
+     * Walks picks ordered by their event's match_date ascending. Plucks only
+     * the is_correct flag, so memory stays bounded regardless of pick volume.
      */
     private function calculateLongestStreak(int $userId): int
     {
-        $picks = DB::table('picks_picks')
+        $picks = Pick::query()
             ->join('picks_events', 'picks_picks.event_id', '=', 'picks_events.id')
             ->where('picks_picks.user_id', $userId)
             ->whereNotNull('picks_picks.is_correct')

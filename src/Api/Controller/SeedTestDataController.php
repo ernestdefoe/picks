@@ -4,15 +4,18 @@ namespace Resofire\Picks\Api\Controller;
 
 use Carbon\Carbon;
 use Flarum\Http\RequestUtil;
+use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\User\User;
-use Illuminate\Database\Capsule\Manager as DB;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Resofire\Picks\Pick;
 use Resofire\Picks\PickEvent;
 use Resofire\Picks\Season;
+use Resofire\Picks\Service\ScoreAggregator;
+use Resofire\Picks\Team;
 use Resofire\Picks\UserScore;
 use Resofire\Picks\Week;
 
@@ -32,6 +35,19 @@ class SeedTestDataController implements RequestHandlerInterface
 
     // Hit rates assigned randomly across users — produces a realistic leaderboard spread
     protected const HIT_RATES = [0.82, 0.75, 0.70, 0.65, 0.60, 0.55, 0.50];
+
+    protected bool $confidenceMode;
+    protected string $confidencePenalty;
+
+    public function __construct(
+        protected ScoreAggregator $aggregator,
+        SettingsRepositoryInterface $settings
+    ) {
+        // Seeded scores must honour the same confidence settings as live
+        // scoring, so the Testing-tab leaderboard matches production behaviour.
+        $this->confidenceMode    = (bool) $settings->get('ernestdefoe-picks.confidence_mode', false);
+        $this->confidencePenalty = $settings->get('ernestdefoe-picks.confidence_penalty', 'none');
+    }
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
@@ -67,7 +83,7 @@ class SeedTestDataController implements RequestHandlerInterface
 
         $hitRates = $this->assignHitRates($userIds);
 
-        $events = DB::table('picks_events')->whereNotNull('week_id')->get();
+        $events = PickEvent::query()->whereNotNull('week_id')->get();
 
         if ($events->isEmpty()) {
             return new JsonResponse(['status' => 'error', 'message' => 'No events found in picks_events. Import your 2026 schedule first.']);
@@ -85,7 +101,7 @@ class SeedTestDataController implements RequestHandlerInterface
 
                 foreach ($weekEvents as $event) {
                     // Skip if pick already exists
-                    $exists = DB::table('picks_picks')
+                    $exists = Pick::query()
                         ->where('user_id', $userId)
                         ->where('event_id', $event->id)
                         ->exists();
@@ -101,7 +117,7 @@ class SeedTestDataController implements RequestHandlerInterface
                         $isCorrect = ($outcome === $event->result);
                     }
 
-                    DB::table('picks_picks')->insert([
+                    Pick::query()->insert([
                         'user_id'          => $userId,
                         'event_id'         => $event->id,
                         'selected_outcome' => $outcome,
@@ -124,7 +140,7 @@ class SeedTestDataController implements RequestHandlerInterface
         }
 
         // Roll up season + all-time
-        $season2026Id = DB::table('picks_weeks')->whereIn('id', $weekIds)->value('season_id');
+        $season2026Id = Week::query()->whereIn('id', $weekIds)->value('season_id');
         foreach ($userIds as $userId) {
             if ($season2026Id) $this->upsertScore($userId, null, $season2026Id);
             $this->upsertScore($userId, null, null);
@@ -144,7 +160,7 @@ class SeedTestDataController implements RequestHandlerInterface
             return new JsonResponse(['status' => 'error', 'message' => 'Fake 2025 season already exists. Use Clean Fake Data first.']);
         }
 
-        $teamIds = DB::table('picks_teams')->pluck('id')->toArray();
+        $teamIds = Team::query()->pluck('id')->toArray();
         if (count($teamIds) < 2) {
             return new JsonResponse(['status' => 'error', 'message' => 'Need at least 2 teams in picks_teams.']);
         }
@@ -196,7 +212,7 @@ class SeedTestDataController implements RequestHandlerInterface
                 $usedTeams[] = $awayId;
                 $result      = $this->randomOutcome();
 
-                $eventId = DB::table('picks_events')->insertGetId([
+                $eventId = PickEvent::query()->insertGetId([
                     'week_id'      => $week->id,
                     'home_team_id' => $homeId,
                     'away_team_id' => $awayId,
@@ -227,7 +243,7 @@ class SeedTestDataController implements RequestHandlerInterface
                         ? $results[$eventId]
                         : ($results[$eventId] === 'home' ? 'away' : 'home');
 
-                    DB::table('picks_picks')->insert([
+                    Pick::query()->insert([
                         'user_id'          => $userId,
                         'event_id'         => $eventId,
                         'selected_outcome' => $outcome,
@@ -269,15 +285,15 @@ class SeedTestDataController implements RequestHandlerInterface
         $weekIds = Week::where('season_id', $season->id)->pluck('id')->toArray();
 
         if (!empty($weekIds)) {
-            $eventIds = DB::table('picks_events')->whereIn('week_id', $weekIds)->pluck('id')->toArray();
+            $eventIds = PickEvent::query()->whereIn('week_id', $weekIds)->pluck('id')->toArray();
 
             if (!empty($eventIds)) {
-                DB::table('picks_picks')->whereIn('event_id', $eventIds)->delete();
-                DB::table('picks_events')->whereIn('id', $eventIds)->delete();
+                Pick::query()->whereIn('event_id', $eventIds)->delete();
+                PickEvent::query()->whereIn('id', $eventIds)->delete();
             }
 
-            DB::table('picks_user_scores')->whereIn('week_id', $weekIds)->delete();
-            DB::table('picks_user_scores')
+            UserScore::query()->whereIn('week_id', $weekIds)->delete();
+            UserScore::query()
                 ->where('season_id', $season->id)
                 ->whereNull('week_id')
                 ->delete();
@@ -303,23 +319,23 @@ class SeedTestDataController implements RequestHandlerInterface
     {
         // Wipe picks and scores for real 2026 events only.
         // Never deletes real events, weeks, or seasons.
-        $season2026 = DB::table('picks_seasons')->where('year', 2026)->first();
+        $season2026 = Season::query()->where('year', 2026)->first();
 
         $picksDeleted  = 0;
         $scoresDeleted = 0;
 
         if ($season2026) {
-            $weekIds = DB::table('picks_weeks')->where('season_id', $season2026->id)->pluck('id')->toArray();
+            $weekIds = Week::query()->where('season_id', $season2026->id)->pluck('id')->toArray();
 
             if (!empty($weekIds)) {
-                $eventIds = DB::table('picks_events')->whereIn('week_id', $weekIds)->pluck('id')->toArray();
+                $eventIds = PickEvent::query()->whereIn('week_id', $weekIds)->pluck('id')->toArray();
 
                 if (!empty($eventIds)) {
-                    $picksDeleted = DB::table('picks_picks')->whereIn('event_id', $eventIds)->delete();
+                    $picksDeleted = Pick::query()->whereIn('event_id', $eventIds)->delete();
                 }
 
-                $scoresDeleted += DB::table('picks_user_scores')->whereIn('week_id', $weekIds)->delete();
-                $scoresDeleted += DB::table('picks_user_scores')->where('season_id', $season2026->id)->whereNull('week_id')->delete();
+                $scoresDeleted += UserScore::query()->whereIn('week_id', $weekIds)->delete();
+                $scoresDeleted += UserScore::query()->where('season_id', $season2026->id)->whereNull('week_id')->delete();
             }
         }
 
@@ -327,21 +343,21 @@ class SeedTestDataController implements RequestHandlerInterface
         $fakeSeason = Season::where('year', self::FAKE_YEAR)->where('slug', self::FAKE_SLUG)->first();
         if ($fakeSeason) {
             $weekIds  = Week::where('season_id', $fakeSeason->id)->pluck('id')->toArray();
-            $eventIds = DB::table('picks_events')->whereIn('week_id', $weekIds)->pluck('id')->toArray();
+            $eventIds = PickEvent::query()->whereIn('week_id', $weekIds)->pluck('id')->toArray();
 
             if (!empty($eventIds)) {
-                $picksDeleted += DB::table('picks_picks')->whereIn('event_id', $eventIds)->delete();
-                DB::table('picks_events')->whereIn('id', $eventIds)->delete();
+                $picksDeleted += Pick::query()->whereIn('event_id', $eventIds)->delete();
+                PickEvent::query()->whereIn('id', $eventIds)->delete();
             }
 
-            DB::table('picks_user_scores')->whereIn('week_id', $weekIds)->delete();
-            DB::table('picks_user_scores')->where('season_id', $fakeSeason->id)->whereNull('week_id')->delete();
+            UserScore::query()->whereIn('week_id', $weekIds)->delete();
+            UserScore::query()->where('season_id', $fakeSeason->id)->whereNull('week_id')->delete();
             Week::whereIn('id', $weekIds)->delete();
             $fakeSeason->delete();
         }
 
         // Wipe all-time scores and recalculate (will be zeroed since no picks remain)
-        $scoresDeleted += DB::table('picks_user_scores')->whereNull('week_id')->whereNull('season_id')->delete();
+        $scoresDeleted += UserScore::query()->whereNull('week_id')->whereNull('season_id')->delete();
 
         return new JsonResponse([
             'status'  => 'success',
@@ -349,48 +365,23 @@ class SeedTestDataController implements RequestHandlerInterface
         ]);
     }
 
-    // ── Score calculation — mirrors ScorePicksJob exactly ─────────────────────
+    // ── Score calculation — delegates to the shared ScoreAggregator ───────────
 
+    /**
+     * Roll up a user's score for one scope via the shared ScoreAggregator, so
+     * the seeder produces exactly the same totals as live scoring (including
+     * confidence mode / penalty — which this method previously ignored).
+     */
     private function upsertScore(int $userId, ?int $weekId, ?int $seasonId): void
     {
-        $query = DB::table('picks_picks')
-            ->join('picks_events', 'picks_picks.event_id', '=', 'picks_events.id')
-            ->where('picks_picks.user_id', $userId)
-            ->whereNotNull('picks_picks.is_correct');
-
-        if ($weekId !== null) {
-            $query->where('picks_events.week_id', $weekId);
-        } elseif ($seasonId !== null) {
-            $query->join('picks_weeks', 'picks_events.week_id', '=', 'picks_weeks.id')
-                  ->where('picks_weeks.season_id', $seasonId);
-        }
-
-        $picks        = $query->get(['picks_picks.is_correct']);
-        $totalPicks   = $picks->count();
-        $correctPicks = $picks->where('is_correct', 1)->count();
-        $totalPoints  = $correctPicks; // confidence off: 1 correct = 1 point
-        $accuracy     = $totalPicks > 0 ? round($correctPicks / $totalPicks * 100, 2) : 0.0;
-
-        $scoreQuery = UserScore::where('user_id', $userId);
-
-        if ($weekId !== null) {
-            $scoreQuery->where('week_id', $weekId)->where('season_id', $seasonId);
-        } elseif ($seasonId !== null) {
-            $scoreQuery->whereNull('week_id')->where('season_id', $seasonId);
-        } else {
-            $scoreQuery->whereNull('week_id')->whereNull('season_id');
-        }
-
-        $score = $scoreQuery->first() ?? new UserScore();
-
-        $score->user_id       = $userId;
-        $score->week_id       = $weekId;
-        $score->season_id     = $seasonId;
-        $score->total_picks   = $totalPicks;
-        $score->correct_picks = $correctPicks;
-        $score->total_points  = $totalPoints;
-        $score->accuracy      = $accuracy;
-        $score->save();
+        $this->aggregator->upsertScore(
+            $userId,
+            $weekId,
+            $seasonId,
+            weekScope: $weekId !== null,
+            confidenceMode: $this->confidenceMode,
+            confidencePenalty: $this->confidencePenalty,
+        );
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

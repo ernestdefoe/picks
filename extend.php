@@ -23,6 +23,7 @@ use Resofire\Picks\Api\Controller\UserScoresController;
 use Resofire\Picks\Api\Controller\UserHistoryController;
 use Resofire\Picks\Api\Controller\LeaderboardContextController;
 use Resofire\Picks\Api\Controller\LeaderboardHistoryController;
+use Resofire\Picks\Api\Controller\SeedTestDataController;
 use Resofire\Picks\Api\ForumPicksAttributes;
 use Resofire\Picks\Api\Resource\EventResource;
 use Resofire\Picks\Api\Resource\SeasonResource;
@@ -122,7 +123,11 @@ return [
         ->get('/picks/user-scores',         'picks.user-scores',         UserScoresController::class)
         ->get('/picks/user-history',        'picks.user-history',        UserHistoryController::class)
         ->get('/picks/leaderboard-history', 'picks.leaderboard-history', LeaderboardHistoryController::class)
-        ->get('/picks/leaderboard-context', 'picks.leaderboard-context', LeaderboardContextController::class),
+        ->get('/picks/leaderboard-context', 'picks.leaderboard-context', LeaderboardContextController::class)
+
+        // Admin "Testing" tab: seed/clean test data (seed2026, seedFake2025,
+        // cleanFake, wipeAll). The controller existed but was never routed.
+        ->post('/picks/seed-test-data',     'picks.seed-test-data',      SeedTestDataController::class),
 
     // -------------------------------------------------------------------------
     // Console commands

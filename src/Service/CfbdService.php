@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Service;
 
 use Flarum\Settings\SettingsRepositoryInterface;
+use GuzzleHttp\Client as HttpClient;
 use RuntimeException;
 
 class CfbdService
@@ -11,7 +12,8 @@ class CfbdService
     protected const TIMEOUT  = 30;
 
     public function __construct(
-        protected SettingsRepositoryInterface $settings
+        protected SettingsRepositoryInterface $settings,
+        protected HttpClient $http
     ) {
     }
 
@@ -85,49 +87,39 @@ class CfbdService
     }
 
     /**
-     * Make a GET request to the CFBD API using curl.
+     * Make a GET request to the CFBD API via Guzzle (honours host proxy/SSL
+     * config and is mockable in tests). Replaces the previous raw-curl call.
      *
      * @throws RuntimeException
      */
     private function request(string $endpoint, array $params, string $apiKey): array
     {
-        $url = self::BASE_URL . $endpoint;
-
-        if (!empty($params)) {
-            $url .= '?' . http_build_query($params);
+        try {
+            $response = $this->http->request('GET', self::BASE_URL . $endpoint, [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $apiKey,
+                    'Accept'        => 'application/json',
+                ],
+                'query'       => $params,
+                'timeout'     => self::TIMEOUT,
+                'http_errors' => false,
+            ]);
+        } catch (\Throwable $e) {
+            throw new RuntimeException('CFBD request failed: ' . $e->getMessage(), 0, $e);
         }
 
-        $ch = curl_init($url);
+        $status = $response->getStatusCode();
 
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPGET        => true,
-            CURLOPT_HTTPHEADER     => [
-                'Authorization: Bearer ' . $apiKey,
-                'Accept: application/json',
-            ],
-            CURLOPT_TIMEOUT        => self::TIMEOUT,
-        ]);
-
-        $response  = curl_exec($ch);
-        $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-
-        if ($curlError) {
-            throw new RuntimeException('CFBD request failed: ' . $curlError);
+        if ($status < 200 || $status >= 300) {
+            throw new RuntimeException('CFBD API returned HTTP ' . $status . ' for ' . $endpoint);
         }
 
-        if ($httpCode !== 200) {
-            throw new RuntimeException('CFBD API returned HTTP ' . $httpCode . ' for ' . $endpoint);
-        }
+        $decoded = json_decode((string) $response->getBody(), true);
 
-        $decoded = json_decode($response, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
+        if (!is_array($decoded)) {
             throw new RuntimeException('CFBD response was not valid JSON.');
         }
 
-        return $decoded ?? [];
+        return $decoded;
     }
 }

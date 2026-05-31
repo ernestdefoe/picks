@@ -3,8 +3,8 @@
 namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
-use Illuminate\Database\Capsule\Manager as DB;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -12,7 +12,6 @@ use Psr\Http\Server\RequestHandlerInterface;
 use Resofire\Picks\Pick;
 use Resofire\Picks\PickEvent;
 use Resofire\Picks\Team;
-use Resofire\Picks\Week;
 
 class StatsController implements RequestHandlerInterface
 {
@@ -20,186 +19,213 @@ class StatsController implements RequestHandlerInterface
     {
         RequestUtil::getActor($request)->assertCan('picks.manage');
 
-        $params = $request->getQueryParams();
-        $weekId = Arr::get($params, 'week_id');
+        $weekId = Arr::get($request->getQueryParams(), 'week_id');
+        $weekId = $weekId !== null ? (int) $weekId : null;
 
-        // ── Participation ────────────────────────────────────────────────────
-        $totalPlayers = Pick::distinct('user_id')->count('user_id');
+        // Pick counts per event per outcome in ONE aggregated query. The upset
+        // and consensus passes read home/away counts from this map instead of
+        // firing two COUNT queries per finished/picked event (260+ queries on a
+        // full FBS season).
+        $pickCountsByEvent = Pick::query()
+            ->groupBy('event_id', 'selected_outcome')
+            ->selectRaw('event_id, selected_outcome, COUNT(*) as cnt')
+            ->get()
+            ->groupBy('event_id');
 
-        $totalGamesThisWeek  = $weekId
-            ? PickEvent::where('week_id', (int) $weekId)->count()
-            : 0;
+        return new JsonResponse([
+            'participation' => $this->participationStats($weekId),
+            'accuracy'      => array_merge(
+                $this->accuracyStats($weekId),
+                [
+                    'upset_rate'       => $this->upsetRate($pickCountsByEvent),
+                    'most_picked_team' => $this->mostPickedTeam(),
+                ]
+            ),
+            'coverage'      => $this->coverage($pickCountsByEvent),
+        ]);
+    }
 
-        $picksThisWeek = $weekId
-            ? Pick::whereHas('event', fn ($q) => $q->where('week_id', (int) $weekId))->count()
-            : 0;
+    private function participationStats(?int $weekId): array
+    {
+        $totalPlayers = Pick::query()->distinct('user_id')->count('user_id');
 
-        $uniquePickersThisWeek = $weekId
-            ? Pick::whereHas('event', fn ($q) => $q->where('week_id', (int) $weekId))
-                ->distinct('user_id')->count('user_id')
-            : 0;
+        $pickedThisWeek = fn () => Pick::query()
+            ->whereHas('event', fn ($q) => $q->where('week_id', $weekId));
 
-        $participationRate = ($totalPlayers > 0 && $weekId)
-            ? round($uniquePickersThisWeek / $totalPlayers * 100, 1)
-            : null;
+        $totalGamesThisWeek = $weekId ? PickEvent::query()->where('week_id', $weekId)->count() : 0;
+        $picksThisWeek      = $weekId ? $pickedThisWeek()->count() : 0;
+        $uniquePickers      = $weekId ? $pickedThisWeek()->distinct('user_id')->count('user_id') : 0;
 
-        $usersNotPickedThisWeek = $weekId
-            ? max(0, $totalPlayers - $uniquePickersThisWeek)
-            : null;
+        return [
+            'total_players'              => $totalPlayers,
+            'unique_pickers_this_week'   => $uniquePickers,
+            'picks_this_week'            => $picksThisWeek,
+            'total_games_this_week'      => $totalGamesThisWeek,
+            'participation_rate'         => ($totalPlayers > 0 && $weekId)
+                ? round($uniquePickers / $totalPlayers * 100, 1) : null,
+            'users_not_picked_this_week' => $weekId ? max(0, $totalPlayers - $uniquePickers) : null,
+        ];
+    }
 
-        // ── Accuracy & Scoring ───────────────────────────────────────────────
-        $scoredPicks = Pick::whereNotNull('is_correct');
-
+    private function accuracyStats(?int $weekId): array
+    {
         $avgAccuracyAllTime = null;
-        if ($scoredPicks->count() > 0) {
-            $correct = (clone $scoredPicks)->where('is_correct', true)->count();
-            $total   = $scoredPicks->count();
-            $avgAccuracyAllTime = round($correct / $total * 100, 1);
+        $scoredTotal = Pick::query()->whereNotNull('is_correct')->count();
+        if ($scoredTotal > 0) {
+            $correct = Pick::query()->where('is_correct', true)->count();
+            $avgAccuracyAllTime = round($correct / $scoredTotal * 100, 1);
         }
 
         $avgAccuracyThisWeek = null;
         if ($weekId) {
-            $weekScored = Pick::whereNotNull('is_correct')
-                ->whereHas('event', fn ($q) => $q->where('week_id', (int) $weekId));
-            $weekTotal   = $weekScored->count();
-            $weekCorrect = (clone $weekScored)->where('is_correct', true)->count();
+            $scopedScored = fn () => Pick::query()
+                ->whereNotNull('is_correct')
+                ->whereHas('event', fn ($q) => $q->where('week_id', $weekId));
+
+            $weekTotal = $scopedScored()->count();
             if ($weekTotal > 0) {
+                $weekCorrect = $scopedScored()->where('is_correct', true)->count();
                 $avgAccuracyThisWeek = round($weekCorrect / $weekTotal * 100, 1);
             }
         }
 
-        // Most picked team — the team with the most picks across all events
-        $mostPickedTeam = null;
-        $homePickCounts = Pick::join('picks_events', 'picks_picks.event_id', '=', 'picks_events.id')
+        return [
+            'avg_accuracy_all_time'  => $avgAccuracyAllTime,
+            'avg_accuracy_this_week' => $avgAccuracyThisWeek,
+        ];
+    }
+
+    /** The team picked most across all events (home + away tallies). */
+    private function mostPickedTeam(): ?array
+    {
+        $homeTop = Pick::query()->join('picks_events', 'picks_picks.event_id', '=', 'picks_events.id')
             ->where('picks_picks.selected_outcome', 'home')
             ->groupBy('picks_events.home_team_id')
             ->selectRaw('picks_events.home_team_id as team_id, COUNT(*) as cnt')
-            ->orderByDesc('cnt')
-            ->first();
+            ->orderByDesc('cnt')->first();
 
-        $awayPickCounts = Pick::join('picks_events', 'picks_picks.event_id', '=', 'picks_events.id')
+        $awayTop = Pick::query()->join('picks_events', 'picks_picks.event_id', '=', 'picks_events.id')
             ->where('picks_picks.selected_outcome', 'away')
             ->groupBy('picks_events.away_team_id')
             ->selectRaw('picks_events.away_team_id as team_id, COUNT(*) as cnt')
-            ->orderByDesc('cnt')
-            ->first();
+            ->orderByDesc('cnt')->first();
 
         $topTeamId  = null;
         $topTeamCnt = 0;
 
-        if ($homePickCounts && $homePickCounts->cnt > $topTeamCnt) {
-            $topTeamId  = $homePickCounts->team_id;
-            $topTeamCnt = $homePickCounts->cnt;
+        if ($homeTop && $homeTop->cnt > $topTeamCnt) {
+            $topTeamId  = $homeTop->team_id;
+            $topTeamCnt = $homeTop->cnt;
         }
-        if ($awayPickCounts && $awayPickCounts->cnt > $topTeamCnt) {
-            $topTeamId  = $awayPickCounts->team_id;
-            $topTeamCnt = $awayPickCounts->cnt;
-        }
-
-        if ($topTeamId) {
-            $team = Team::find($topTeamId);
-            $mostPickedTeam = $team
-                ? ['name' => $team->name, 'abbreviation' => $team->abbreviation, 'picks' => $topTeamCnt]
-                : null;
+        if ($awayTop && $awayTop->cnt > $topTeamCnt) {
+            $topTeamId  = $awayTop->team_id;
+            $topTeamCnt = $awayTop->cnt;
         }
 
-        // Upset rate — % of finished games where majority picked the loser
-        $upsets         = 0;
+        if (! $topTeamId) {
+            return null;
+        }
+
+        $team = Team::find($topTeamId);
+
+        return $team
+            ? ['name' => $team->name, 'abbreviation' => $team->abbreviation, 'picks' => $topTeamCnt]
+            : null;
+    }
+
+    /** % of finished games where the majority picked the loser. */
+    private function upsetRate(Collection $pickCountsByEvent): ?float
+    {
+        $upsets            = 0;
         $finishedWithPicks = 0;
 
-        $finishedEvents = PickEvent::where('status', PickEvent::STATUS_FINISHED)
+        $finishedEvents = PickEvent::query()
+            ->where('status', PickEvent::STATUS_FINISHED)
             ->whereNotNull('result')
-            ->get();
+            ->get(['id', 'result']);
 
         foreach ($finishedEvents as $event) {
-            $homePicks = Pick::where('event_id', $event->id)->where('selected_outcome', 'home')->count();
-            $awayPicks = Pick::where('event_id', $event->id)->where('selected_outcome', 'away')->count();
-            $total     = $homePicks + $awayPicks;
-
-            if ($total === 0) continue;
+            [$home, $away] = $this->outcomeCounts($pickCountsByEvent, $event->id);
+            if ($home + $away === 0) {
+                continue;
+            }
 
             $finishedWithPicks++;
-            $majorityPicked = $homePicks >= $awayPicks ? 'home' : 'away';
-
+            $majorityPicked = $home >= $away ? 'home' : 'away';
             if ($majorityPicked !== $event->result) {
                 $upsets++;
             }
         }
 
-        $upsetRate = $finishedWithPicks > 0
-            ? round($upsets / $finishedWithPicks * 100, 1)
-            : null;
+        return $finishedWithPicks > 0 ? round($upsets / $finishedWithPicks * 100, 1) : null;
+    }
 
-        // ── Game Coverage ────────────────────────────────────────────────────
-        $totalFinished    = PickEvent::where('status', PickEvent::STATUS_FINISHED)->count();
-        $totalScheduled   = PickEvent::where('status', PickEvent::STATUS_SCHEDULED)->count();
-        $gamesNoPicks     = PickEvent::whereDoesntHave('picks')->count();
-
-        // Consensus games — all picks went the same way
+    /** Game coverage + consensus / most-contested games. */
+    private function coverage(Collection $pickCountsByEvent): array
+    {
         $consensusCount = 0;
-        $contestedGames = [];
+        $contested      = [];
 
-        $eventsWithPicks = PickEvent::has('picks')->get();
+        $eventsWithPicks = PickEvent::query()->has('picks')->get(['id', 'home_team_id', 'away_team_id']);
+
         foreach ($eventsWithPicks as $event) {
-            $home  = Pick::where('event_id', $event->id)->where('selected_outcome', 'home')->count();
-            $away  = Pick::where('event_id', $event->id)->where('selected_outcome', 'away')->count();
+            [$home, $away] = $this->outcomeCounts($pickCountsByEvent, $event->id);
             $total = $home + $away;
-
-            if ($total === 0) continue;
+            if ($total === 0) {
+                continue;
+            }
 
             $homePct = $home / $total;
-
             if ($homePct === 1.0 || $homePct === 0.0) {
                 $consensusCount++;
             }
 
-            // Most contested = closest to 50/50
-            $split = abs($homePct - 0.5);
-            $homeTeam = Team::find($event->home_team_id);
-            $awayTeam = Team::find($event->away_team_id);
-
-            $contestedGames[] = [
-                'event_id'  => $event->id,
-                'home_team' => $homeTeam?->abbreviation ?? '?',
-                'away_team' => $awayTeam?->abbreviation ?? '?',
-                'home_pct'  => round($homePct * 100, 1),
-                'away_pct'  => round((1 - $homePct) * 100, 1),
-                'total'     => $total,
-                'split'     => $split,
+            $contested[] = [
+                'event_id'     => $event->id,
+                'home_team_id' => $event->home_team_id,
+                'away_team_id' => $event->away_team_id,
+                'home_pct'     => round($homePct * 100, 1),
+                'away_pct'     => round((1 - $homePct) * 100, 1),
+                'total'        => $total,
+                'split'        => abs($homePct - 0.5), // closest to 50/50 = most contested
             ];
         }
 
-        usort($contestedGames, fn ($a, $b) => $a['split'] <=> $b['split']);
-        $mostContested = array_slice($contestedGames, 0, 3);
-
-        // Remove internal split field before sending
+        // Most contested = closest to a 50/50 split. Resolve team names only for
+        // the top 3 we actually return (instead of every picked event).
+        usort($contested, fn ($a, $b) => $a['split'] <=> $b['split']);
         $mostContested = array_map(function ($g) {
-            unset($g['split']);
-            return $g;
-        }, $mostContested);
+            return [
+                'event_id'  => $g['event_id'],
+                'home_team' => Team::find($g['home_team_id'])?->abbreviation ?? '?',
+                'away_team' => Team::find($g['away_team_id'])?->abbreviation ?? '?',
+                'home_pct'  => $g['home_pct'],
+                'away_pct'  => $g['away_pct'],
+                'total'     => $g['total'],
+            ];
+        }, array_slice($contested, 0, 3));
 
-        return new JsonResponse([
-            'participation' => [
-                'total_players'              => $totalPlayers,
-                'unique_pickers_this_week'   => $uniquePickersThisWeek,
-                'picks_this_week'            => $picksThisWeek,
-                'total_games_this_week'      => $totalGamesThisWeek,
-                'participation_rate'         => $participationRate,
-                'users_not_picked_this_week' => $usersNotPickedThisWeek,
-            ],
-            'accuracy' => [
-                'avg_accuracy_all_time'  => $avgAccuracyAllTime,
-                'avg_accuracy_this_week' => $avgAccuracyThisWeek,
-                'upset_rate'             => $upsetRate,
-                'most_picked_team'       => $mostPickedTeam,
-            ],
-            'coverage' => [
-                'total_finished'   => $totalFinished,
-                'total_scheduled'  => $totalScheduled,
-                'games_no_picks'   => $gamesNoPicks,
-                'consensus_games'  => $consensusCount,
-                'most_contested'   => $mostContested,
-            ],
-        ]);
+        return [
+            'total_finished'  => PickEvent::query()->where('status', PickEvent::STATUS_FINISHED)->count(),
+            'total_scheduled' => PickEvent::query()->where('status', PickEvent::STATUS_SCHEDULED)->count(),
+            'games_no_picks'  => PickEvent::query()->whereDoesntHave('picks')->count(),
+            'consensus_games' => $consensusCount,
+            'most_contested'  => $mostContested,
+        ];
+    }
+
+    /**
+     * Home/away pick counts for one event, read from the pre-aggregated map.
+     *
+     * @return array{0:int,1:int} [home, away]
+     */
+    private function outcomeCounts(Collection $pickCountsByEvent, int $eventId): array
+    {
+        $rows = $pickCountsByEvent->get($eventId, collect());
+
+        return [
+            (int) (optional($rows->firstWhere('selected_outcome', 'home'))->cnt ?? 0),
+            (int) (optional($rows->firstWhere('selected_outcome', 'away'))->cnt ?? 0),
+        ];
     }
 }

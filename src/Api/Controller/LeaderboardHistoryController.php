@@ -3,11 +3,13 @@
 namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
-use Illuminate\Database\Capsule\Manager as DB;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
+use Resofire\Picks\Season;
+use Resofire\Picks\Service\CurrentSeasonService;
 use Resofire\Picks\UserScore;
 
 /**
@@ -24,30 +26,24 @@ use Resofire\Picks\UserScore;
  */
 class LeaderboardHistoryController implements RequestHandlerInterface
 {
+    public function __construct(
+        protected CurrentSeasonService $currentSeason,
+        protected LoggerInterface $log
+    ) {
+    }
+
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $actor = RequestUtil::getActor($request);
         $actor->assertCan('picks.view');
 
         try {
-            // ── Identify the current season (has unfinished games) ───────────
-            // Scoped to the most recent season with unfinished games so that
-            // future unplayed weeks in other seasons don't interfere.
-            $currentSeasonRow = DB::table('picks_seasons')
-                ->whereExists(function ($q) {
-                    $q->select(DB::raw(1))
-                      ->from('picks_weeks')
-                      ->join('picks_events', 'picks_events.week_id', '=', 'picks_weeks.id')
-                      ->whereColumn('picks_weeks.season_id', 'picks_seasons.id')
-                      ->whereIn('picks_events.status', ['scheduled', 'in_progress']);
-                })
-                ->orderByDesc('year')
-                ->first();
-
-            $currentSeasonId = $currentSeasonRow?->id ?? null;
+            // The current season is the one owning the current (unfinished)
+            // week — shared via CurrentSeasonService.
+            $currentSeasonId = $this->currentSeason->getCurrentWeek()?->season_id;
 
             // ── Load all seasons except the current one, newest first ─────────
-            $seasonsQuery = DB::table('picks_seasons')->orderByDesc('year');
+            $seasonsQuery = Season::query()->orderByDesc('year');
 
             if ($currentSeasonId) {
                 $seasonsQuery->where('id', '!=', $currentSeasonId);
@@ -100,6 +96,8 @@ class LeaderboardHistoryController implements RequestHandlerInterface
             return new JsonResponse(['seasons' => $seasonsData]);
 
         } catch (\Exception $e) {
+            $this->log->error('[Picks] LeaderboardHistory failed: ' . $e->getMessage(), ['exception' => $e]);
+
             return new JsonResponse(['error' => 'Failed to load leaderboard history.'], 500);
         }
     }

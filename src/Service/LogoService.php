@@ -2,8 +2,9 @@
 
 namespace Resofire\Picks\Service;
 
-use Flarum\Foundation\Paths;
 use Flarum\Settings\SettingsRepositoryInterface;
+use GuzzleHttp\Client as HttpClient;
+use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
 use Intervention\Image\ImageManager;
 
 class LogoService
@@ -16,7 +17,8 @@ class LogoService
 
     public function __construct(
         protected ImageManager $imageManager,
-        protected Paths $paths,
+        protected FilesystemFactory $filesystem,
+        protected HttpClient $http,
         protected SettingsRepositoryInterface $settings
     ) {
     }
@@ -27,8 +29,6 @@ class LogoService
      */
     public function downloadFromUrls(?string $logoUrl, ?string $logoDarkUrl, string $slug): array
     {
-        $this->ensureDirectoryExists();
-
         return [
             'logo_path'      => $logoUrl
                 ? $this->processLogo($logoUrl, $slug, '')
@@ -45,8 +45,6 @@ class LogoService
      */
     public function downloadAndStore(int $espnId, string $slug): array
     {
-        $this->ensureDirectoryExists();
-
         return [
             'logo_path'      => $this->processLogo(
                 sprintf(self::ESPN_LOGO_URL, $espnId),
@@ -77,25 +75,27 @@ class LogoService
     }
 
     /**
-     * Download raw image bytes via curl.
+     * Download raw image bytes via Guzzle (honours host proxy/SSL config and
+     * follows redirects by default). Replaces the previous raw-curl call.
      * Returns null on 404, network error, or empty body.
      */
     private function download(string $url): ?string
     {
-        $ch = curl_init($url);
+        try {
+            $response = $this->http->request('GET', $url, [
+                'headers'         => ['User-Agent' => 'ernestdefoe/picks'],
+                'timeout'         => self::TIMEOUT,
+                'allow_redirects' => true,
+                'http_errors'     => false,
+            ]);
+        } catch (\Throwable $e) {
+            return null;
+        }
 
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_TIMEOUT        => self::TIMEOUT,
-            CURLOPT_USERAGENT      => 'ernestdefoe/picks',
-        ]);
+        $status = $response->getStatusCode();
+        $body   = (string) $response->getBody();
 
-        $body     = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($body === false || empty($body) || $httpCode !== 200) {
+        if ($status < 200 || $status >= 300 || $body === '') {
             return null;
         }
 
@@ -113,24 +113,18 @@ class LogoService
                 ->read($imageData)
                 ->toWebp(self::WEBP_QUALITY);
 
-            $filename  = $slug . $suffix . '.webp';
-            $directory = $this->paths->public . '/assets/' . self::LOGO_DIRECTORY;
-            $fullPath  = $directory . '/' . $filename;
+            $filename = $slug . $suffix . '.webp';
 
-            file_put_contents($fullPath, $encoded);
+            // Write through the flarum-assets disk (public/assets) so the
+            // extension works on cloud/CDN-backed public disks too. put()
+            // creates any missing directories.
+            $this->filesystem
+                ->disk('flarum-assets')
+                ->put(self::LOGO_DIRECTORY . '/' . $filename, (string) $encoded);
 
             return 'assets/' . self::LOGO_DIRECTORY . '/' . $filename;
         } catch (\Throwable $e) {
             return null;
-        }
-    }
-
-    private function ensureDirectoryExists(): void
-    {
-        $directory = $this->paths->public . '/assets/' . self::LOGO_DIRECTORY;
-
-        if (!is_dir($directory)) {
-            mkdir($directory, 0755, true);
         }
     }
 }

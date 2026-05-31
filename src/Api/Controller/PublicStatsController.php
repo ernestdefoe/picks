@@ -4,21 +4,21 @@ namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
 use Flarum\Settings\SettingsRepositoryInterface;
-use Illuminate\Database\Capsule\Manager as DB;
+use Flarum\User\User;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Resofire\Picks\Pick;
-use Resofire\Picks\PickEvent;
+use Resofire\Picks\Service\CurrentSeasonService;
 use Resofire\Picks\Team;
 use Resofire\Picks\UserScore;
-use Resofire\Picks\Week;
 
 class PublicStatsController implements RequestHandlerInterface
 {
     public function __construct(
-        protected SettingsRepositoryInterface $settings
+        protected SettingsRepositoryInterface $settings,
+        protected CurrentSeasonService $currentSeason
     ) {
     }
 
@@ -27,39 +27,17 @@ class PublicStatsController implements RequestHandlerInterface
         RequestUtil::getActor($request)->assertCan('picks.view');
 
         // ── Current week ─────────────────────────────────────────────────────
-        // Scoped to the most recent season with unfinished games so that
-        // future unplayed weeks in other seasons don't interfere.
-        $currentSeason = DB::table('picks_seasons')
-            ->whereExists(function ($q) {
-                $q->select(DB::raw(1))
-                  ->from('picks_weeks')
-                  ->join('picks_events', 'picks_events.week_id', '=', 'picks_weeks.id')
-                  ->whereColumn('picks_weeks.season_id', 'picks_seasons.id')
-                  ->whereIn('picks_events.status', ['scheduled', 'in_progress']);
-            })
-            ->orderByDesc('year')
-            ->first();
-
-        $currentWeek = null;
-        if ($currentSeason) {
-            $currentWeek = Week::where('season_id', $currentSeason->id)
-                ->whereHas('events', function ($q) {
-                    $q->whereIn('status', ['scheduled', 'in_progress']);
-                })
-                ->orderByRaw("CASE season_type WHEN 'regular' THEN 0 ELSE 1 END")
-                ->orderBy('week_number', 'asc')
-                ->first();
-        }
-
+        // Shared with the other picks endpoints via CurrentSeasonService.
+        $currentWeek     = $this->currentSeason->getCurrentWeek();
         $currentWeekId   = $currentWeek?->id;
-        $currentWeekName = $currentWeek?->name ?? null;
-        $currentWeekNum  = $currentWeek?->week_number ?? null;
+        $currentWeekName = $currentWeek?->name;
+        $currentWeekNum  = $currentWeek?->week_number;
 
         // ── Participation ─────────────────────────────────────────────────────
         // Total eligible players = all registered users (including admins).
         // No email confirmation filter — admins may bypass confirmation
         // but should still count toward participation totals.
-        $totalPlayers = DB::table('users')->count();
+        $totalPlayers = User::query()->count();
 
         $uniquePickersThisWeek = $currentWeekId
             ? Pick::whereHas('event', fn ($q) => $q->where('week_id', $currentWeekId))
@@ -207,10 +185,10 @@ class PublicStatsController implements RequestHandlerInterface
         // If that extension isn't installed, return an empty array gracefully.
         $mostFollowedTeams = [];
         try {
-            $hasColumn = DB::schema()->hasColumn('users', 'football_team');
+            $hasColumn = User::query()->getConnection()->getSchemaBuilder()->hasColumn('users', 'football_team');
 
             if ($hasColumn) {
-                $fanCounts = DB::table('users')
+                $fanCounts = User::query()
                     ->whereNotNull('football_team')
                     ->where('football_team', '!=', '')
                     ->groupBy('football_team')
