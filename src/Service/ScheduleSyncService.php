@@ -41,6 +41,11 @@ class ScheduleSyncService
         $gamesCreated = 0;
         $gamesUpdated = 0;
 
+        // Build the cfbd_id => local team id map ONCE for the whole sync and
+        // pass it into syncGames(), rather than re-scanning picks_teams on
+        // every week.
+        $teamMap = Team::whereNotNull('cfbd_id')->pluck('id', 'cfbd_id')->all();
+
         // ------------------------------------------------------------------
         // Regular season
         // ------------------------------------------------------------------
@@ -74,7 +79,7 @@ class ScheduleSyncService
 
                 // Fetch and sync games for this week
                 $apiGames = $this->cfbd->fetchGames($year, 'regular', $weekNumber);
-                [$gc, $gu] = $this->syncGames($apiGames, $week);
+                [$gc, $gu] = $this->syncGames($apiGames, $week, $teamMap);
                 $gamesCreated += $gc;
                 $gamesUpdated += $gu;
             }
@@ -111,7 +116,7 @@ class ScheduleSyncService
                     $weeksUpdated++;
                 }
 
-                [$gc, $gu] = $this->syncGames($apiGames, $week);
+                [$gc, $gu] = $this->syncGames($apiGames, $week, $teamMap);
                 $gamesCreated += $gc;
                 $gamesUpdated += $gu;
             }
@@ -181,17 +186,15 @@ class ScheduleSyncService
 
     /**
      * Sync an array of games from the CFBD API into picks_events.
-     * Returns [created, updated] counts.
+     *
+     * @param array<int|string, int> $teamMap cfbd_id => local team id, built
+     *   once per sync by the caller.
+     * @return array{0:int,1:int} [created, updated]
      */
-    private function syncGames(array $apiGames, Week $week): array
+    private function syncGames(array $apiGames, Week $week, array $teamMap): array
     {
         $created = 0;
         $updated = 0;
-
-        // Build a lookup map of cfbd_id => local team id for fast matching
-        $teamMap = Team::whereNotNull('cfbd_id')
-            ->pluck('id', 'cfbd_id')
-            ->all();
 
         foreach ($apiGames as $apiGame) {
             $cfbdGameId = Arr::get($apiGame, 'id');

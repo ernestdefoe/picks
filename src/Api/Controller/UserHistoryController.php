@@ -193,6 +193,24 @@ class UserHistoryController implements RequestHandlerInterface
             ->get()
             ->keyBy('season_id');
 
+        $seasonIds = $seasons->pluck('id')->all();
+
+        // Preload all weeks for all seasons in ONE query (grouped by season),
+        // plus this user's week-level scores keyed by week — replacing the
+        // per-season leftJoin that fired once for every season.
+        $weeksBySeason = Week::query()
+            ->whereIn('season_id', $seasonIds)
+            ->orderByRaw("CASE season_type WHEN 'regular' THEN 0 ELSE 1 END")
+            ->orderByDesc('week_number')
+            ->get()
+            ->groupBy('season_id');
+
+        $userWeekScores = UserScore::query()
+            ->where('user_id', $userId)
+            ->whereNotNull('week_id')
+            ->get()
+            ->keyBy('week_id');
+
         $seasonsData = [];
 
         foreach ($seasons as $season) {
@@ -208,45 +226,33 @@ class UserHistoryController implements RequestHandlerInterface
                 $seasonTotalPlayers = $seasonScopeScores->count();
             }
 
-            // All weeks in this season — left join user scores so every week
-            // appears regardless of whether the user has picks yet.
-            $weekScores = Week::query()
-                ->leftJoin('picks_user_scores', function ($join) use ($userId) {
-                    $join->on('picks_user_scores.week_id', '=', 'picks_weeks.id')
-                         ->where('picks_user_scores.user_id', '=', $userId);
-                })
-                ->where('picks_weeks.season_id', $season->id)
-                ->orderByRaw("CASE picks_weeks.season_type WHEN 'regular' THEN 0 ELSE 1 END")
-                ->orderByDesc('picks_weeks.week_number')
-                ->selectRaw(
-                    'picks_weeks.id as week_id, picks_weeks.name as week_name, picks_weeks.week_number, '
-                    . 'COALESCE(picks_user_scores.total_picks, 0) as total_picks, '
-                    . 'COALESCE(picks_user_scores.correct_picks, 0) as correct_picks, '
-                    . 'COALESCE(picks_user_scores.total_points, 0) as total_points, '
-                    . 'COALESCE(picks_user_scores.accuracy, 0.00) as accuracy'
-                )
-                ->get();
-
+            // All weeks in this season (from the preloaded set), each merged
+            // with the user's score for that week — or zeros when they haven't
+            // picked it yet — so every week still appears.
             $weeksData = [];
-            foreach ($weekScores as $ws) {
+            foreach ($weeksBySeason->get($season->id, collect()) as $week) {
+                $userWeek    = $userWeekScores->get($week->id);
+                $totalPicks  = (int) ($userWeek->total_picks ?? 0);
+                $totalPoints = (int) ($userWeek->total_points ?? 0);
+
                 // Week rank — from the pre-loaded collection (no per-week query)
                 $weekRank = null;
-                if ($ws->total_picks > 0) {
+                if ($totalPicks > 0) {
                     $weekRank = $this->rankIn(
-                        $weekScoresByWeek->get($ws->week_id, collect()),
-                        $ws->total_points
+                        $weekScoresByWeek->get($week->id, collect()),
+                        $totalPoints
                     );
                 }
 
                 $weeksData[] = [
-                    'week_id'       => (int) $ws->week_id,
-                    'week_name'     => $ws->week_name,
-                    'week_number'   => (int) $ws->week_number,
-                    'is_current'    => ((int) $ws->week_id === (int) $currentWeekId),
-                    'total_picks'   => (int) $ws->total_picks,
-                    'correct_picks' => (int) $ws->correct_picks,
-                    'total_points'  => (int) $ws->total_points,
-                    'accuracy'      => (float) $ws->accuracy,
+                    'week_id'       => (int) $week->id,
+                    'week_name'     => $week->name,
+                    'week_number'   => (int) $week->week_number,
+                    'is_current'    => ((int) $week->id === (int) $currentWeekId),
+                    'total_picks'   => $totalPicks,
+                    'correct_picks' => (int) ($userWeek->correct_picks ?? 0),
+                    'total_points'  => $totalPoints,
+                    'accuracy'      => (float) ($userWeek->accuracy ?? 0.0),
                     'rank'          => $weekRank,
                 ];
             }

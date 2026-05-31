@@ -5,6 +5,7 @@ namespace Resofire\Picks\Api\Controller;
 use Flarum\Http\RequestUtil;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\User\User;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -18,7 +19,8 @@ class PublicStatsController implements RequestHandlerInterface
 {
     public function __construct(
         protected SettingsRepositoryInterface $settings,
-        protected CurrentSeasonService $currentSeason
+        protected CurrentSeasonService $currentSeason,
+        protected CacheRepository $cache
     ) {
     }
 
@@ -192,7 +194,14 @@ class PublicStatsController implements RequestHandlerInterface
         // If that extension isn't installed, return an empty array gracefully.
         $mostFollowedTeams = [];
         try {
-            $hasColumn = User::query()->getConnection()->getSchemaBuilder()->hasColumn('users', 'football_team');
+            // Probing information_schema on every request is heavyweight; the
+            // column only appears/disappears when the Team extension is
+            // installed/removed, so cache the result for an hour.
+            $hasColumn = $this->cache->remember(
+                'picks.has_football_team_column',
+                3600,
+                fn () => User::query()->getConnection()->getSchemaBuilder()->hasColumn('users', 'football_team')
+            );
 
             if ($hasColumn) {
                 $fanCounts = User::query()

@@ -15,6 +15,7 @@ use Flarum\User\User;
  * @property int         $correct_picks
  * @property float       $accuracy
  * @property int|null    $previous_rank
+ * @property int|null    $current_rank
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
@@ -33,6 +34,7 @@ class UserScore extends AbstractModel
         'correct_picks',
         'accuracy',
         'previous_rank',
+        'current_rank',
     ];
 
     protected $casts = [
@@ -41,6 +43,7 @@ class UserScore extends AbstractModel
         'correct_picks' => 'integer',
         'accuracy'      => 'float',
         'previous_rank' => 'integer',
+        'current_rank'  => 'integer',
     ];
 
     public function user()

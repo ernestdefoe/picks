@@ -15,9 +15,9 @@ use Resofire\Picks\UserScore;
 /**
  * GET /picks/user-scores?user_id=X
  *
- * Returns alltime, season, and current-week stats for a user.
- * Ported wholesale from StatCards\UserScoresController — same logic,
- * same response shape, updated namespace and route only.
+ * Returns the user's all-time, current-season, and current-week score blocks
+ * (totals, accuracy, rank, and the player count for each scope), used by the
+ * profile stat cards.
  *
  * Permission: picks.view (same gate as every other picks endpoint).
  */
@@ -153,14 +153,12 @@ class UserScoresController implements RequestHandlerInterface
             ]);
 
         } catch (\Exception $e) {
+            // A query failure is a real error — return 500 so the client (and
+            // operator) can tell it apart from the valid "user has no picks
+            // yet" case, which is the empty-but-200 response built above.
             $this->log->error('[Picks] UserScores failed: ' . $e->getMessage(), ['exception' => $e]);
 
-            return new JsonResponse([
-                'current_week_name' => null,
-                'alltime' => null,
-                'season'  => null,
-                'week'    => null,
-            ]);
+            return new JsonResponse(['error' => 'Failed to load user scores.'], 500);
         }
     }
 }

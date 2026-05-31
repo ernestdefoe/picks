@@ -117,17 +117,12 @@ class LeaderboardContextController implements RequestHandlerInterface
             ]);
 
         } catch (\Exception $e) {
+            // Unexpected failure → 500 (the detail is logged). The valid
+            // "no completed seasons / off-season" states are returned with 200
+            // from the normal path above.
             $this->log->error('[Picks] LeaderboardContext failed: ' . $e->getMessage(), ['exception' => $e]);
 
-            return new JsonResponse([
-                'is_active'          => false,
-                'is_off_season'      => false,
-                'retention_expired'  => false,
-                'days_since_ended'   => null,
-                'last_week_id'       => null,
-                'last_season_id'     => null,
-                'last_season_name'   => null,
-            ]);
+            return new JsonResponse(['error' => 'Failed to load leaderboard context.'], 500);
         }
     }
 }

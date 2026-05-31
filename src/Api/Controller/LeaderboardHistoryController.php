@@ -55,17 +55,23 @@ class LeaderboardHistoryController implements RequestHandlerInterface
                 return new JsonResponse(['seasons' => []]);
             }
 
+            // Load season-level scores for ALL past seasons in one query
+            // (eager-loading users), then group by season in PHP. The global
+            // points ordering is preserved within each season's group, so per-
+            // season rank assignment in the loop stays correct.
+            $scoresBySeason = UserScore::with('user')
+                ->whereIn('season_id', $seasons->pluck('id')->all())
+                ->whereNull('week_id')
+                ->where('total_picks', '>', 0)
+                ->orderByDesc('total_points')
+                ->orderByDesc('correct_picks')
+                ->get()
+                ->groupBy('season_id');
+
             $seasonsData = [];
 
             foreach ($seasons as $season) {
-                // Load season-level scores via Eloquent so user accessors work
-                $scores = UserScore::with('user')
-                    ->where('season_id', $season->id)
-                    ->whereNull('week_id')
-                    ->where('total_picks', '>', 0)
-                    ->orderByDesc('total_points')
-                    ->orderByDesc('correct_picks')
-                    ->get();
+                $scores = $scoresBySeason->get($season->id, collect());
 
                 $entries = [];
                 $rank    = 1;

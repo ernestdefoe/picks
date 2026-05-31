@@ -7,13 +7,8 @@ use Flarum\Settings\SettingsRepositoryInterface;
 use GuzzleHttp\Client as HttpClient;
 use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
 use Illuminate\Contracts\Queue\Queue;
-use Resofire\Picks\Api\Controller\PublicStatsController;
-use Resofire\Picks\Service\CurrentSeasonService;
-use Resofire\Picks\Api\Controller\WeekOpenController;
-use Resofire\Picks\Api\Controller\DeletePickController;
 use Resofire\Picks\Api\Controller\EnterResultController;
 use Resofire\Picks\Api\Controller\ListEventsController;
-use Resofire\Picks\Api\Controller\ListLeaderboardController;
 use Resofire\Picks\Api\Controller\ListPicksController;
 use Resofire\Picks\Api\Controller\SubmitPickController;
 use Resofire\Picks\Api\Controller\SyncScoresController;
@@ -56,29 +51,10 @@ class PicksServiceProvider extends AbstractServiceProvider
             );
         });
 
-        $this->container->singleton(ListLeaderboardController::class, function ($container) {
-            return new ListLeaderboardController();
-        });
-
         $this->container->singleton(SubmitPickController::class, function ($container) {
             return new SubmitPickController(
                 $container->make(SettingsRepositoryInterface::class)
             );
-        });
-
-        $this->container->singleton(PublicStatsController::class, function ($container) {
-            return new PublicStatsController(
-                $container->make(SettingsRepositoryInterface::class),
-                $container->make(CurrentSeasonService::class)
-            );
-        });
-
-        $this->container->singleton(WeekOpenController::class, function ($container) {
-            return new WeekOpenController();
-        });
-
-        $this->container->singleton(DeletePickController::class, function ($container) {
-            return new DeletePickController();
         });
 
         $this->container->singleton(EnterResultController::class, function ($container) {
