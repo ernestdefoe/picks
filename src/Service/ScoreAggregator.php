@@ -73,31 +73,37 @@ class ScoreAggregator
             ));
         }
 
-        $allPicks     = (clone $query)->get();
-        $totalPicks   = $allPicks->count();
-        $correctPicks = $allPicks->where('is_correct', true)->count();
-
+        // Aggregate in SQL and return only scalars, instead of loading every
+        // scored pick into a PHP Collection and walking it 2–3 times. A heavy
+        // multi-season user can have hundreds of thousands of scored rows;
+        // there's no reason to materialise them just to sum a few totals.
         if ($confidenceMode) {
-            // Points from correct picks (confidence value, default 1).
-            $earned = $allPicks
-                ->where('is_correct', true)
-                ->sum(fn ($p) => $p->confidence ?? 1);
+            // Penalty from incorrect picks, per the configured rule.
+            $penaltyExpr = match ($confidencePenalty) {
+                'full'  => 'SUM(CASE WHEN is_correct = 0 THEN COALESCE(confidence, 0) ELSE 0 END)',
+                'half'  => 'SUM(CASE WHEN is_correct = 0 THEN FLOOR(COALESCE(confidence, 0) / 2) ELSE 0 END)',
+                default => '0',
+            };
 
-            // Penalty from incorrect picks.
-            $penalty = 0;
-            if ($confidencePenalty === 'full') {
-                $penalty = $allPicks
-                    ->where('is_correct', false)
-                    ->sum(fn ($p) => $p->confidence ?? 0);
-            } elseif ($confidencePenalty === 'half') {
-                $penalty = $allPicks
-                    ->where('is_correct', false)
-                    ->sum(fn ($p) => (int) floor(($p->confidence ?? 0) / 2));
-            }
+            $row = (clone $query)->selectRaw(
+                'COUNT(*) AS agg_total, '
+                . 'SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) AS agg_correct, '
+                . 'SUM(CASE WHEN is_correct = 1 THEN COALESCE(confidence, 1) ELSE 0 END) AS agg_earned, '
+                . $penaltyExpr . ' AS agg_penalty'
+            )->first();
 
-            $totalPoints = max(0, $earned - $penalty);
+            $totalPicks   = (int) ($row->agg_total ?? 0);
+            $correctPicks = (int) ($row->agg_correct ?? 0);
+            $totalPoints  = max(0, (int) ($row->agg_earned ?? 0) - (int) ($row->agg_penalty ?? 0));
         } else {
-            $totalPoints = $correctPicks;
+            $row = (clone $query)->selectRaw(
+                'COUNT(*) AS agg_total, '
+                . 'SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) AS agg_correct'
+            )->first();
+
+            $totalPicks   = (int) ($row->agg_total ?? 0);
+            $correctPicks = (int) ($row->agg_correct ?? 0);
+            $totalPoints  = $correctPicks;
         }
 
         $accuracy = $totalPicks > 0

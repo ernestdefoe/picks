@@ -10,7 +10,6 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Resofire\Picks\Pick;
 use Resofire\Picks\PickEvent;
-use Resofire\Picks\Week;
 use Flarum\Settings\SettingsRepositoryInterface;
 
 class ListPicksController implements RequestHandlerInterface
@@ -93,7 +92,9 @@ class ListPicksController implements RequestHandlerInterface
             ];
         });
 
-        $weekObj = \Resofire\Picks\Week::find((int) $weekId);
+        // Reuse the week already eager-loaded on each event (PickEvent::with([… 'week']))
+        // instead of firing a separate SELECT for the same row.
+        $weekObj = $events->first()?->week;
 
         return new JsonResponse([
             'data' => $data->values()->toArray(),

@@ -4,6 +4,7 @@ namespace Resofire\Picks;
 
 use Flarum\Database\AbstractModel;
 use Flarum\User\User;
+use Illuminate\Support\Collection;
 
 /**
  * @property int         $id
@@ -73,5 +74,16 @@ class UserScore extends AbstractModel
     public function getIncorrectPicks(): int
     {
         return $this->total_picks - $this->correct_picks;
+    }
+
+    /**
+     * The 1-based rank of $points within a pre-loaded collection of score rows
+     * (each having a `total_points`), computed in PHP so callers avoid a COUNT
+     * query per week / season / scope. Shared by the user-scores and
+     * user-history controllers so tie-breaking stays defined in one place.
+     */
+    public static function rankIn(Collection $scores, $points): int
+    {
+        return $scores->where('total_points', '>', $points)->count() + 1;
     }
 }

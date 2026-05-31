@@ -4,7 +4,6 @@ namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Collection;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -84,7 +83,7 @@ class UserScoresController implements RequestHandlerInterface
             $alltimeRank  = null;
             $totalAlltime = $alltimeScores->count();
             if ($alltime && $alltime->total_picks > 0) {
-                $alltimeRank = $this->rankIn($alltimeScores, $alltime->total_points);
+                $alltimeRank = UserScore::rankIn($alltimeScores, $alltime->total_points);
             }
 
             // ── Season scores ─────────────────────────────────────────────────
@@ -100,7 +99,7 @@ class UserScoresController implements RequestHandlerInterface
                     ->first();
 
                 if ($season && $season->total_picks > 0) {
-                    $seasonRank = $this->rankIn($seasonScores, $season->total_points);
+                    $seasonRank = UserScore::rankIn($seasonScores, $season->total_points);
                 }
             }
 
@@ -116,7 +115,7 @@ class UserScoresController implements RequestHandlerInterface
                     ->first();
 
                 if ($week && $week->total_picks > 0) {
-                    $weekRank = $this->rankIn($weekScores, $week->total_points);
+                    $weekRank = UserScore::rankIn($weekScores, $week->total_points);
                 }
             }
 
@@ -156,15 +155,5 @@ class UserScoresController implements RequestHandlerInterface
 
             return new JsonResponse(['error' => 'Failed to load user scores.'], 500);
         }
-    }
-
-    /**
-     * The 1-based rank of $points within a pre-loaded collection of scored rows
-     * (each having a `total_points`), computed in PHP so the handler avoids a
-     * COUNT query per scope. Mirrors UserHistoryController::rankIn.
-     */
-    private function rankIn(Collection $scores, $points): int
-    {
-        return $scores->where('total_points', '>', $points)->count() + 1;
     }
 }

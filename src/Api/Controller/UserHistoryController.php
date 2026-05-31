@@ -121,7 +121,7 @@ class UserHistoryController implements RequestHandlerInterface
         $alltimeRank         = null;
         $alltimeTotalPlayers = 0;
         if ($alltimeRow->total_picks > 0) {
-            $alltimeRank         = $this->rankIn($alltimeScores, $alltimeRow->total_points);
+            $alltimeRank         = UserScore::rankIn($alltimeScores, $alltimeRow->total_points);
             $alltimeTotalPlayers = $alltimeScores->count();
         }
 
@@ -222,7 +222,7 @@ class UserHistoryController implements RequestHandlerInterface
             $seasonScopeScores  = $seasonScoresBySeason->get($season->id, collect());
 
             if ($seasonScore && $seasonScore->total_picks > 0) {
-                $seasonRank         = $this->rankIn($seasonScopeScores, $seasonScore->total_points);
+                $seasonRank         = UserScore::rankIn($seasonScopeScores, $seasonScore->total_points);
                 $seasonTotalPlayers = $seasonScopeScores->count();
             }
 
@@ -238,7 +238,7 @@ class UserHistoryController implements RequestHandlerInterface
                 // Week rank — from the pre-loaded collection (no per-week query)
                 $weekRank = null;
                 if ($totalPicks > 0) {
-                    $weekRank = $this->rankIn(
+                    $weekRank = UserScore::rankIn(
                         $weekScoresByWeek->get($week->id, collect()),
                         $totalPoints
                     );
@@ -278,44 +278,47 @@ class UserHistoryController implements RequestHandlerInterface
     }
 
     /**
-     * The 1-based rank of $points within a pre-loaded collection of score rows
-     * (each having a `total_points`), computed in PHP so callers avoid a COUNT
-     * query per week / per season.
-     */
-    private function rankIn(Collection $scores, $points): int
-    {
-        return $scores->where('total_points', '>', $points)->count() + 1;
-    }
-
-    /**
-     * Calculate the longest consecutive correct picks streak for a user.
-     * Walks picks ordered by their event's match_date ascending. Plucks only
-     * the is_correct flag, so memory stays bounded regardless of pick volume.
+     * Calculate the longest consecutive correct picks streak for a user,
+     * entirely in SQL via the "gaps and islands" technique so no pick rows are
+     * loaded into PHP regardless of how many seasons the user has played.
+     *
+     * Each scored pick is numbered chronologically (rn_all) and, separately,
+     * within its is_correct value (rn_by_correct). Across a run of consecutive
+     * correct picks both counters advance in lockstep, so their difference is
+     * constant for that run and changes the moment the streak breaks. Grouping
+     * the correct picks by that difference yields one group per streak; the
+     * longest streak is the largest group size.
+     *
+     * Uses window functions (MySQL 8.0+ / MariaDB 10.2+, per Flarum 2 reqs).
      */
     private function buildStreakStat(int $userId): int
     {
-        $picks = Pick::query()
+        $connection = (new Pick())->getConnection();
+
+        $sequenced = Pick::query()
             ->join('picks_events', 'picks_picks.event_id', '=', 'picks_events.id')
             ->where('picks_picks.user_id', $userId)
             ->whereNotNull('picks_picks.is_correct')
-            ->orderBy('picks_events.match_date')
-            ->orderBy('picks_events.id')
-            ->pluck('picks_picks.is_correct');
+            ->select([
+                'picks_picks.is_correct as is_correct',
+                $connection->raw(
+                    'ROW_NUMBER() OVER (ORDER BY picks_events.match_date, picks_events.id)'
+                    . ' - ROW_NUMBER() OVER ('
+                    . 'PARTITION BY picks_picks.is_correct'
+                    . ' ORDER BY picks_events.match_date, picks_events.id) AS grp'
+                ),
+            ]);
 
-        $longest = 0;
-        $current = 0;
+        $runs = $connection->query()
+            ->fromSub($sequenced, 'seq')
+            ->where('seq.is_correct', 1)
+            ->groupBy('seq.grp')
+            ->selectRaw('COUNT(*) AS run_len');
 
-        foreach ($picks as $isCorrect) {
-            if ($isCorrect) {
-                $current++;
-                if ($current > $longest) {
-                    $longest = $current;
-                }
-            } else {
-                $current = 0;
-            }
-        }
+        $longest = $connection->query()
+            ->fromSub($runs, 'runs')
+            ->max('run_len');
 
-        return $longest;
+        return (int) $longest;
     }
 }

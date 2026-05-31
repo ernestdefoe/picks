@@ -46,6 +46,12 @@ class ScheduleSyncService
         // every week.
         $teamMap = Team::whereNotNull('cfbd_id')->pluck('id', 'cfbd_id')->all();
 
+        // Preload every existing event keyed by cfbd_id ONCE, rather than firing
+        // a PickEvent::where('cfbd_id', …)->first() per game — a full 17-week FBS
+        // season is ~1,500 games, i.e. ~1,500 individual SELECTs. New events
+        // created during this sync are added to the map as we go (see syncGames).
+        $existingEventsByCfbdId = PickEvent::whereNotNull('cfbd_id')->get()->keyBy('cfbd_id');
+
         // ------------------------------------------------------------------
         // Regular season
         // ------------------------------------------------------------------
@@ -79,7 +85,7 @@ class ScheduleSyncService
 
                 // Fetch and sync games for this week
                 $apiGames = $this->cfbd->fetchGames($year, 'regular', $weekNumber);
-                [$gc, $gu] = $this->syncGames($apiGames, $week, $teamMap);
+                [$gc, $gu] = $this->syncGames($apiGames, $week, $teamMap, $existingEventsByCfbdId);
                 $gamesCreated += $gc;
                 $gamesUpdated += $gu;
             }
@@ -116,7 +122,7 @@ class ScheduleSyncService
                     $weeksUpdated++;
                 }
 
-                [$gc, $gu] = $this->syncGames($apiGames, $week, $teamMap);
+                [$gc, $gu] = $this->syncGames($apiGames, $week, $teamMap, $existingEventsByCfbdId);
                 $gamesCreated += $gc;
                 $gamesUpdated += $gu;
             }
@@ -189,9 +195,12 @@ class ScheduleSyncService
      *
      * @param array<int|string, int> $teamMap cfbd_id => local team id, built
      *   once per sync by the caller.
+     * @param \Illuminate\Support\Collection<int|string, PickEvent> $existingEventsByCfbdId
+     *   existing events keyed by cfbd_id, preloaded once by the caller; newly
+     *   created events are added here so later weeks see them too.
      * @return array{0:int,1:int} [created, updated]
      */
-    private function syncGames(array $apiGames, Week $week, array $teamMap): array
+    private function syncGames(array $apiGames, Week $week, array $teamMap, $existingEventsByCfbdId): array
     {
         $created = 0;
         $updated = 0;
@@ -227,7 +236,7 @@ class ScheduleSyncService
                 continue;
             }
 
-            $event = PickEvent::where('cfbd_id', $cfbdGameId)->first();
+            $event = $existingEventsByCfbdId->get($cfbdGameId);
 
             $isNew = $event === null;
 
@@ -257,6 +266,9 @@ class ScheduleSyncService
 
             if ($isNew) {
                 $created++;
+                // Keep the in-memory map in sync so a cfbd_id that recurs later
+                // in the same run resolves to this row instead of re-inserting.
+                $existingEventsByCfbdId->put($cfbdGameId, $event);
             } else {
                 $updated++;
             }

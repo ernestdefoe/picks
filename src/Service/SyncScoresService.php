@@ -176,6 +176,16 @@ class SyncScoresService
             ->get()
             ->keyBy('cfbd_id');
 
+        // Pre-build the set of event ids that already have at least one pick so
+        // the per-game "did anyone pick this?" check reads from memory instead
+        // of firing a Pick::exists() query for each newly-completed game —
+        // matching the CFBD sync path above.
+        $eventIdsWithPicks = Pick::query()
+            ->whereIn('event_id', $eventsByCfbdId->pluck('id'))
+            ->distinct()
+            ->pluck('event_id')
+            ->flip();
+
         foreach ($events as $espnEvent) {
             $espnId      = $espnEvent['id'] ?? null;
             $competition = $espnEvent['competitions'][0] ?? null;
@@ -238,7 +248,7 @@ class SyncScoresService
 
             // Only dispatch scoring job when a game just became finished
             if ($completed && ! $wasFinished) {
-                $hasPicks = Pick::where('event_id', $event->id)->exists();
+                $hasPicks = $eventIdsWithPicks->has($event->id);
                 if ($hasPicks) {
                     $this->queue->push(new ScorePicksJob($event->id));
                     $finished++;
@@ -346,7 +356,7 @@ class SyncScoresService
             return [1];
         }
 
-        return \Resofire\Picks\Week::where('season_type', 'regular')
+        return Week::where('season_type', 'regular')
             ->whereHas('season', function ($q) {
                 $year = (int) $this->settings->get('ernestdefoe-picks.season_year', (int) date('Y'));
                 $q->where('year', $year);

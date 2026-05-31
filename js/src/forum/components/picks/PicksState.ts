@@ -310,6 +310,9 @@ export default class PicksState {
 
   submitConfidence(game: Game, confidence: number): void {
     if (!game.my_pick || !game.can_pick) return;
+    // Capture the previous value so a failed request can roll back the
+    // optimistic update instead of leaving the wrong confidence on screen.
+    const prevConfidence = game.my_pick.confidence;
     game.my_pick.confidence = confidence;
     m.redraw();
 
@@ -323,7 +326,10 @@ export default class PicksState {
           confidence,
         },
       })
-      .catch(() => m.redraw());
+      .catch(() => {
+        if (game.my_pick) game.my_pick.confidence = prevConfidence;
+        m.redraw();
+      });
   }
 
   currentWeek(): WeekInfo | undefined {
