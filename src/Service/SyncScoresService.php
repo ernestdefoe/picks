@@ -4,6 +4,7 @@ namespace Resofire\Picks\Service;
 
 use Carbon\Carbon;
 use Flarum\Settings\SettingsRepositoryInterface;
+use GuzzleHttp\Client as HttpClient;
 use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Support\Arr;
 use Resofire\Picks\Jobs\ScorePicksJob;
@@ -13,10 +14,14 @@ use Resofire\Picks\Week;
 
 class SyncScoresService
 {
+    /** ESPN scoreboard fetch timeout (seconds). */
+    private const ESPN_TIMEOUT = 15;
+
     public function __construct(
         protected CfbdService $cfbd,
         protected SettingsRepositoryInterface $settings,
-        protected Queue $queue
+        protected Queue $queue,
+        protected HttpClient $http
     ) {
     }
 
@@ -130,7 +135,7 @@ class SyncScoresService
     public function syncFromEspn(): array
     {
         $url      = 'https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard';
-        $response = $this->fetchUrl($url);
+        $response = $this->fetchJson($url);
 
         if ($response === null) {
             throw new \RuntimeException('Failed to fetch ESPN scoreboard.');
@@ -274,29 +279,30 @@ class SyncScoresService
     }
 
     /**
-     * Fetch a URL via curl and return decoded JSON, or null on failure.
+     * Fetch a URL via the container-managed Guzzle client and return decoded
+     * JSON, or null on any transport / non-200 / parse failure. Uses the same
+     * 'http_errors' => false convention as CfbdService so the host's proxy/SSL
+     * config applies and the call is mockable in tests.
      */
-    private function fetchUrl(string $url): ?array
+    private function fetchJson(string $url): ?array
     {
-        $ch = curl_init($url);
-
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => 15,
-            CURLOPT_USERAGENT      => 'ernestdefoe/picks',
-        ]);
-
-        $body     = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($body === false || $httpCode !== 200) {
+        try {
+            $response = $this->http->request('GET', $url, [
+                'headers'     => ['User-Agent' => 'ernestdefoe/picks'],
+                'timeout'     => self::ESPN_TIMEOUT,
+                'http_errors' => false,
+            ]);
+        } catch (\Throwable $e) {
             return null;
         }
 
-        $decoded = json_decode($body, true);
+        if ($response->getStatusCode() !== 200) {
+            return null;
+        }
 
-        return json_last_error() === JSON_ERROR_NONE ? $decoded : null;
+        $decoded = json_decode((string) $response->getBody(), true);
+
+        return is_array($decoded) ? $decoded : null;
     }
 
     /**

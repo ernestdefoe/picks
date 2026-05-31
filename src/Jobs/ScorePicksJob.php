@@ -27,22 +27,26 @@ class ScorePicksJob extends AbstractJob
         $confidenceMode    = (bool) $settings->get('ernestdefoe-picks.confidence_mode', false);
         $confidencePenalty = $settings->get('ernestdefoe-picks.confidence_penalty', 'none');
 
-        $picks = Pick::where('event_id', $this->eventId)
-            ->with('user')
-            ->get();
+        // Unique users affected — read before the batch update so we can bail
+        // early when nobody picked this game.
+        $userIds = Pick::where('event_id', $this->eventId)
+            ->pluck('user_id')
+            ->unique()
+            ->values();
 
-        if ($picks->isEmpty()) {
+        if ($userIds->isEmpty()) {
             return;
         }
 
-        // Score each pick
-        foreach ($picks as $pick) {
-            $pick->is_correct = ($pick->selected_outcome === $event->result);
-            $pick->save();
-        }
+        // Score every pick in two batched UPDATEs instead of one save() per
+        // row — a popular week can have hundreds of picks per game.
+        Pick::where('event_id', $this->eventId)
+            ->where('selected_outcome', $event->result)
+            ->update(['is_correct' => true]);
 
-        // Get unique user IDs affected
-        $userIds = $picks->pluck('user_id')->unique()->values();
+        Pick::where('event_id', $this->eventId)
+            ->where('selected_outcome', '!=', $event->result)
+            ->update(['is_correct' => false]);
 
         // Recalculate scores for each user (shared ScoreAggregator)
         foreach ($userIds as $userId) {

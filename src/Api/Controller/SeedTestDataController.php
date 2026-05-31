@@ -93,6 +93,19 @@ class SeedTestDataController implements RequestHandlerInterface
         $weekIds       = $eventsByWeek->keys()->toArray();
         $picksInserted = 0;
 
+        // Preload every existing (user_id, event_id) pair for these events in
+        // ONE query, keyed "userId:eventId". Replaces a per-iteration
+        // exists() that fired ~users × events SELECTs before any insert (tens
+        // of thousands on a full season) and timed out on real data.
+        $existingPairs = [];
+        foreach (
+            Pick::query()
+                ->whereIn('event_id', $events->pluck('id')->all())
+                ->get(['user_id', 'event_id']) as $existing
+        ) {
+            $existingPairs[$existing->user_id . ':' . $existing->event_id] = true;
+        }
+
         foreach ($weekIds as $weekId) {
             $weekEvents = $eventsByWeek[$weekId];
 
@@ -100,13 +113,11 @@ class SeedTestDataController implements RequestHandlerInterface
                 $hitRate = $hitRates[$userId];
 
                 foreach ($weekEvents as $event) {
-                    // Skip if pick already exists
-                    $exists = Pick::query()
-                        ->where('user_id', $userId)
-                        ->where('event_id', $event->id)
-                        ->exists();
-
-                    if ($exists) continue;
+                    // Skip if pick already exists (checked against the
+                    // preloaded in-memory set, not the DB).
+                    if (isset($existingPairs[$userId . ':' . $event->id])) {
+                        continue;
+                    }
 
                     $isCorrect = null;
                     $outcome   = $this->randomOutcome();

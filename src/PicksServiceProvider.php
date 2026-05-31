@@ -32,7 +32,8 @@ class PicksServiceProvider extends AbstractServiceProvider
             return new SyncScoresService(
                 $container->make(CfbdService::class),
                 $container->make(SettingsRepositoryInterface::class),
-                $container->make(Queue::class)
+                $container->make(Queue::class),
+                $container->make(HttpClient::class)
             );
         });
 

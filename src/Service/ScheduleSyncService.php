@@ -162,20 +162,20 @@ class ScheduleSyncService
             ->first();
 
         if (! $week) {
-            $week                  = new Week();
-            $week->season_id       = $season->id;
-            $week->week_number     = $weekNumber;
-            $week->season_type     = $seasonType;
-            $week->name            = $name;
-            $week->wasRecentlyCreated = true;
-        } else {
-            $week->wasRecentlyCreated = false;
+            $week              = new Week();
+            $week->season_id   = $season->id;
+            $week->week_number = $weekNumber;
+            $week->season_type = $seasonType;
+            $week->name        = $name;
         }
 
         $week->start_date = $startDate;
         $week->end_date   = $endDate;
         $week->save();
 
+        // $week->wasRecentlyCreated is set by Eloquent's performInsert():
+        // true for a fresh INSERT, false for an update of an existing row —
+        // exactly what the caller checks, with no manual bookkeeping.
         return $week;
     }
 
