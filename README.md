@@ -106,7 +106,8 @@ endorsed by the NCAA, CFBD, ESPN, or any team.
 
 ## Credits
 
-Originally created by [resofire](https://github.com/resofire); now maintained by
+Based on [huseyinfiliz/pickem](https://github.com/huseyinfiliz/pickem) by Hüseyin Filiz.
+Subsequently forked by [resofire](https://github.com/resofire) and now maintained by
 [ernestdefoe](https://github.com/ernestdefoe) as `ernestdefoe/picks`.
 
 ## Support
