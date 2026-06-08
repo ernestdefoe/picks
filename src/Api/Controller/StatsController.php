@@ -11,10 +11,16 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Resofire\Picks\Pick;
 use Resofire\Picks\PickEvent;
+use Resofire\Picks\Service\PickStatsService;
 use Resofire\Picks\Team;
 
 class StatsController implements RequestHandlerInterface
 {
+    public function __construct(
+        protected PickStatsService $pickStats
+    ) {
+    }
+
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         RequestUtil::getActor($request)->assertCan('picks.manage');
@@ -98,29 +104,7 @@ class StatsController implements RequestHandlerInterface
     /** The team picked most across all events (home + away tallies). */
     private function mostPickedTeam(): ?array
     {
-        $homeTop = Pick::query()->join('picks_events', 'picks_picks.event_id', '=', 'picks_events.id')
-            ->where('picks_picks.selected_outcome', 'home')
-            ->groupBy('picks_events.home_team_id')
-            ->selectRaw('picks_events.home_team_id as team_id, COUNT(*) as cnt')
-            ->orderByDesc('cnt')->first();
-
-        $awayTop = Pick::query()->join('picks_events', 'picks_picks.event_id', '=', 'picks_events.id')
-            ->where('picks_picks.selected_outcome', 'away')
-            ->groupBy('picks_events.away_team_id')
-            ->selectRaw('picks_events.away_team_id as team_id, COUNT(*) as cnt')
-            ->orderByDesc('cnt')->first();
-
-        $topTeamId  = null;
-        $topTeamCnt = 0;
-
-        if ($homeTop && $homeTop->cnt > $topTeamCnt) {
-            $topTeamId  = $homeTop->team_id;
-            $topTeamCnt = $homeTop->cnt;
-        }
-        if ($awayTop && $awayTop->cnt > $topTeamCnt) {
-            $topTeamId  = $awayTop->team_id;
-            $topTeamCnt = $awayTop->cnt;
-        }
+        [$topTeamId, $topTeamCnt] = $this->pickStats->mostPickedTeam();
 
         if (! $topTeamId) {
             return null;

@@ -27,7 +27,9 @@ class EventResource extends AbstractDatabaseResource
 
     public function scope(Builder $query, Context $context): void
     {
-        $query->orderBy('match_date', 'asc');
+        // Eager-load the week so the `canPick` field never lazy-loads it
+        // per-row during serialization (an N+1 on the index endpoint).
+        $query->with('week')->orderBy('match_date', 'asc');
     }
 
     public function endpoints(): array

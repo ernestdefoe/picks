@@ -63,22 +63,40 @@ class UserHistoryController implements RequestHandlerInterface
             $currentSeasonId = $currentWeek?->season_id;
             $currentWeekId   = $currentWeek?->id;
 
-            // ── Batch-load every scored row once, grouped by scope, so ranks
-            // are computed in PHP instead of firing a COUNT query per week /
-            // per season (previously 30+ rank queries for a multi-season user).
+            // This user's own season/week score rows — defines the only scopes
+            // we need rank data for. Loading these first lets us bound every
+            // rank query to the weeks/seasons the user actually played, instead
+            // of pulling every player's every-week row into memory.
+            $userSeasonScores = UserScore::query()
+                ->where('user_id', $userId)
+                ->whereNull('week_id')->whereNotNull('season_id')
+                ->get()->keyBy('season_id');
+
+            $userWeekScores = UserScore::query()
+                ->where('user_id', $userId)
+                ->whereNotNull('week_id')
+                ->get()->keyBy('week_id');
+
+            // All-time rank set: one row per player (bounded by player count, not
+            // by weeks) — needed to rank the user against the whole board.
             $alltimeScores = UserScore::query()
                 ->whereNull('week_id')->whereNull('season_id')
                 ->where('total_picks', '>', 0)
                 ->get(['user_id', 'total_points']);
 
-            $seasonScoresBySeason = UserScore::query()
-                ->whereNull('week_id')->whereNotNull('season_id')
+            // Season/week rank sets, scoped to ONLY the seasons/weeks this user
+            // participated in (was: every season and every week for every player).
+            $seasonIds = $userSeasonScores->keys()->all();
+            $weekIds   = $userWeekScores->keys()->all();
+
+            $seasonScoresBySeason = empty($seasonIds) ? collect() : UserScore::query()
+                ->whereNull('week_id')->whereIn('season_id', $seasonIds)
                 ->where('total_picks', '>', 0)
                 ->get(['season_id', 'user_id', 'total_points'])
                 ->groupBy('season_id');
 
-            $weekScoresByWeek = UserScore::query()
-                ->whereNotNull('week_id')
+            $weekScoresByWeek = empty($weekIds) ? collect() : UserScore::query()
+                ->whereIn('week_id', $weekIds)
                 ->where('total_picks', '>', 0)
                 ->get(['week_id', 'user_id', 'total_points'])
                 ->groupBy('week_id');
@@ -88,6 +106,8 @@ class UserHistoryController implements RequestHandlerInterface
                 'seasons' => $this->buildSeasonsBlock(
                     $userId,
                     $seasons,
+                    $userSeasonScores,
+                    $userWeekScores,
                     $seasonScoresBySeason,
                     $weekScoresByWeek,
                     $currentSeasonId,
@@ -180,36 +200,26 @@ class UserHistoryController implements RequestHandlerInterface
     private function buildSeasonsBlock(
         int $userId,
         Collection $seasons,
+        Collection $userSeasonScores,
+        Collection $userWeekScores,
         Collection $seasonScoresBySeason,
         Collection $weekScoresByWeek,
         ?int $currentSeasonId,
         ?int $currentWeekId
     ): array {
-        // Preload this user's season-level scores (one query, not one per season).
-        $userSeasonScores = UserScore::query()
-            ->where('user_id', $userId)
-            ->whereNull('week_id')
-            ->whereNotNull('season_id')
-            ->get()
-            ->keyBy('season_id');
+        // $userSeasonScores / $userWeekScores are preloaded by the caller.
 
         $seasonIds = $seasons->pluck('id')->all();
 
-        // Preload all weeks for all seasons in ONE query (grouped by season),
-        // plus this user's week-level scores keyed by week — replacing the
-        // per-season leftJoin that fired once for every season.
+        // Preload all weeks for all seasons in ONE query (grouped by season) so
+        // every week still appears in the breakdown, replacing the per-season
+        // leftJoin that fired once for every season.
         $weeksBySeason = Week::query()
             ->whereIn('season_id', $seasonIds)
             ->orderByRaw("CASE season_type WHEN 'regular' THEN 0 ELSE 1 END")
             ->orderByDesc('week_number')
             ->get()
             ->groupBy('season_id');
-
-        $userWeekScores = UserScore::query()
-            ->where('user_id', $userId)
-            ->whereNotNull('week_id')
-            ->get()
-            ->keyBy('week_id');
 
         $seasonsData = [];
 
@@ -311,7 +321,9 @@ class UserHistoryController implements RequestHandlerInterface
 
         $runs = $connection->query()
             ->fromSub($sequenced, 'seq')
-            ->where('seq.is_correct', 1)
+            // Compare against a real boolean, not the integer 1 — `= 1` against a
+            // boolean column errors on PostgreSQL.
+            ->where('seq.is_correct', true)
             ->groupBy('seq.grp')
             ->selectRaw('COUNT(*) AS run_len');
 

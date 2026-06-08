@@ -12,15 +12,20 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Resofire\Picks\Pick;
 use Resofire\Picks\Service\CurrentSeasonService;
+use Resofire\Picks\Service\PickStatsService;
 use Resofire\Picks\Team;
 use Resofire\Picks\UserScore;
 
 class PublicStatsController implements RequestHandlerInterface
 {
+    /** Public stats are global (not per-actor); cache the whole payload briefly. */
+    private const CACHE_TTL = 60;
+
     public function __construct(
         protected SettingsRepositoryInterface $settings,
         protected CurrentSeasonService $currentSeason,
-        protected CacheRepository $cache
+        protected CacheRepository $cache,
+        protected PickStatsService $pickStats
     ) {
     }
 
@@ -28,17 +33,35 @@ class PublicStatsController implements RequestHandlerInterface
     {
         RequestUtil::getActor($request)->assertCan('picks.view');
 
-        // ── Current week ─────────────────────────────────────────────────────
         // Shared with the other picks endpoints via CurrentSeasonService.
-        $currentWeek     = $this->currentSeason->getCurrentWeek();
+        $currentWeek   = $this->currentSeason->getCurrentWeek();
+        $currentWeekId = $currentWeek?->id;
+
+        // This is a public, every-page-load endpoint that runs 10+ aggregate
+        // queries. The data is identical for every viewer, so cache the computed
+        // payload for a short window (keyed by the current week).
+        $payload = $this->cache->remember(
+            'ernestdefoe-picks.public_stats.' . ($currentWeekId ?? 0),
+            self::CACHE_TTL,
+            fn () => $this->buildPayload($currentWeek)
+        );
+
+        return new JsonResponse($payload);
+    }
+
+    /**
+     * Compute the full public-stats payload. Pure reads; safe to cache.
+     *
+     * @param  \Resofire\Picks\Week|null  $currentWeek
+     */
+    private function buildPayload($currentWeek): array
+    {
         $currentWeekId   = $currentWeek?->id;
         $currentWeekName = $currentWeek?->name;
         $currentWeekNum  = $currentWeek?->week_number;
 
         // ── Participation ─────────────────────────────────────────────────────
         // Total eligible players = all registered users (including admins).
-        // No email confirmation filter — admins may bypass confirmation
-        // but should still count toward participation totals.
         $totalPlayers = User::query()->count();
 
         $uniquePickersThisWeek = $currentWeekId
@@ -54,8 +77,7 @@ class PublicStatsController implements RequestHandlerInterface
         $scoredPicks = Pick::whereNotNull('is_correct');
         $avgAccuracyAllTime = null;
 
-        // Count once and reuse — the builder was previously executed twice
-        // (once for the >0 guard, once for $total), firing the same COUNT twice.
+        // Count once and reuse — the builder was previously executed twice.
         $total = $scoredPicks->count();
         if ($total > 0) {
             $correct = (clone $scoredPicks)->where('is_correct', true)->count();
@@ -75,8 +97,8 @@ class PublicStatsController implements RequestHandlerInterface
         }
 
         // ── Season leader ─────────────────────────────────────────────────────
-        // Top user by total_points in the all-time scope (week_id = null, season_id = null)
-        $seasonLeader     = null;
+        // Top user by total_points in the all-time scope.
+        $seasonLeader = null;
         $topScore = UserScore::whereNull('week_id')
             ->whereNull('season_id')
             ->where('total_picks', '>', 0)
@@ -95,32 +117,7 @@ class PublicStatsController implements RequestHandlerInterface
 
         // ── Most picked team (all time) ───────────────────────────────────────
         $mostPickedTeam = null;
-
-        $homeTop = Pick::join('picks_events', 'picks_picks.event_id', '=', 'picks_events.id')
-            ->where('picks_picks.selected_outcome', 'home')
-            ->groupBy('picks_events.home_team_id')
-            ->selectRaw('picks_events.home_team_id as team_id, COUNT(*) as cnt')
-            ->orderByDesc('cnt')
-            ->first();
-
-        $awayTop = Pick::join('picks_events', 'picks_picks.event_id', '=', 'picks_events.id')
-            ->where('picks_picks.selected_outcome', 'away')
-            ->groupBy('picks_events.away_team_id')
-            ->selectRaw('picks_events.away_team_id as team_id, COUNT(*) as cnt')
-            ->orderByDesc('cnt')
-            ->first();
-
-        $topTeamId  = null;
-        $topTeamCnt = 0;
-
-        if ($homeTop && $homeTop->cnt > $topTeamCnt) {
-            $topTeamId  = $homeTop->team_id;
-            $topTeamCnt = $homeTop->cnt;
-        }
-        if ($awayTop && $awayTop->cnt > $topTeamCnt) {
-            $topTeamId  = $awayTop->team_id;
-            $topTeamCnt = $awayTop->cnt;
-        }
+        [$topTeamId, $topTeamCnt] = $this->pickStats->mostPickedTeam();
 
         if ($topTeamId) {
             $team = Team::find($topTeamId);
@@ -153,9 +150,7 @@ class PublicStatsController implements RequestHandlerInterface
 
             $baseUrl = rtrim($this->settings->get('url', ''), '/');
 
-            // Resolve every referenced team in ONE query instead of two
-            // Team::find() calls per game (up to 10 SELECTs on this public,
-            // every-page-load endpoint).
+            // Resolve every referenced team in ONE query.
             $teamIds = $gameCounts
                 ->flatMap(fn ($row) => [$row->home_team_id, $row->away_team_id])
                 ->filter()
@@ -191,14 +186,13 @@ class PublicStatsController implements RequestHandlerInterface
             }
         }
 
-        // ── Most followed teams (top 5 by fan count on users table) ──────────
+        // ── Most followed teams (top 10 by fan count on users table) ─────────
         // Defensive — the football_team column is added by the Team extension.
-        // If that extension isn't installed, return an empty array gracefully.
         $mostFollowedTeams = [];
         try {
             // Probing information_schema on every request is heavyweight; the
-            // column only appears/disappears when the Team extension is
-            // installed/removed, so cache the result for an hour.
+            // column only changes when the Team extension is installed/removed,
+            // so cache the result for an hour.
             $hasColumn = $this->cache->remember(
                 'picks.has_football_team_column',
                 3600,
@@ -217,9 +211,7 @@ class PublicStatsController implements RequestHandlerInterface
 
                 $baseUrl = rtrim($this->settings->get('url', ''), '/');
 
-                // Resolve every referenced team in ONE query (matched on slug OR
-                // abbreviation) instead of a lookup per fan-count row — up to 10
-                // SELECTs on this public, every-page-load endpoint.
+                // Resolve every referenced team in ONE query (slug OR abbreviation).
                 $footballTeams = $fanCounts->pluck('football_team')->filter()->unique()->values()->all();
                 $teamRecords = ! empty($footballTeams)
                     ? Team::where(function ($q) use ($footballTeams) {
@@ -231,7 +223,6 @@ class PublicStatsController implements RequestHandlerInterface
                 $teamsByAbbr = $teamRecords->keyBy('abbreviation');
 
                 foreach ($fanCounts as $row) {
-                    // Look up the team record by slug/abbreviation from the map
                     $team = $teamsBySlug->get($row->football_team)
                         ?? $teamsByAbbr->get($row->football_team);
 
@@ -250,29 +241,29 @@ class PublicStatsController implements RequestHandlerInterface
                 }
             }
         } catch (\Exception $e) {
-            // Team extension not installed or column missing — return empty
+            // Team extension not installed or column missing — return empty.
             $mostFollowedTeams = [];
         }
 
-        return new JsonResponse([
+        return [
             'current_week' => [
                 'id'          => $currentWeekId,
                 'name'        => $currentWeekName,
                 'week_number' => $currentWeekNum,
             ],
             'participation' => [
-                'total_players'        => $totalPlayers,
-                'pickers_this_week'    => $uniquePickersThisWeek,
-                'participation_rate'   => $participationRate,
+                'total_players'      => $totalPlayers,
+                'pickers_this_week'  => $uniquePickersThisWeek,
+                'participation_rate' => $participationRate,
             ],
             'accuracy' => [
                 'avg_accuracy_all_time'  => $avgAccuracyAllTime,
                 'avg_accuracy_this_week' => $avgAccuracyThisWeek,
             ],
-            'season_leader'      => $seasonLeader,
-            'most_picked_team'   => $mostPickedTeam,
-            'most_picked_games'  => $mostPickedGames,
+            'season_leader'       => $seasonLeader,
+            'most_picked_team'    => $mostPickedTeam,
+            'most_picked_games'   => $mostPickedGames,
             'most_followed_teams' => $mostFollowedTeams,
-        ]);
+        ];
     }
 }
