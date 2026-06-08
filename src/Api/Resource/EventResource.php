@@ -82,17 +82,23 @@ class EventResource extends AbstractDatabaseResource
                 ->writable()
                 ->get(fn (PickEvent $e) => $e->status),
 
+            // Scores are READ-ONLY on this resource by design. Entering a
+            // result is more than persisting two integers — it must also
+            // recompute the event's `result`, flip status to FINISHED, and
+            // dispatch ScorePicksJob to score every pick. That whole
+            // transaction lives in EnterResultController (POST
+            // /picks/events/{id}/result), which is the single source of
+            // truth the admin ResultModal posts to. Exposing homeScore /
+            // awayScore as writable here would create a second path that
+            // sets the numbers but leaves `result` stale and picks unscored
+            // — so we serialize them for display only.
             Schema\Integer::make('homeScore')
                 ->nullable()
-                ->writable()
-                ->get(fn (PickEvent $e) => $e->home_score)
-                ->set(fn (PickEvent $e, $v) => $e->home_score = $v),
+                ->get(fn (PickEvent $e) => $e->home_score),
 
             Schema\Integer::make('awayScore')
                 ->nullable()
-                ->writable()
-                ->get(fn (PickEvent $e) => $e->away_score)
-                ->set(fn (PickEvent $e, $v) => $e->away_score = $v),
+                ->get(fn (PickEvent $e) => $e->away_score),
 
             Schema\Str::make('result')
                 ->nullable()
