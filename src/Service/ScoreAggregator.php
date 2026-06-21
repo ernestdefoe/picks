@@ -80,15 +80,15 @@ class ScoreAggregator
         if ($confidenceMode) {
             // Penalty from incorrect picks, per the configured rule.
             $penaltyExpr = match ($confidencePenalty) {
-                'full'  => 'SUM(CASE WHEN is_correct = 0 THEN COALESCE(confidence, 0) ELSE 0 END)',
-                'half'  => 'SUM(CASE WHEN is_correct = 0 THEN FLOOR(COALESCE(confidence, 0) / 2) ELSE 0 END)',
+                'full'  => 'SUM(CASE WHEN is_correct = false THEN COALESCE(confidence, 0) ELSE 0 END)',
+                'half'  => 'SUM(CASE WHEN is_correct = false THEN FLOOR(COALESCE(confidence, 0) / 2) ELSE 0 END)',
                 default => '0',
             };
 
             $row = (clone $query)->selectRaw(
                 'COUNT(*) AS agg_total, '
-                . 'SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) AS agg_correct, '
-                . 'SUM(CASE WHEN is_correct = 1 THEN COALESCE(confidence, 1) ELSE 0 END) AS agg_earned, '
+                . 'SUM(CASE WHEN is_correct = true THEN 1 ELSE 0 END) AS agg_correct, '
+                . 'SUM(CASE WHEN is_correct = true THEN COALESCE(confidence, 1) ELSE 0 END) AS agg_earned, '
                 . $penaltyExpr . ' AS agg_penalty'
             )->first();
 
@@ -98,7 +98,7 @@ class ScoreAggregator
         } else {
             $row = (clone $query)->selectRaw(
                 'COUNT(*) AS agg_total, '
-                . 'SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) AS agg_correct'
+                . 'SUM(CASE WHEN is_correct = true THEN 1 ELSE 0 END) AS agg_correct'
             )->first();
 
             $totalPicks   = (int) ($row->agg_total ?? 0);
