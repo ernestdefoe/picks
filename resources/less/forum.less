@@ -995,3 +995,60 @@
   }
 }
 
+
+// ─── Loading skeletons ────────────────────────────────────────────────────
+//
+// 🚨 Colours come from the theme's own tokens. A literal grey is invisible on
+// half the forums this ships to.
+//
+// Height is set inline from the remembered size and the bars are allowed to
+// overshoot and clip, so the reserved space is exactly what came back last
+// time rather than whatever a whole number of bars adds up to.
+.PicksSkeleton {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.PicksSkeleton-bar {
+  display: block;
+  flex: none;
+  // .PicksGameCard: 1rem padding around its rows, 10px under each.
+  height: 96px;
+  margin-bottom: 10px;
+  border-radius: 12px;
+  background: var(--control-bg);
+  background-image: linear-gradient(
+    90deg,
+    var(--control-bg) 0%,
+    var(--body-bg) 40%,
+    var(--control-bg) 80%
+  );
+  background-size: 300% 100%;
+  animation: PicksSkeletonSheen 1.4s ease-in-out infinite;
+}
+
+// .PicksMyPickRow: 12px padding around a 26px avatar, 8px under each.
+.PicksSkeleton--rows .PicksSkeleton-bar { height: 51px; margin-bottom: 8px; border-radius: 10px; }
+
+// .PicksLeaderboard is one bordered box: a 35px head over 47px rows, no gaps.
+.PicksSkeleton--table {
+  border: 1px solid var(--control-bg);
+  border-radius: 10px;
+}
+
+.PicksSkeleton--table .PicksSkeleton-bar {
+  height: 47px;
+  margin-bottom: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--control-bg);
+}
+
+@keyframes PicksSkeletonSheen {
+  from { background-position: 150% 0; }
+  to   { background-position: -50% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .PicksSkeleton-bar { animation: none; }
+}

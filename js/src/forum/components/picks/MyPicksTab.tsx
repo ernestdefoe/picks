@@ -4,6 +4,7 @@ import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import type Mithril from 'mithril';
 import type PicksState from './PicksState';
+import PicksSkeleton, { measure } from '../PicksSkeleton';
 
 interface TabAttrs extends ComponentAttrs {
   state: PicksState;
@@ -60,7 +61,7 @@ export default class MyPicksTab extends Component<TabAttrs> {
         )}
 
         {state.gamesLoading ? (
-          <LoadingIndicator />
+          <PicksSkeleton surface="myPicks" fallback={295} rows={5} variant="rows" />
         ) : myGames.length === 0 ? (
           <div className="PicksEmpty">{app.translator.trans('ernestdefoe-picks.lib.messages.no_data')}</div>
         ) : (

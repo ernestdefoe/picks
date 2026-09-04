@@ -3,6 +3,7 @@ import Component, { ComponentAttrs } from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import type Mithril from 'mithril';
 import type PicksState from './PicksState';
+import PicksSkeleton, { measure } from '../PicksSkeleton';
 
 interface TabAttrs extends ComponentAttrs {
   state: PicksState;
@@ -79,11 +80,11 @@ export default class LeaderboardTab extends Component<TabAttrs> {
         )}
 
         {state.lbLoading ? (
-          <LoadingIndicator />
+          <PicksSkeleton surface="leaderboard" fallback={318} rows={6} variant="table" />
         ) : state.leaderboard.length === 0 ? (
           <div className="PicksEmpty">{emptyMessage()}</div>
         ) : (
-          <div className="PicksLeaderboard">
+          <div className="PicksLeaderboard" {...measure('leaderboard')}>
             <div className="PicksLeaderboard-head">
               <div>#</div>
               <div>{app.translator.trans('ernestdefoe-picks.lib.common.team')}</div>

@@ -10,6 +10,7 @@ import MatchesTab from './picks/MatchesTab';
 import MyPicksTab from './picks/MyPicksTab';
 import LeaderboardTab from './picks/LeaderboardTab';
 import HistoryTab from './picks/HistoryTab';
+import PicksSkeleton, { measure } from './PicksSkeleton';
 
 /**
  * Thin orchestrator for the /picks page. All state + data loading lives in
@@ -83,7 +84,7 @@ export default class PicksPage extends Page {
           {!canView ? (
             <div className="PicksEmpty">{app.translator.trans('ernestdefoe-picks.lib.messages.login_required')}</div>
           ) : !state.weeksLoaded ? (
-            <LoadingIndicator />
+            <PicksSkeleton surface="page" fallback={430} rows={4} />
           ) : state.weeks.length === 0 && state.activeTab !== 'history' ? (
             <div className="PicksEmpty PicksEmpty--noSchedule">
               <i className="fas fa-football" />
