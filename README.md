@@ -6,11 +6,17 @@
 [![Review](https://floxum.com/extension/ernestdefoe/picks/badge/review)](https://floxum.com/extension/ernestdefoe/picks)
 [![License](https://floxum.com/extension/ernestdefoe/picks/badge/license)](https://floxum.com/extension/ernestdefoe/picks)
 
-A [Flarum](https://flarum.org) 2.x extension that adds a college-football
-**pick'em** game to your forum. Members predict the winners of each week's games,
-earn points, and compete on a season leaderboard. Schedules and teams are synced
-from [CollegeFootballData](https://collegefootballdata.com) (CFBD), and team
-logos / live scores come from ESPN.
+A [Flarum](https://flarum.org) 2.x extension that adds a **pick'em** game to
+your forum. Members predict the winners of each week's games, earn points, and
+compete on a season leaderboard.
+
+A season belongs to a league: college football, the NFL, the NBA, MLB, the NHL,
+MLS or the Premier League. College football is synced from
+[CollegeFootballData](https://collegefootballdata.com); everything else comes
+from ESPN, which needs no API key. Live scores and team crests come from ESPN
+throughout.
+
+![The Picks board: an NFL week, crests and scores, one card per game](screenshots/board.png)
 
 ## Features
 
