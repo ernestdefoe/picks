@@ -32,6 +32,7 @@ use Resofire\Picks\Api\Resource\TeamResource;
 use Resofire\Picks\Api\Resource\WeekResource;
 use Resofire\Picks\Console\PollLiveScoresCommand;
 use Resofire\Picks\Console\SyncBoxScoresCommand;
+use Resofire\Picks\Console\SyncEspnCommand;
 use Resofire\Picks\Console\SyncTeamsCommand;
 use Resofire\Picks\PicksServiceProvider;
 
@@ -142,6 +143,7 @@ return [
         ->command(SyncTeamsCommand::class)
         ->command(PollLiveScoresCommand::class)
         ->command(SyncBoxScoresCommand::class)
+        ->command(SyncEspnCommand::class)
         ->schedule(PollLiveScoresCommand::class, function ($event) {
             $event->everyFiveMinutes();
         })
@@ -152,5 +154,15 @@ return [
          */
         ->schedule(SyncBoxScoresCommand::class, function ($event) {
             $event->hourly();
+        })
+        /*
+         * 🚨 Every fifteen minutes, not every five. ESPN's scoreboard is ONE
+         * call per league per run — far cheaper than the college sync — but a
+         * board following six leagues at five-minute intervals is seventy-two
+         * outbound calls an hour for fixtures that move a few times a day.
+         * Live scores are `picks:poll-live-scores`' job; this is the schedule.
+         */
+        ->schedule(SyncEspnCommand::class, function ($event) {
+            $event->everyFifteenMinutes()->withoutOverlapping();
         }),
 ];

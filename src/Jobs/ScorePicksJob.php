@@ -24,6 +24,23 @@ class ScorePicksJob extends AbstractJob
             return;
         }
 
+        /*
+         * 🚨 A drawn match is VOID, not a week everybody lost.
+         *
+         * Football arrived with the multi-sport work and brought a result this
+         * scoring has never had to hold. The picker offers two outcomes, home
+         * and away, so on a draw nobody picked the result — and the batched
+         * "everything that is not the result is wrong" below would mark every
+         * single entry incorrect for a result no one could have chosen.
+         *
+         * Leaving the picks unscored is the honest answer: `is_correct` stays
+         * null, the aggregator counts neither a hit nor a miss, and the match
+         * simply does not affect the table. Which is what a void is.
+         */
+        if ($event->result === 'draw') {
+            return;
+        }
+
         $confidenceMode    = (bool) $settings->get('ernestdefoe-picks.confidence_mode', false);
         $confidencePenalty = $settings->get('ernestdefoe-picks.confidence_penalty', 'none');
 

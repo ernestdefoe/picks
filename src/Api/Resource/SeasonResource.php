@@ -7,6 +7,7 @@ use Flarum\Api\Resource\AbstractDatabaseResource;
 use Flarum\Api\Schema;
 use Illuminate\Database\Eloquent\Builder;
 use Resofire\Picks\Season;
+use Resofire\Picks\Service\Leagues\Leagues;
 use Tobyz\JsonApiServer\Context;
 
 /**
@@ -51,6 +52,28 @@ class SeasonResource extends AbstractDatabaseResource
 
             Schema\Integer::make('year')
                 ->get(fn (Season $s) => $s->year),
+
+            /*
+             * 🚨 Validated against the registry on the way in. A season whose
+             * league is a typo syncs nothing and explains nothing about why —
+             * refusing the value is the one moment anybody is looking at the
+             * screen and can fix it.
+             */
+            Schema\Str::make('league')
+                ->writable()
+                ->get(fn (Season $s) => (string) ($s->league ?: Leagues::DEFAULT))
+                ->set(function (Season $s, $value) {
+                    $leagues = new Leagues();
+
+                    $s->league = $leagues->has((string) $value) ? (string) $value : Leagues::DEFAULT;
+                }),
+
+            /* What the league means, so a client need not carry its own copy. */
+            Schema\Str::make('sport')
+                ->get(fn (Season $s) => $s->leagueDefinition()->sport),
+
+            Schema\Str::make('leagueName')
+                ->get(fn (Season $s) => $s->leagueDefinition()->name),
 
             Schema\Str::make('startDate')
                 ->nullable()

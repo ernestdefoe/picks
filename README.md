@@ -91,14 +91,60 @@ cron:
 You can also run syncs manually:
 
 ```bash
-php flarum picks:sync-teams      # sync the FBS team list from CFBD
-php flarum picks:poll-scores     # poll ESPN for live scores once
+php flarum picks:sync-teams        # sync the FBS team list from CFBD
+php flarum picks:poll-scores       # poll ESPN for live scores once
+php flarum picks:sync-espn         # fixtures and scores for non-college seasons
+php flarum picks:sync-box-scores   # box scores for finished games
 ```
+
+## More than one sport
+
+A season belongs to a **league**, and the league decides where its fixtures come
+from and how a game is described:
+
+| League | Source | Vocabulary |
+|---|---|---|
+| College football | CollegeFootballData | gridiron |
+| NFL | ESPN | gridiron |
+| NBA, college basketball | ESPN | basketball |
+| MLB | ESPN | baseball |
+| NHL | ESPN | ice hockey |
+| MLS, Premier League, Champions League | ESPN | football |
+
+Create a season, set its league, and run `picks:sync-espn`. Nothing else
+changes: the same tables, the same picks, the same leaderboard. A board that
+follows only college football carries on exactly as before — every existing
+season defaults to it, because every existing row came from there.
+
+Adding a league is one line in `Service\Leagues\Leagues`, because ESPN answers
+every one of these in the same shape.
+
+Two things are worth knowing:
+
+**Most sports have no weeks.** Gridiron numbers its rounds; everything else is
+played to a date. A league without weeks gets one week per calendar week, which
+is what a pick'em for those sports is anyway — you pick this week's games. The
+deadline is each game's own kickoff rather than the start of the round, because
+one deadline across seven days either closes Monday's game on Saturday morning
+or lets somebody pick a game they have already watched.
+
+**A drawn match is void.** Football arrived with a result this scoring had never
+had to hold. The picker offers home or away, so on a draw nobody picked the
+result — those picks stay unscored and the match simply does not affect the
+table, rather than counting as a loss for everybody.
 
 ## Data sources
 
-- **CollegeFootballData (CFBD)** — teams and game schedules (API key required).
-- **ESPN** — team logos and live in-game scores (public endpoints, no key).
+- **CollegeFootballData (CFBD)** — college football teams, schedules and box
+  scores. Needs an API key.
+- **ESPN** — every other league's fixtures, scores and box scores, plus team
+  logos and live in-game scores everywhere. Public endpoints, no key.
+
+🚨 A box score from ESPN is **one call per game**, where CFBD answers a whole
+week at once — so the fetch is capped per run and picks up where it left off.
+A Saturday of college basketball is a hundred and fifty games, and a scheduled
+job that fired a hundred and fifty outbound requests inside a minute is how a
+forum takes itself down.
 
 Team names, logos, and data are the property of their respective owners and the
 providers above. This is an unofficial fan tool and is not affiliated with or

@@ -11,6 +11,7 @@ use Flarum\Database\AbstractModel;
  * @property int         $home_team_id
  * @property int         $away_team_id
  * @property int|null    $cfbd_id
+ * @property string|null $external_id
  * @property bool        $neutral_site
  * @property \Carbon\Carbon $match_date
  * @property \Carbon\Carbon $cutoff_date
@@ -40,6 +41,7 @@ class PickEvent extends AbstractModel
         'home_team_id',
         'away_team_id',
         'cfbd_id',
+        'external_id',
         'neutral_site',
         'match_date',
         'cutoff_date',
