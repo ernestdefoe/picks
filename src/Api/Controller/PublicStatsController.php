@@ -122,16 +122,16 @@ class PublicStatsController implements RequestHandlerInterface
         if ($topTeamId) {
             $team = Team::find($topTeamId);
             if ($team) {
-                $baseUrl = rtrim($this->settings->get('url', ''), '/');
                 $mostPickedTeam = [
                     'name'         => $team->name,
                     'abbreviation' => $team->abbreviation,
-                    'logo_url'     => $team->logo_path
-                        ? $baseUrl . '/' . ltrim($team->logo_path, '/')
-                        : null,
-                    'logo_dark_url' => $team->logo_dark_path
-                        ? $baseUrl . '/' . ltrim($team->logo_dark_path, '/')
-                        : null,
+                    /*
+                     * 🚨 Through the MODEL, never by gluing the forum URL onto
+                     * the stored path — `logo_path` is absolute for every team
+                     * synced from ESPN. See ListEventsController.
+                     */
+                    'logo_url'     => $team->logo_url,
+                    'logo_dark_url' => $team->logo_dark_url,
                     'picks'        => $topTeamCnt,
                 ];
             }
@@ -148,7 +148,6 @@ class PublicStatsController implements RequestHandlerInterface
                 ->limit(5)
                 ->get();
 
-            $baseUrl = rtrim($this->settings->get('url', ''), '/');
 
             // Resolve every referenced team in ONE query.
             $teamIds = $gameCounts
@@ -158,7 +157,7 @@ class PublicStatsController implements RequestHandlerInterface
                 ->all();
             $teams = Team::whereIn('id', $teamIds)->get()->keyBy('id');
 
-            $teamPayload = function ($teamId) use ($teams, $baseUrl) {
+            $teamPayload = function ($teamId) use ($teams) {
                 $team = $teams->get($teamId);
                 if (! $team) {
                     return null;
@@ -167,12 +166,8 @@ class PublicStatsController implements RequestHandlerInterface
                 return [
                     'name'          => $team->name,
                     'abbreviation'  => $team->abbreviation,
-                    'logo_url'      => $team->logo_path
-                        ? $baseUrl . '/' . ltrim($team->logo_path, '/')
-                        : null,
-                    'logo_dark_url' => $team->logo_dark_path
-                        ? $baseUrl . '/' . ltrim($team->logo_dark_path, '/')
-                        : null,
+                    'logo_url'      => $team->logo_url,
+                    'logo_dark_url' => $team->logo_dark_url,
                 ];
             };
 
@@ -209,7 +204,6 @@ class PublicStatsController implements RequestHandlerInterface
                     ->limit(10)
                     ->get();
 
-                $baseUrl = rtrim($this->settings->get('url', ''), '/');
 
                 // Resolve every referenced team in ONE query (slug OR abbreviation).
                 $footballTeams = $fanCounts->pluck('football_team')->filter()->unique()->values()->all();
@@ -231,12 +225,8 @@ class PublicStatsController implements RequestHandlerInterface
                         'fan_count'     => (int) $row->fan_count,
                         'name'          => $team?->name ?? $row->football_team,
                         'abbreviation'  => $team?->abbreviation ?? $row->football_team,
-                        'logo_url'      => $team?->logo_path
-                            ? $baseUrl . '/' . ltrim($team->logo_path, '/')
-                            : null,
-                        'logo_dark_url' => $team?->logo_dark_path
-                            ? $baseUrl . '/' . ltrim($team->logo_dark_path, '/')
-                            : null,
+                        'logo_url'      => $team?->logo_url,
+                        'logo_dark_url' => $team?->logo_dark_url,
                     ];
                 }
             }

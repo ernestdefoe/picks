@@ -73,8 +73,8 @@ class EspnSyncService
                 continue;
             }
 
-            $home = $this->team($teams, $game['home'], $summary);
-            $away = $this->team($teams, $game['away'], $summary);
+            $home = $this->team($teams, $game['home'], $game['home_team'] ?? [], $summary);
+            $away = $this->team($teams, $game['away'], $game['away_team'] ?? [], $summary);
 
             $start = $this->when($game['start']);
 
@@ -139,12 +139,31 @@ class EspnSyncService
      * @param \Illuminate\Support\Collection<string, Team> $teams
      * @param array<string, int>                          $summary
      */
-    protected function team($teams, string $name, array &$summary): Team
+    protected function team($teams, string $name, array $club, array &$summary): Team
     {
         $slug = $this->slug($name);
 
+        $crest = [
+            'espn_id' => ($club['external_id'] ?? '') !== '' ? (int) $club['external_id'] : null,
+            'abbreviation' => (string) ($club['abbreviation'] ?? ''),
+            'logo_path' => (string) ($club['logo'] ?? ''),
+        ];
+
         if ($teams->has($slug)) {
-            return $teams->get($slug);
+            $team = $teams->get($slug);
+
+            /*
+             * 🚨 A crest an operator chose is never overwritten. `logo_custom`
+             * is the only way to keep a hand-picked one through a sync, and a
+             * sync that ignored it would undo the same piece of work every hour.
+             */
+            if ($crest['logo_path'] !== '' && !$team->logo_custom && (string) $team->logo_path === '') {
+                $team->logo_path = $crest['logo_path'];
+                $team->espn_id = $crest['espn_id'];
+                $team->save();
+            }
+
+            return $team;
         }
 
         /*
@@ -153,11 +172,20 @@ class EspnSyncService
          * in the database is the ordinary case on the first sync — not an
          * error. The alternative is a season that imports nothing and says
          * nothing about why.
+         *
+         * 🚨 The crest comes off the FIXTURE, which is the whole reason it is
+         * carried there. A pick'em whose teams have no logo is a board of grey
+         * squares — the first version of this shipped exactly that, and it
+         * looked broken rather than unfinished.
          */
         $team = Team::query()->create([
             'name' => $name,
             'slug' => $slug,
-            'abbreviation' => Str::upper(Str::substr(preg_replace('/[^A-Za-z]/', '', $name) ?? '', 0, 4)),
+            'abbreviation' => $crest['abbreviation'] !== ''
+                ? $crest['abbreviation']
+                : Str::upper(Str::substr(preg_replace('/[^A-Za-z]/', '', $name) ?? '', 0, 4)),
+            'espn_id' => $crest['espn_id'],
+            'logo_path' => $crest['logo_path'] ?: null,
         ]);
 
         $teams->put($slug, $team);

@@ -86,7 +86,6 @@ class ListEventsController implements RequestHandlerInterface
             return null;
         }
 
-        $baseUrl = rtrim($this->settings->get('url', ''), '/');
 
         return [
             'id'           => $team->id,
@@ -94,12 +93,17 @@ class ListEventsController implements RequestHandlerInterface
             'abbreviation' => $team->abbreviation,
             'conference'   => $team->conference,
             'logo_path'    => $team->logo_path,
-            'logo_url'      => $team->logo_path
-                ? $baseUrl . '/' . ltrim($team->logo_path, '/')
-                : null,
-            'logo_dark_url' => $team->logo_dark_path
-                ? $baseUrl . '/' . ltrim($team->logo_dark_path, '/')
-                : null,
+/*
+             * 🚨 Through the MODEL, never by gluing the forum URL onto the
+             * stored path. `logo_path` is not always relative: a team synced
+             * from ESPN — every league but college football — stores the
+             * provider's own absolute URL, and prefixing that produced
+             * `https://forum.example/https://a.espncdn.com/...`, which 404s and
+             * renders as a broken crest on every card. `Team::logo_url` has
+             * always handled both; four controllers were quietly rebuilding it.
+             */
+            'logo_url'      => $team->logo_url,
+            'logo_dark_url' => $team->logo_dark_url,
         ];
     }
 }

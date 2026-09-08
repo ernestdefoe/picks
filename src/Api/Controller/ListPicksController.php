@@ -31,7 +31,6 @@ class ListPicksController implements RequestHandlerInterface
             return new JsonResponse(['status' => 'error', 'message' => 'week_id is required.'], 422);
         }
 
-        $baseUrl = rtrim($this->settings->get('url', ''), '/');
 
         // All events for this week with home/away teams
         $events = PickEvent::with(['homeTeam', 'awayTeam', 'week'])
@@ -57,7 +56,7 @@ class ListPicksController implements RequestHandlerInterface
             }
         }
 
-        $data = $events->map(function (PickEvent $e) use ($myPicks, $baseUrl) {
+        $data = $events->map(function (PickEvent $e) use ($myPicks) {
             $home = $e->homeTeam;
             $away = $e->awayTeam;
             $pick = $myPicks[$e->id] ?? null;
@@ -77,16 +76,26 @@ class ListPicksController implements RequestHandlerInterface
                     'name'         => $home->name,
                     'abbreviation' => $home->abbreviation,
                     'conference'   => $home->conference,
-                    'logo_url'     => $home->logo_path ? $baseUrl . '/' . ltrim($home->logo_path, '/') : null,
-                    'logo_dark_url'=> $home->logo_dark_path ? $baseUrl . '/' . ltrim($home->logo_dark_path, '/') : null,
+                    /*
+                     * 🚨 Through the MODEL, never by gluing the forum URL onto
+                     * the stored path — `logo_path` is absolute for every team
+                     * synced from ESPN. See ListEventsController.
+                     */
+                    'logo_url'     => $home->logo_url,
+                    'logo_dark_url'=> $home->logo_dark_url,
                 ] : null,
                 'away_team'   => $away ? [
                     'id'           => $away->id,
                     'name'         => $away->name,
                     'abbreviation' => $away->abbreviation,
                     'conference'   => $away->conference,
-                    'logo_url'     => $away->logo_path ? $baseUrl . '/' . ltrim($away->logo_path, '/') : null,
-                    'logo_dark_url'=> $away->logo_dark_path ? $baseUrl . '/' . ltrim($away->logo_dark_path, '/') : null,
+                    /*
+                     * 🚨 Through the MODEL, never by gluing the forum URL onto
+                     * the stored path — `logo_path` is absolute for every team
+                     * synced from ESPN. See ListEventsController.
+                     */
+                    'logo_url'     => $away->logo_url,
+                    'logo_dark_url'=> $away->logo_dark_url,
                 ] : null,
                 'my_pick'     => $pick,
             ];
