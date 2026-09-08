@@ -87,6 +87,78 @@ class CfbdService
     }
 
     /**
+     * The team box score for every game in a week.
+     *
+     * 🚨 A WEEK, not a game, and that is a budget decision. CollegeFootballData
+     * spends a monthly allowance per call and a Saturday has sixty games on it,
+     * so asking per game is sixty calls for what one answers. Two calls — this
+     * and the player one — cover a whole week.
+     *
+     * Answered as `[cfbd game id => the provider's own `teams` array]`, still
+     * in its shape. Normalising happens once, in BoxScoreService.
+     *
+     * @return array<int, array<int, array<string, mixed>>>
+     */
+    public function fetchTeamBoxScores(int $year, string $seasonType, int $week): array
+    {
+        return $this->boxScores('/games/teams', $year, $seasonType, $week);
+    }
+
+    /**
+     * The player box score for every game in a week.
+     *
+     * @return array<int, array<int, array<string, mixed>>>
+     */
+    public function fetchPlayerBoxScores(int $year, string $seasonType, int $week): array
+    {
+        return $this->boxScores('/games/players', $year, $seasonType, $week);
+    }
+
+    /**
+     * @return array<int, array<int, array<string, mixed>>>
+     */
+    private function boxScores(string $endpoint, int $year, string $seasonType, int $week): array
+    {
+        $apiKey = $this->settings->get('ernestdefoe-picks.cfbd_api_key');
+
+        if (empty($apiKey)) {
+            throw new RuntimeException('CFBD API key is not configured.');
+        }
+
+        $rows = $this->request($endpoint, [
+            'year'           => $year,
+            'seasonType'     => $seasonType,
+            'week'           => $week,
+            'classification' => 'fbs',
+        ], $apiKey);
+
+        $out = [];
+
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $id = (int) ($row['id'] ?? 0);
+            $sides = $row['teams'] ?? null;
+
+            /*
+             * 🚨 A game with no id, or with one side missing, is dropped rather
+             * than half-kept. A box score showing one team's numbers beside a
+             * blank column reads as the other team having done nothing, which
+             * is worse than showing no box score at all.
+             */
+            if ($id < 1 || !is_array($sides) || count($sides) < 2) {
+                continue;
+            }
+
+            $out[$id] = array_values(array_filter($sides, 'is_array'));
+        }
+
+        return $out;
+    }
+
+    /**
      * Make a GET request to the CFBD API via Guzzle (honours host proxy/SSL
      * config and is mockable in tests). Replaces the previous raw-curl call.
      *

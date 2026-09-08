@@ -31,6 +31,7 @@ use Resofire\Picks\Api\Resource\SeasonResource;
 use Resofire\Picks\Api\Resource\TeamResource;
 use Resofire\Picks\Api\Resource\WeekResource;
 use Resofire\Picks\Console\PollLiveScoresCommand;
+use Resofire\Picks\Console\SyncBoxScoresCommand;
 use Resofire\Picks\Console\SyncTeamsCommand;
 use Resofire\Picks\PicksServiceProvider;
 
@@ -140,7 +141,16 @@ return [
     (new Extend\Console())
         ->command(SyncTeamsCommand::class)
         ->command(PollLiveScoresCommand::class)
+        ->command(SyncBoxScoresCommand::class)
         ->schedule(PollLiveScoresCommand::class, function ($event) {
             $event->everyFiveMinutes();
+        })
+        /*
+         * 🚨 Hourly, and cheap by construction: it fetches a WEEK at a time —
+         * two calls cover every game on a Saturday — and returns immediately
+         * once every finished game has one, which is most of the week.
+         */
+        ->schedule(SyncBoxScoresCommand::class, function ($event) {
+            $event->hourly();
         }),
 ];
