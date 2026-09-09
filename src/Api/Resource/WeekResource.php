@@ -33,8 +33,22 @@ class WeekResource extends AbstractDatabaseResource
     public function endpoints(): array
     {
         return [
-            Endpoint\Index::make()->authenticated(),
-            Endpoint\Show::make()->authenticated(),
+            /*
+             * 🚨 `can('picks.view')`, not `authenticated()`.
+             *
+             * The permission is registered with `allowGuest: true` and offered
+             * in the admin as grantable to guests — and `authenticated()` made
+             * that impossible, so a board that ticked the box still showed
+             * visitors an empty schedule and a "you do not have permission"
+             * toast. fbsfb.com had exactly that, having been a public pick'em
+             * before it moved.
+             *
+             * It was broken in the other direction too: any signed-in member
+             * could read all of this whether or not they had `picks.view`, so
+             * the permission neither let anybody in nor kept anybody out.
+             */
+            Endpoint\Index::make()->can('picks.view'),
+            Endpoint\Show::make()->can('picks.view'),
             Endpoint\Update::make()->authenticated()->can('picks.manage'),
             Endpoint\Delete::make()->authenticated()->can('picks.manage'),
         ];
