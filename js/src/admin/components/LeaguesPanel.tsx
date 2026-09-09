@@ -1,6 +1,7 @@
 import app from 'flarum/admin/app';
 import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
+import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import type Mithril from 'mithril';
 import Season from '../../common/models/Season';
 
@@ -17,6 +18,16 @@ interface LeagueDef {
 
 interface Attrs {
   seasons: Season[];
+  /**
+   * 🚨 Told apart from an empty list, deliberately.
+   *
+   * Seasons arrive after the first render, so without this the panel opens on
+   * "No seasons yet. Create one" every single time — and on a slow request, or
+   * a failed one, that sentence is the only thing anybody ever sees. An empty
+   * state that also means "still loading" is a wrong answer that looks like a
+   * right one.
+   */
+  loading: boolean;
   /** Ask the tab to reload — a new season changes the week list under it. */
   onchange: () => void;
 }
@@ -87,7 +98,9 @@ export default class LeaguesPanel extends Component<Attrs> {
 
         {this.adding ? this.form(registry) : null}
 
-        {seasons.length === 0 ? (
+        {this.attrs.loading ? (
+          <LoadingIndicator />
+        ) : seasons.length === 0 ? (
           <div className="PicksEmptyState">{t('no_seasons')}</div>
         ) : (
           <div className="PicksCardList">

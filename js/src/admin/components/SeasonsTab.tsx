@@ -149,6 +149,7 @@ export default class SeasonsTab extends Component {
         */}
         <LeaguesPanel
           seasons={this.seasons}
+          loading={this.loading}
           onchange={() => {
             app.store.models['picks-seasons'] = {};
             app.store.models['picks-weeks'] = {};
