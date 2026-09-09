@@ -1158,14 +1158,21 @@
 }
 
 /*
- * Narrow: the record and accuracy go, the points stay. A sidebar has room for
- * who is winning and by how much, and nothing else — and dropping columns is
- * better than three of them each cut to two characters.
+ * Narrow: columns are dropped one at a time, least useful first.
+ *
+ * 🚨 In two steps rather than one. A single breakpoint at 340px took the record
+ * AND the accuracy together, so a 350px sidebar card — which is most of them —
+ * fell straight from five columns to three and showed a name and a number.
+ * Accuracy is the first to go because the record already implies it.
  */
-@container (max-width: 340px) {
-  .PicksBoardBlock-row { grid-template-columns: 1.9rem 1fr 2.6rem; }
-  .PicksBoardBlock-record,
+@container (max-width: 360px) {
+  .PicksBoardBlock-row { grid-template-columns: 2rem 1fr auto 2.8rem; }
   .PicksBoardBlock-acc { display: none; }
+}
+
+@container (max-width: 290px) {
+  .PicksBoardBlock-row { grid-template-columns: 1.9rem 1fr 2.6rem; }
+  .PicksBoardBlock-record { display: none; }
 }
 
 .PicksBoardBlock-empty {
