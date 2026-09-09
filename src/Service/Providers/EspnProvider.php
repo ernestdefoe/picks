@@ -458,8 +458,55 @@ class EspnProvider implements Provider
                     }
                 }
 
-                if ($types !== []) {
-                    $categories[] = ['name' => $name, 'types' => $types];
+                /*
+                 * 🚨 The same athletes again, ATHLETE-major this time.
+                 *
+                 * `types` is label-major — one list per statistic — which is
+                 * what a box-score table renders from and useless for ranking
+                 * people: a player's yards and touchdowns live in two different
+                 * lists with nothing but array position joining them. This
+                 * keeps each athlete's whole line together, with the id and the
+                 * headshot the feed already sent, which is what a leaderboard
+                 * needs and what the leaders-only shape threw away.
+                 */
+                $lines = [];
+
+                foreach ($athletes as $athlete) {
+                    if (!is_array($athlete)) {
+                        continue;
+                    }
+
+                    $who = (array) ($athlete['athlete'] ?? []);
+                    $displayName = (string) ($who['displayName'] ?? '');
+
+                    if ($displayName === '') {
+                        continue;
+                    }
+
+                    $stats = array_values((array) ($athlete['stats'] ?? []));
+                    $map = [];
+
+                    foreach ($labels as $index => $label) {
+                        if (array_key_exists($index, $stats)) {
+                            $map[$label] = (string) $stats[$index];
+                        }
+                    }
+
+                    if ($map === []) {
+                        continue;
+                    }
+
+                    $lines[] = [
+                        'id' => (string) ($who['id'] ?? ''),
+                        'name' => $displayName,
+                        'jersey' => (string) ($who['jersey'] ?? ''),
+                        'headshot' => (string) ((array) ($who['headshot'] ?? []))['href'] ?? '',
+                        'stats' => $map,
+                    ];
+                }
+
+                if ($types !== [] || $lines !== []) {
+                    $categories[] = ['name' => $name, 'types' => $types, 'lines' => $lines];
                 }
             }
 

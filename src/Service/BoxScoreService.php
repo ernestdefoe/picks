@@ -308,9 +308,91 @@ class BoxScoreService
             }
 
             $document[$where]['leaders'] = $this->leaders($side['categories'] ?? [], $league->leaders);
+            $document[$where]['performers'] = $this->performers($side['categories'] ?? []);
         }
 
         return $document;
+    }
+
+    /**
+     * How many of each category to keep.
+     *
+     * 🚨 A ceiling, because this is stored per game forever. A full college
+     * roster puts fifty athletes in the defensive category alone, and keeping
+     * every one of them would grow the payload of a single game past what any
+     * page built from it will ever read. Five per category per side is more
+     * candidates than a weekly leaderboard can use.
+     */
+    protected const PERFORMERS_PER_CATEGORY = 5;
+
+    /**
+     * The best few in every category, whole lines kept together.
+     *
+     * 🚨 This is what makes a special-teams column possible at all. ESPN names
+     * a single LEADER for passing, rushing, receiving and defence and none for
+     * kicking, punting or returns — so a page built from `leaders` can never
+     * show a kicker, however good his afternoon was. The per-athlete lines are
+     * in the same response and were being discarded.
+     *
+     * @return array<string, list<array<string, mixed>>>
+     */
+    protected function performers(array $categories): array
+    {
+        // Which figure decides who had the better day, per category.
+        $rankBy = [
+            'passing' => 'YDS',
+            'rushing' => 'YDS',
+            'receiving' => 'YDS',
+            'defensive' => 'TOT',
+            'interceptions' => 'INT',
+            'kicking' => 'PTS',
+            'punting' => 'AVG',
+            'kickReturns' => 'YDS',
+            'puntReturns' => 'YDS',
+        ];
+
+        $out = [];
+
+        foreach ($categories as $category) {
+            $name = (string) ($category['name'] ?? '');
+            $lines = (array) ($category['lines'] ?? []);
+
+            if (! isset($rankBy[$name]) || $lines === []) {
+                continue;
+            }
+
+            $field = $rankBy[$name];
+
+            $scored = [];
+
+            foreach ($lines as $line) {
+                /*
+                 * 🚨 Stripped to digits before comparing. The feed writes a
+                 * kicker's day as "2/2" and an average as "43.5"; a plain cast
+                 * reads the first as 2 — which is right — and a ratio like
+                 * "9/13" as 9, which is also what we want. Anything with no
+                 * number in it scores nothing and drops out.
+                 */
+                $raw = (string) (($line['stats'] ?? [])[$field] ?? '');
+                $score = (float) preg_replace('/[^0-9.].*$/', '', ltrim($raw));
+
+                if ($score <= 0) {
+                    continue;
+                }
+
+                $scored[] = ['score' => $score] + $line;
+            }
+
+            if ($scored === []) {
+                continue;
+            }
+
+            usort($scored, fn ($a, $b) => $b['score'] <=> $a['score']);
+
+            $out[$name] = array_slice($scored, 0, self::PERFORMERS_PER_CATEGORY);
+        }
+
+        return $out;
     }
 
     /**
