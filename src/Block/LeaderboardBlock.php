@@ -107,13 +107,30 @@ class LeaderboardBlock extends AbstractBlock
             ->get([
                 'u.id as id',
                 'u.username',
-                'u.display_name',
                 'u.avatar_url',
                 's.total_points',
                 's.total_picks',
                 's.correct_picks',
                 's.accuracy',
             ]);
+
+        /*
+         * 🚨 `display_name` is NOT a column — it is an accessor, and what backs
+         * it depends on which extensions are installed (Nicknames supplies a
+         * `nickname`; without it the accessor falls back to the username).
+         * Selecting it in SQL is an "Unknown column" the moment this block is
+         * placed on a page, which is how it took the whole front page down.
+         *
+         * One extra query for the whole table, resolved through the model so
+         * whatever the site uses for display names is what appears.
+         */
+        $names = [];
+
+        if (count($rows)) {
+            foreach (\Flarum\User\User::query()->whereIn('id', $rows->pluck('id')->all())->get() as $user) {
+                $names[(int) $user->id] = (string) $user->display_name;
+            }
+        }
 
         $out = [];
         $rank = 0;
@@ -123,7 +140,7 @@ class LeaderboardBlock extends AbstractBlock
                 'rank' => ++$rank,
                 'id' => (int) $row->id,
                 'username' => (string) $row->username,
-                'displayName' => (string) ($row->display_name ?: $row->username),
+                'displayName' => $names[(int) $row->id] ?? (string) $row->username,
                 'avatarUrl' => $row->avatar_url
                     ? $this->avatar((string) $row->avatar_url)
                     : null,
