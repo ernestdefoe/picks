@@ -315,6 +315,49 @@ class BoxScoreService
     }
 
     /**
+     * Label-major `types` turned athlete-major.
+     *
+     * `[{name: "YDS", athletes: [{id, name, stat}]}]` becomes
+     * `[{id, name, stats: {YDS: "430", TD: "3"}}]` — the same facts, keyed so
+     * one player's whole line can be read at once.
+     *
+     * @return list<array<string, mixed>>
+     */
+    protected function pivot(array $types): array
+    {
+        $byPlayer = [];
+
+        foreach ($types as $type) {
+            $label = (string) ($type['name'] ?? '');
+
+            if ($label === '') {
+                continue;
+            }
+
+            foreach ((array) ($type['athletes'] ?? []) as $athlete) {
+                $name = trim((string) ($athlete['name'] ?? ''));
+
+                if ($name === '') {
+                    continue;
+                }
+
+                /*
+                 * 🚨 Keyed on the provider's athlete id where there is one, and
+                 * on the name only as a fallback. Two players on one roster can
+                 * share a name — and on a college roster with a hundred and
+                 * thirty players, that is a coin flip rather than a curiosity.
+                 */
+                $key = (string) ($athlete['id'] ?? '') ?: mb_strtolower($name);
+
+                $byPlayer[$key] ??= ['id' => (string) ($athlete['id'] ?? ''), 'name' => $name, 'headshot' => '', 'stats' => []];
+                $byPlayer[$key]['stats'][$label] = (string) ($athlete['stat'] ?? '');
+            }
+        }
+
+        return array_values($byPlayer);
+    }
+
+    /**
      * How many of each category to keep.
      *
      * 🚨 A ceiling, because this is stored per game forever. A full college
@@ -355,7 +398,25 @@ class BoxScoreService
 
         foreach ($categories as $category) {
             $name = (string) ($category['name'] ?? '');
+
+            /*
+             * 🚨 Both provider shapes, because both send the same facts
+             * differently. ESPN's provider already pivots to athlete-major
+             * `lines` and carries a headshot with each; CollegeFootballData
+             * answers label-major `types` — one list per statistic — which is
+             * what a box-score table renders from and useless for ranking
+             * people, since a player's yards and touchdowns sit in separate
+             * lists joined only by array position.
+             *
+             * Teaching this the second shape is the whole of what a
+             * CFBD-sourced board needed: the player data was already being
+             * fetched and passed in, and simply had no reader.
+             */
             $lines = (array) ($category['lines'] ?? []);
+
+            if ($lines === []) {
+                $lines = $this->pivot((array) ($category['types'] ?? []));
+            }
 
             if (! isset($rankBy[$name]) || $lines === []) {
                 continue;
