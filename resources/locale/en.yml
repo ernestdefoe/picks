@@ -56,6 +56,35 @@ ernestdefoe-picks:
         logo_custom: Custom Logo (protect from sync)
         logo_custom_help: When checked, the sync process will never overwrite this team's logos.
 
+    leagues:
+      title: Competitions
+      description: >-
+        A season belongs to one competition, and that is what decides
+        everything else: which provider fills its fixtures, which words a Game
+        Day recap is written in, and which scoring rules a Fantasy league
+        starts from.
+      add: New season
+      cancel: Cancel
+      create: Create season
+      col_season: Season
+      col_league: Competition
+      col_sport: Scored as
+      field_name: Name
+      field_year: Year
+      field_league: Competition
+      name_placeholder: 2026 NFL Season
+      no_seasons: No seasons yet. Create one, or sync the college schedule.
+      provider_cfbd: CollegeFootballData
+      sync_espn: Fetch fixtures and scores from ESPN
+      sync_done: "ESPN sync complete. Games: +{created} created, {updated} updated. Teams: {teams}."
+      sync_failed: ESPN sync failed. Check the server logs.
+      season_created: Season created.
+      create_failed: The season could not be created.
+      league_saved: "{season} moved."
+      save_failed: That change could not be saved.
+      registry_missing: >-
+        No competitions were sent by the server. That is a broken install
+        rather than an empty list — every build ships the registry.
     seasons:
       sync_button: Sync Schedule
       seasons_label: seasons

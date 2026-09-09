@@ -34,6 +34,14 @@ class SeasonResource extends AbstractDatabaseResource
         return [
             Endpoint\Index::make()->authenticated(),
             Endpoint\Show::make()->authenticated(),
+            /*
+             * 🚨 Creatable, or multi-sport is unreachable. The college schedule
+             * sync makes its own season row and nothing else ever did, so every
+             * league but that one could be stored, read, synced and scored —
+             * and had no way for anybody to bring a season into existence. The
+             * whole feature was one missing endpoint from being ornamental.
+             */
+            Endpoint\Create::make()->authenticated()->can('picks.manage'),
             Endpoint\Update::make()->authenticated()->can('picks.manage'),
             Endpoint\Delete::make()->authenticated()->can('picks.manage'),
         ];
@@ -50,7 +58,13 @@ class SeasonResource extends AbstractDatabaseResource
                 ->writable()
                 ->maxLength(100),
 
+            /*
+             * 🚨 Writable, because a season for a league nobody syncs from a
+             * calendar has to get its year from somewhere. The college sync
+             * derives it; every other league is created by hand.
+             */
             Schema\Integer::make('year')
+                ->writable()
                 ->get(fn (Season $s) => $s->year),
 
             /*

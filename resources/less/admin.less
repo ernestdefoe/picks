@@ -181,6 +181,50 @@
   grid-template-columns: 60px 110px 1fr 1fr 120px;
 }
 
+// ─── Competitions ────────────────────────────────────────────
+.PicksCardList-header--leagues,
+.PicksCardList-row--leagues {
+  grid-template-columns: 1fr 200px 130px 90px;
+}
+
+.PicksLeagues {
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  // A rule rather than a card: this is the same page as the weeks below it,
+  // and boxing it would suggest two screens where there is one.
+  border-bottom: 1px solid var(--control-bg);
+}
+
+.PicksLeagues-form {
+  display: grid;
+  grid-template-columns: 1fr 110px 1fr auto;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 16px;
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--control-bg);
+
+  .Form-group { margin: 0; }
+
+  label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted-color);
+  }
+}
+
+@media (max-width: 767px) {
+  .PicksCardList-header--leagues,
+  .PicksCardList-row--leagues {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .PicksLeagues-form { grid-template-columns: 1fr; }
+}
+
 // ─── Games tab ───────────────────────────────────────────────
 .PicksCardList-header--games,
 .PicksCardList-row--games {

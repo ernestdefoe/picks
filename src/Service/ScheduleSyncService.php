@@ -8,6 +8,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Resofire\Picks\PickEvent;
 use Resofire\Picks\Season;
+use Resofire\Picks\Service\Leagues\Leagues;
 use Resofire\Picks\Team;
 use Resofire\Picks\Week;
 
@@ -141,7 +142,25 @@ class ScheduleSyncService
      */
     private function syncSeason(int $year): Season
     {
-        $season = Season::where('year', $year)->first();
+        /*
+         * 🚨 Scoped to college football, not to the year alone.
+         *
+         * A board following the NFL and college football has two seasons for
+         * 2026, and a lookup by year would hand this whichever came first —
+         * so the college calendar would be written into the NFL's season and
+         * every NFL fixture would arrive under a competition it is not in. The
+         * league column is what makes them two rows; this is what makes them
+         * stay two rows.
+         */
+        $season = Season::where('year', $year)
+            ->where(function ($q) {
+                // Seasons created before the league column existed have no
+                // value in it, and every one of them is college football.
+                $q->where('league', Leagues::DEFAULT)
+                  ->orWhereNull('league')
+                  ->orWhere('league', '');
+            })
+            ->first();
 
         if (! $season) {
             $season       = new Season();
@@ -149,6 +168,10 @@ class ScheduleSyncService
             $season->name = $year . ' Season';
             $season->slug = Str::slug($year . '-season');
         }
+
+        // Stamped on every pass, so a pre-league row is repaired the first time
+        // it syncs rather than staying ambiguous forever.
+        $season->league = Leagues::DEFAULT;
 
         // Always update dates from the calendar if we have them
         $season->save();

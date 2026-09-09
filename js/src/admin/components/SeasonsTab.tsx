@@ -5,6 +5,7 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import type Mithril from 'mithril';
 import Season from '../../common/models/Season';
 import Week from '../../common/models/Week';
+import LeaguesPanel from './LeaguesPanel';
 
 export default class SeasonsTab extends Component {
   private seasons: Season[] = [];
@@ -141,6 +142,20 @@ export default class SeasonsTab extends Component {
 
     return (
       <div className="PicksSeasonsTab">
+        {/*
+          Which competitions the board follows, above the weeks that belong to
+          one of them. A week list is meaningless until a season exists to hold
+          it, and until this panel there was no way to make one.
+        */}
+        <LeaguesPanel
+          seasons={this.seasons}
+          onchange={() => {
+            app.store.models['picks-seasons'] = {};
+            app.store.models['picks-weeks'] = {};
+            this.loadSeasons();
+          }}
+        />
+
         <div className="PicksTab-header">
           <div>
             <h3>

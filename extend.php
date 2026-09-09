@@ -4,6 +4,8 @@ namespace Resofire\Picks;
 
 use Flarum\Api\Resource;
 use Flarum\Extend;
+use Flarum\Frontend\Document;
+use Resofire\Picks\Service\Leagues\Leagues;
 use Resofire\Picks\Api\Controller\WeekOpenController;
 use Resofire\Picks\Api\Controller\DeletePickController;
 use Resofire\Picks\Api\Controller\EnterResultController;
@@ -14,6 +16,7 @@ use Resofire\Picks\Api\Controller\RefreshTeamLogoController;
 use Resofire\Picks\Api\Controller\ResetDataController;
 use Resofire\Picks\Api\Controller\SyncLogosController;
 use Resofire\Picks\Api\Controller\SyncScheduleController;
+use Resofire\Picks\Api\Controller\SyncEspnController;
 use Resofire\Picks\Api\Controller\SyncScoresController;
 use Resofire\Picks\Api\Controller\SyncScoresStatusController;
 use Resofire\Picks\Api\Controller\SyncTeamsController;
@@ -55,7 +58,21 @@ return [
 
     (new Extend\Frontend('admin'))
         ->js(__DIR__.'/js/dist/admin.js')
-        ->css(__DIR__.'/resources/less/admin.less'),
+        ->css(__DIR__.'/resources/less/admin.less')
+        /*
+         * 🚨 The league list reaches the admin from the registry rather than
+         * being written into the JavaScript. A second copy in the bundle is a
+         * copy that goes stale the first time an extension registers a
+         * competition — which is the whole reason the registry exists.
+         *
+         * 🚨 Each entry carries its PROVIDER too, because the admin has to say
+         * which button syncs a season. CollegeFootballData answers a year and a
+         * week; ESPN answers a scoreboard. Offering the wrong one is a button
+         * that runs and reports nothing changed.
+         */
+        ->content(function (Document $document): void {
+            $document->payload['picksLeagues'] = (new Leagues())->manifest();
+        }),
 
     new Extend\Locales(__DIR__.'/resources/locale'),
 
@@ -120,6 +137,7 @@ return [
         ->post('/picks/sync/logos',         'picks.sync.logos',           SyncLogosController::class)
         ->post('/picks/sync/schedule',      'picks.sync.schedule',        SyncScheduleController::class)
         ->post('/picks/sync/scores',        'picks.sync.scores',          SyncScoresController::class)
+        ->post('/picks/sync/espn',          'picks.sync.espn',            SyncEspnController::class)
         ->get('/picks/sync/scores/status',  'picks.sync.scores.status',   SyncScoresStatusController::class)
         ->get('/picks/stats',               'picks.stats',                StatsController::class)
         ->get('/picks/public-stats',        'picks.public-stats',         PublicStatsController::class)

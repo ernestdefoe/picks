@@ -117,4 +117,30 @@ class Leagues
 
         return $out;
     }
+
+    /**
+     * The registry as the admin needs it: a name to show, and enough about each
+     * league to say how it is kept up to date.
+     *
+     * 🚨 The PROVIDER travels with the name. The admin has to offer the right
+     * sync button per season — CollegeFootballData is asked for a year and a
+     * week, ESPN for a scoreboard — and a screen that guessed would give half
+     * the seasons a button that runs and reports that nothing changed.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public function manifest(): array
+    {
+        $out = [];
+
+        foreach ($this->leagues as $key => $league) {
+            $out[$key] = [
+                'name' => $league->name,
+                'provider' => $league->provider,
+                'sport' => $league->sport,
+            ];
+        }
+
+        return $out;
+    }
 }
