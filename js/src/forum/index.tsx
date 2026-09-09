@@ -3,10 +3,14 @@ import { extend } from 'flarum/common/extend';
 import LinkButton from 'flarum/common/components/LinkButton';
 import IndexSidebar from 'flarum/forum/components/IndexSidebar';
 import UserPage from 'flarum/forum/components/UserPage';
+import registerBlocks from './blocks';
 
 export { default as extend } from './extend.tsx';
 
 app.initializers.add('ernestdefoe/picks', () => {
+  // The standings, offered to Page Builder. Registration only.
+  registerBlocks();
+
   // Forum sidebar nav item
   extend(IndexSidebar.prototype, 'navItems', function (items) {
     if (!app.forum.attribute('picksCanView') && !app.session.user?.isAdmin()) return;

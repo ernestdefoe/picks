@@ -213,8 +213,6 @@ ernestdefoe-picks:
       delete_confirm: Are you sure?
       login_required: Please log in to participate.
 
-# ── Additions ─────────────────────────────────────────────────────────────────
-# These are appended and will be merged by the YAML parser correctly
-# when placed at correct indentation in the actual file.
-# For safety we append here — Flarum reads the full file fine with duplicates
-# at the key level; last value wins. These are new keys so no conflict.
+  forum:
+    leaderboard_block:
+      empty: No picks have been scored yet this season.
