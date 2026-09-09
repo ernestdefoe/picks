@@ -154,6 +154,39 @@ class EspnProvider implements Provider
         $status = (array) (($competition['status'] ?? $event['status'] ?? [])['type'] ?? []);
 
         /*
+         * Who has the ball, as OUR word for a side rather than ESPN's id for a
+         * team.
+         *
+         * 🚨 `situation.possession` is an ESPN team id, and nothing in this
+         * database is keyed by one. Resolving it here — against the two
+         * competitors already in hand — means everything downstream stores
+         * "home" or "away", which is what a scoreboard needs and cannot drift
+         * out of step with anybody's team table.
+         */
+        $situation = (array) ($competition['situation'] ?? []);
+        $hasBall = (string) ($situation['possession'] ?? '');
+        $possession = '';
+
+        if ($hasBall !== '') {
+            foreach ([['home', $home], ['away', $away]] as [$side, $competitor]) {
+                if ((string) (($competitor['team'] ?? [])['id'] ?? $competitor['id'] ?? '') === $hasBall) {
+                    $possession = $side;
+                }
+            }
+        }
+
+        /*
+         * The clock, for a scoreboard that means to look like one.
+         *
+         * 🚨 Period is safe to show and the clock is not, on its own: a quarter
+         * lasts fifteen minutes and a game clock moves every second, so a
+         * number fetched a minute ago is a lie by the time it is read. Both are
+         * carried along with WHEN they were true, and whatever draws them
+         * decides what is still worth showing.
+         */
+        $clock = (array) ($competition['status'] ?? $event['status'] ?? []);
+
+        /*
          * 🚨 Finished is read from `completed` and `state`, NEVER from the
          * status name. Soccer's finished game is `STATUS_FULL_TIME`, baseball's
          * is `STATUS_FINAL`, and a match settled on penalties is something else
@@ -183,7 +216,65 @@ class EspnProvider implements Provider
             'completed' => $completed,
             'status' => (string) ($status['state'] ?? 'pre'),
             'neutral_site' => (bool) ($competition['neutralSite'] ?? false),
+
+            /* ------------------------------------------------- live state */
+            'period' => (int) ($clock['period'] ?? 0),
+            'clock' => trim((string) ($clock['displayClock'] ?? '')),
+            // ESPN's own words, which beat anything built here from a number:
+            // it already knows what a period means in a game gone to overtime.
+            'clock_detail' => trim((string) ($status['shortDetail'] ?? $status['detail'] ?? '')),
+            'possession' => $possession,
+            /*
+             * The short form. "2nd & 10" is what belongs on a scoreboard;
+             * "2nd & 10 at TCU 45" is a sentence, and the yard line is already
+             * the least durable thing on the strip.
+             */
+            'down_distance' => self::downAndDistance($situation),
+            'red_zone' => ! empty($situation['isRedZone']),
         ];
+    }
+
+    /**
+     * "2nd & 10", from whichever the feed happened to send.
+     *
+     * 🚨 The text is not always there. ESPN's situation block changes shape
+     * through a game — between possessions it can carry `down` and `distance`
+     * as bare numbers with no sentence built from them, and after a score it
+     * carries `down = 0`, which means there is no down rather than a zeroth one.
+     *
+     * @param array<string, mixed> $situation
+     */
+    protected static function downAndDistance(array $situation): string
+    {
+        $text = trim((string) ($situation['shortDownDistanceText'] ?? ''));
+
+        /*
+         * 🚨 A negative distance is refused, not printed.
+         *
+         * Caught live on the Convoro board: ESPN sent "4th & -1" for a minute
+         * either side of the half and it went straight onto the scoreboard. A
+         * board reading "4th & -1" is not a board with a small mistake on it,
+         * it is one nobody trusts again — and a feed briefly disagreeing with
+         * itself is an ordinary event, not an exceptional one.
+         *
+         * Showing nothing is the honest answer meanwhile; the score and clock
+         * beside it are unaffected.
+         */
+        if ($text !== '' && ! preg_match('/-\s*\d/', $text)) {
+            return $text;
+        }
+
+        $down = (int) ($situation['down'] ?? 0);
+
+        if ($down < 1 || $down > 4) {
+            return '';
+        }
+
+        $distance = (int) ($situation['distance'] ?? 0);
+        $ordinal = [1 => '1st', 2 => '2nd', 3 => '3rd', 4 => '4th'][$down];
+
+        // "& Goal" is what a scoreboard says when the distance IS the end zone.
+        return $distance > 0 ? $ordinal.' & '.$distance : $ordinal.' & Goal';
     }
 
     /**

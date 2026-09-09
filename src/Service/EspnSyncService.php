@@ -106,7 +106,7 @@ class EspnSyncService
                 'home_score' => $game['home_score'],
                 'away_score' => $game['away_score'],
                 'result' => $this->result($game),
-            ];
+            ] + $this->liveState($game);
 
             if ($event === null) {
                 PickEvent::query()->create($attributes);
@@ -279,6 +279,40 @@ class EspnSyncService
             $game['status'] === 'in' => 'in_progress',
             default => 'scheduled',
         };
+    }
+
+    /**
+     * The in-play state, for anything drawing a scoreboard.
+     *
+     * 🚨 `clock_at` is stamped HERE rather than defaulted in the database,
+     * because it has to mean "when this clock was true", not "when this row was
+     * last touched". A fixture edited by hand three days later must not make a
+     * three-day-old game clock look like it arrived a second ago.
+     *
+     * 🚨 Only stamped when a clock actually came back. A provider that answers
+     * a fixture with no status block would otherwise refresh the timestamp on
+     * stale numbers every sync, and the freshness check downstream — the whole
+     * reason the timestamp exists — would never fire.
+     *
+     * @param  array<string, mixed> $game
+     * @return array<string, mixed>
+     */
+    protected function liveState(array $game): array
+    {
+        $clock = trim((string) ($game['clock'] ?? ''));
+        $period = (int) ($game['period'] ?? 0);
+
+        return [
+            'period' => $period,
+            'clock' => $clock,
+            'clock_detail' => (string) ($game['clock_detail'] ?? ''),
+            'clock_at' => ($clock !== '' || $period > 0) ? time() : 0,
+            'possession' => in_array($game['possession'] ?? '', ['home', 'away'], true)
+                ? (string) $game['possession']
+                : '',
+            'down_distance' => (string) ($game['down_distance'] ?? ''),
+            'red_zone' => (bool) ($game['red_zone'] ?? false),
+        ];
     }
 
     protected function result(array $game): ?string

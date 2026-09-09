@@ -49,6 +49,14 @@ class PickEvent extends AbstractModel
         'home_score',
         'away_score',
         'result',
+        // In-play state; see the clock migration for why clock_at is separate.
+        'period',
+        'clock',
+        'clock_detail',
+        'clock_at',
+        'possession',
+        'down_distance',
+        'red_zone',
     ];
 
     protected $casts = [
@@ -57,6 +65,9 @@ class PickEvent extends AbstractModel
         'neutral_site' => 'boolean',
         'home_score'  => 'integer',
         'away_score'  => 'integer',
+        'period'      => 'integer',
+        'clock_at'    => 'integer',
+        'red_zone'    => 'boolean',
     ];
 
     protected static function booted(): void
