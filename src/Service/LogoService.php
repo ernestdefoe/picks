@@ -85,7 +85,8 @@ class LogoService
     {
         try {
             $response = $this->http->request('GET', $url, [
-                'headers'         => ['User-Agent' => 'ernestdefoe/picks'],
+                // No User-Agent override - see SyncScoresService::fetchJson().
+                // ESPN 403s this custom string; Guzzle's own default is accepted.
                 'timeout'         => self::TIMEOUT,
                 'allow_redirects' => true,
                 'http_errors'     => false,

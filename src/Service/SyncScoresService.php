@@ -148,11 +148,24 @@ class SyncScoresService
      */
     public function syncFromEspn(): array
     {
-        $url      = 'https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard';
+        /*
+         * 🚨 groups=80&limit=300, not the bare scoreboard URL.
+         *
+         * The bare endpoint returns a FEATURED subset — 24 games on the night
+         * this was found, out of 86 being played. Every game outside that
+         * subset simply never appeared in the payload, so its row was never
+         * matched and never updated: the thread sat on "Kickoff" with the game
+         * well under way, and nothing logged, because from the sync's point of
+         * view there was no such game. Rutgers at Boston College was one.
+         *
+         * groups=80 is FBS; limit=300 covers a full Saturday.
+         */
+        $url      = 'https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard'
+            .'?groups=80&limit=300';
         $response = $this->fetchJson($url);
 
         if ($response === null) {
-            throw new \RuntimeException('Failed to fetch ESPN scoreboard.');
+            throw new \RuntimeException('Failed to fetch ESPN scoreboard: '.($this->lastError ?? 'no detail'));
         }
 
         $events    = $response['events'] ?? [];
@@ -324,19 +337,45 @@ class SyncScoresService
      * 'http_errors' => false convention as CfbdService so the host's proxy/SSL
      * config applies and the call is mockable in tests.
      */
+    /** Why the last fetch failed, so the thrown message can say. */
+    private ?string $lastError = null;
+
     private function fetchJson(string $url): ?array
     {
         try {
+            /*
+             * 🚨 NO User-Agent override. Guzzle's own default is what works.
+             *
+             * This used to send 'ernestdefoe/picks' and ESPN began answering
+             * 403 to it, silently, for two days — every live score on the site
+             * froze. Testing a spread of agents against the endpoint: curl/8.5.0
+             * and GuzzleHttp/7 both get 200, while 'ernestdefoe/picks', an empty
+             * agent, a descriptive bot string and 'Mozilla/5.0' all get 403. So
+             * this is not ESPN turning away automated clients — it answers two
+             * of the most obviously automated agents there are. It is the custom
+             * string itself.
+             *
+             * Which is why the fix is to send NOTHING and let Guzzle identify
+             * itself honestly, rather than to paste in a browser agent. A
+             * spoofed browser is both a lie and, here, a 403 anyway.
+             */
             $response = $this->http->request('GET', $url, [
-                'headers'     => ['User-Agent' => 'ernestdefoe/picks'],
                 'timeout'     => self::ESPN_TIMEOUT,
                 'http_errors' => false,
             ]);
         } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
+
             return null;
         }
 
         if ($response->getStatusCode() !== 200) {
+            // 🚨 Keep the status. Returning a bare null turned "ESPN is
+            // refusing us" into "Failed to fetch ESPN scoreboard.", which is
+            // indistinguishable from the site being down and took a live
+            // outage to diagnose.
+            $this->lastError = 'HTTP '.$response->getStatusCode().' from '.$url;
+
             return null;
         }
 
