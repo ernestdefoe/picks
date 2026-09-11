@@ -10,6 +10,7 @@ use Illuminate\Support\Arr;
 use Resofire\Picks\Jobs\ScorePicksJob;
 use Resofire\Picks\Pick;
 use Resofire\Picks\PickEvent;
+use Resofire\Picks\Service\Providers\EspnProvider;
 use Resofire\Picks\Week;
 
 class SyncScoresService
@@ -255,6 +256,51 @@ class SyncScoresService
                 // In progress — update score but don't finalize
                 $event->status = 'in_progress';
             }
+
+            /*
+             * 🚨 The live clock, from the payload already in hand.
+             *
+             * These columns exist for the scoreboard strip, and on this site
+             * nothing was filling them: the other sync path writes them, but it
+             * only runs for an ESPN-backed LEAGUE, and this forum has none — it
+             * exits with "No seasons on an ESPN-backed league" and does nothing.
+             * So the score arrived and the clock never did, and a thread with a
+             * 7-0 game on it still read "Kickoff", which is what period 0 with
+             * an empty clock means to the panel.
+             *
+             * The fields are read exactly as EspnProvider reads them so the two
+             * paths cannot drift into disagreeing about the same game, and
+             * downAndDistance is CALLED rather than copied — it carries a guard
+             * against ESPN's momentary "4th & -1" that is worth having once.
+             */
+            $statusBlock = (array) ($competition['status'] ?? $espnEvent['status'] ?? []);
+            $situation   = (array) ($competition['situation'] ?? []);
+
+            $possession = '';
+            $hasBall    = (string) ($situation['possession'] ?? '');
+
+            if ($hasBall !== '') {
+                foreach ($competition['competitors'] ?? [] as $competitor) {
+                    $teamId = (string) (($competitor['team'] ?? [])['id'] ?? $competitor['id'] ?? '');
+                    if ($teamId === $hasBall) {
+                        $possession = (string) ($competitor['homeAway'] ?? '');
+                    }
+                }
+            }
+
+            $clock  = trim((string) ($statusBlock['displayClock'] ?? ''));
+            $period = (int) ($statusBlock['period'] ?? 0);
+
+            $event->period        = $period;
+            $event->clock         = $clock;
+            $event->clock_detail  = trim((string) ($statusType['shortDetail'] ?? $statusType['detail'] ?? ''));
+            // Stamped here, not defaulted in the database: the panel needs to
+            // know how old the clock is before it shows a number that moves
+            // every second.
+            $event->clock_at      = ($clock !== '' || $period > 0) ? time() : 0;
+            $event->possession    = $possession;
+            $event->down_distance = EspnProvider::downAndDistance($situation);
+            $event->red_zone      = ! empty($situation['isRedZone']);
 
             $event->save();
             $updated++;

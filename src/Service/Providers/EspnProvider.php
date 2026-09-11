@@ -244,7 +244,7 @@ class EspnProvider implements Provider
      *
      * @param array<string, mixed> $situation
      */
-    protected static function downAndDistance(array $situation): string
+    public static function downAndDistance(array $situation): string
     {
         $text = trim((string) ($situation['shortDownDistanceText'] ?? ''));
 
