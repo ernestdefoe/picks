@@ -305,6 +305,14 @@ class UserHistoryController implements RequestHandlerInterface
     {
         $connection = (new Pick())->getConnection();
 
+        /*
+         * 🚨 raw() is passed through VERBATIM — the query builder prefixes only
+         * the identifiers it wraps itself, so the join and wheres below resolve
+         * while the tables named inside this window expression do not. Left
+         * unprefixed the streak stat 500s on any forum with a table prefix.
+         */
+        $p = $connection->getTablePrefix();
+
         $sequenced = Pick::query()
             ->join('picks_events', 'picks_picks.event_id', '=', 'picks_events.id')
             ->where('picks_picks.user_id', $userId)
@@ -312,10 +320,10 @@ class UserHistoryController implements RequestHandlerInterface
             ->select([
                 'picks_picks.is_correct as is_correct',
                 $connection->raw(
-                    'ROW_NUMBER() OVER (ORDER BY picks_events.match_date, picks_events.id)'
+                    "ROW_NUMBER() OVER (ORDER BY {$p}picks_events.match_date, {$p}picks_events.id)"
                     . ' - ROW_NUMBER() OVER ('
-                    . 'PARTITION BY picks_picks.is_correct'
-                    . ' ORDER BY picks_events.match_date, picks_events.id) AS grp'
+                    . "PARTITION BY {$p}picks_picks.is_correct"
+                    . " ORDER BY {$p}picks_events.match_date, {$p}picks_events.id) AS grp"
                 ),
             ]);
 

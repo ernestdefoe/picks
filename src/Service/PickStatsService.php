@@ -18,18 +18,26 @@ class PickStatsService
      */
     public function mostPickedTeam(): array
     {
+        /*
+         * 🚨 selectRaw() is verbatim — the query builder prefixes only the
+         * identifiers it wraps itself, so the join/where/groupBy below resolve
+         * while a table-qualified column in the select list does not. Left
+         * unprefixed this 500s on any forum with a table prefix configured.
+         */
+        $p = (new Pick())->getConnection()->getTablePrefix();
+
         $homeTop = Pick::query()
             ->join('picks_events', 'picks_picks.event_id', '=', 'picks_events.id')
             ->where('picks_picks.selected_outcome', 'home')
             ->groupBy('picks_events.home_team_id')
-            ->selectRaw('picks_events.home_team_id as team_id, COUNT(*) as cnt')
+            ->selectRaw("{$p}picks_events.home_team_id as team_id, COUNT(*) as cnt")
             ->orderByDesc('cnt')->first();
 
         $awayTop = Pick::query()
             ->join('picks_events', 'picks_picks.event_id', '=', 'picks_events.id')
             ->where('picks_picks.selected_outcome', 'away')
             ->groupBy('picks_events.away_team_id')
-            ->selectRaw('picks_events.away_team_id as team_id, COUNT(*) as cnt')
+            ->selectRaw("{$p}picks_events.away_team_id as team_id, COUNT(*) as cnt")
             ->orderByDesc('cnt')->first();
 
         $topTeamId  = null;

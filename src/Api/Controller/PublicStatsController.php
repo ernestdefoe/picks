@@ -140,10 +140,21 @@ class PublicStatsController implements RequestHandlerInterface
         // ── Most picked games this week (top 5 by pick volume) ───────────────
         $mostPickedGames = [];
         if ($currentWeekId) {
+            /*
+             * 🚨 selectRaw() is passed through VERBATIM — the query builder
+             * prefixes only the identifiers it wraps itself, so the join,
+             * where and groupBy came out correctly prefixed while this select
+             * list did not. On a forum with a table prefix that is "Unknown
+             * column 'picks_picks.event_id' in 'field list'" — a 500 on the
+             * public stats page. Core interpolates the prefix the same way
+             * (Flarum\Post\Post::boot()); no prefix configured returns ''.
+             */
+            $p = (new Pick())->getConnection()->getTablePrefix();
+
             $gameCounts = Pick::join('picks_events', 'picks_picks.event_id', '=', 'picks_events.id')
                 ->where('picks_events.week_id', $currentWeekId)
                 ->groupBy('picks_picks.event_id', 'picks_events.home_team_id', 'picks_events.away_team_id')
-                ->selectRaw('picks_picks.event_id, picks_events.home_team_id, picks_events.away_team_id, COUNT(*) as total_picks')
+                ->selectRaw("{$p}picks_picks.event_id, {$p}picks_events.home_team_id, {$p}picks_events.away_team_id, COUNT(*) as total_picks")
                 ->orderByDesc('total_picks')
                 ->limit(5)
                 ->get();
