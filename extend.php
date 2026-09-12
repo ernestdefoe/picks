@@ -162,8 +162,24 @@ $extenders = [
         ->command(PollLiveScoresCommand::class)
         ->command(SyncBoxScoresCommand::class)
         ->command(SyncEspnCommand::class)
+        /*
+         * Every minute, not every five.
+         *
+         * Five was chosen for SCORES, where a final arriving late is harmless.
+         * The same command now carries the game CLOCK, and a clock five minutes
+         * stale is wrong more often than it is right — a live thread showed
+         * "1st 10:42" while the game was most of a drive further on.
+         *
+         * One minute is the floor available here anyway: schedule:run is driven
+         * by a minutely timer, so nothing scheduled can be fresher than that.
+         *
+         * The cost is one request per minute — a single call covers every game
+         * on the board (86 on a Saturday), so this does not scale with the
+         * fixture list. See the read path for how the panel gets fresher than
+         * a minute without adding any outbound calls per viewer.
+         */
         ->schedule(PollLiveScoresCommand::class, function ($event) {
-            $event->everyFiveMinutes();
+            $event->everyMinute()->withoutOverlapping();
         })
         /*
          * 🚨 Hourly, and cheap by construction: it fetches a WEEK at a time —
