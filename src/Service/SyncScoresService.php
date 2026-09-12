@@ -213,17 +213,71 @@ class SyncScoresService
             $state      = $statusType['state'] ?? 'pre';
             $completed  = (bool) ($statusType['completed'] ?? false);
 
-            // Skip games that haven't started
-            if ($state === 'pre') {
-                $skipped++;
-                continue;
-            }
-
             // Match to our event by cfbd_id (ESPN event id = CFBD game id)
             $event = $eventsByCfbdId->get((int) $espnId);
 
             if (! $event) {
                 $skipped++;
+                continue;
+            }
+
+            /*
+             * 🚨 The lead-in is written for EVERY game in the payload, a game
+             * that has not started included — which is the whole reason this
+             * block sits above the `pre` check rather than below it.
+             *
+             * Rank, record, venue and channel are worth most in the hours
+             * BEFORE kickoff: they are what a game thread's opening post is
+             * built from, and Game Day opens that thread three hours early. A
+             * sync that skipped straight past every scheduled game — as this
+             * one did — could only ever fill them in once the game was already
+             * being played, which is an hour after the only post that wanted
+             * them had been written.
+             *
+             * It costs nothing: this payload is already in hand, and an
+             * unchanged fixture is not dirty, so Eloquent issues no UPDATE for
+             * it.
+             */
+            /*
+             * 🚨 And it STOPS at the final whistle. A finished game keeps
+             * appearing in the scoreboard payload until midnight, and by then
+             * the feed's records have the game itself in them — so a board left
+             * to keep writing would quietly turn "1-0 at 1-0" into "2-0 at 1-1"
+             * on a final everybody had already read. Worse for a thread title,
+             * which is built from the rank once and never again.
+             *
+             * The lead-in is what the two sides brought INTO the game. Once
+             * they have played it, it is history, and history is not a thing a
+             * sync gets to revise.
+             */
+            /*
+             * 🚨 `$completed` as well as the stored status, because the poll
+             * that SEES a game finish has not written that status yet — the
+             * score block below does, a few lines later. Checking only the row
+             * would let exactly one last poll through, and that one is the
+             * dangerous one: it is the first payload in which the feed's
+             * records include the game that has just been played.
+             */
+            if (! $completed && $event->status !== PickEvent::STATUS_FINISHED) {
+                $event->home_rank   = EspnProvider::rank($this->competitor($competition, 'home'));
+                $event->away_rank   = EspnProvider::rank($this->competitor($competition, 'away'));
+                $event->home_record = EspnProvider::record($this->competitor($competition, 'home'));
+                $event->away_record = EspnProvider::record($this->competitor($competition, 'away'));
+                $event->venue       = trim((string) (((array) ($competition['venue'] ?? []))['fullName'] ?? ''));
+                $event->venue_city  = EspnProvider::venueCity((array) ($competition['venue'] ?? []));
+                $event->broadcast   = EspnProvider::broadcast($competition);
+            }
+
+            // A game that has not started has no score, no clock and no result
+            // — but it does now have everything above.
+            if ($state === 'pre') {
+                if ($event->isDirty()) {
+                    $event->save();
+                    $updated++;
+                } else {
+                    $skipped++;
+                }
+
                 continue;
             }
 
@@ -329,6 +383,29 @@ class SyncScoresService
         );
 
         return compact('updated', 'finished', 'skipped');
+    }
+
+    /**
+     * One side of a competition, by home or away.
+     *
+     * 🚨 Matched on `homeAway` rather than taken by position. ESPN orders the
+     * competitors away-then-home almost everywhere and not quite everywhere,
+     * and a rank read off the wrong index is the most plausible-looking mistake
+     * on the board: the number is real, the team is wrong, and nothing about it
+     * looks broken.
+     *
+     * @param  array<string, mixed> $competition
+     * @return array<string, mixed>
+     */
+    private function competitor(array $competition, string $side): array
+    {
+        foreach ((array) ($competition['competitors'] ?? []) as $competitor) {
+            if (is_array($competitor) && ($competitor['homeAway'] ?? '') === $side) {
+                return $competitor;
+            }
+        }
+
+        return [];
     }
 
     /**

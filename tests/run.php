@@ -336,6 +336,70 @@ $tests['a summary is fetched once per game, and only so many per run'] = functio
     same(EspnProvider::MAX_SUMMARIES_PER_RUN, $provider->calls, 'the per-run ceiling did not hold');
 };
 
+$tests['the lead-in is read off the fixture, sentinels and all'] = function () {
+    /*
+     * 🚨 99 is the trap, and it is the only one here worth a test of its own.
+     * Every competitor in the payload carries a `curatedRank`, and for two
+     * thirds of the teams playing on a Saturday its value is 99 — the feed's
+     * word for "outside the poll". Taken at face value it puts "#99" beside
+     * most of the names on the board, which looks like a number being counted
+     * and is not one.
+     */
+    same(0, EspnProvider::rank(['curatedRank' => ['current' => 99]]), '99 was not read as unranked');
+    same(0, EspnProvider::rank([]), 'a competitor with no rank block was not unranked');
+    same(0, EspnProvider::rank(['curatedRank' => ['current' => 0]]), 'zero was not unranked');
+    same(12, EspnProvider::rank(['curatedRank' => ['current' => 12]]), 'a real rank was lost');
+    same(0, EspnProvider::rank(['curatedRank' => ['current' => 26]]), 'a rank outside a 25-team poll was kept');
+
+    /*
+     * 🚨 Picked by TYPE. The array also carries home, road and conference
+     * records, and taking the first would be right until the feed reordered
+     * them — at which point every board would quietly show road records.
+     */
+    $records = ['records' => [
+        ['name' => 'Home', 'type' => 'home', 'summary' => '2-0'],
+        ['name' => 'overall', 'type' => 'total', 'summary' => '3-1'],
+    ]];
+    same('3-1', EspnProvider::record($records), 'the overall record was not the one taken');
+    same('', EspnProvider::record([]), 'a competitor with no records invented one');
+
+    /*
+     * 🚨 The NATIONAL listing. A reader that took the first entry would tell
+     * everybody on the board to watch a regional channel most of them cannot
+     * receive.
+     */
+    $broadcasts = ['broadcasts' => [
+        ['market' => 'home', 'names' => ['KTVT']],
+        ['market' => 'national', 'names' => ['ABC']],
+    ]];
+    same('ABC', EspnProvider::broadcast($broadcasts), 'a regional listing beat the national one');
+    same('KTVT', EspnProvider::broadcast(['broadcasts' => [['market' => 'home', 'names' => ['KTVT']]]]), 'a regional-only listing was dropped');
+    same('', EspnProvider::broadcast([]), 'a game with no listing was given one');
+
+    // 🚨 Composed from the parts that are there: an address with a city and no
+    // state must not print "London, " with the comma hanging off it.
+    same('College Station, TX', EspnProvider::venueCity(['address' => ['city' => 'College Station', 'state' => 'TX']]), 'city and state were not joined');
+    same('London, England', EspnProvider::venueCity(['address' => ['city' => 'London', 'country' => 'England']]), 'country did not stand in for state');
+    same('Dublin', EspnProvider::venueCity(['address' => ['city' => 'Dublin']]), 'a lone city gained a trailing comma');
+    same('', EspnProvider::venueCity([]), 'an empty venue produced a location');
+};
+
+$tests['a fixture carries its lead-in through the adapter'] = function () use ($espn, $leagues) {
+    $games = $espn('espn-scoreboard-nfl.json')->games($leagues->get('nfl'), 2026, 2);
+
+    ok($games !== [], 'no games came back at all');
+
+    foreach ($games as $game) {
+        foreach (['home_rank', 'away_rank', 'home_record', 'away_record', 'venue', 'venue_city', 'broadcast'] as $key) {
+            ok(array_key_exists($key, $game), 'the adapter dropped ' . $key . ' from the fixture');
+        }
+
+        // Whatever the feed said, a rank that reaches a row is a real one.
+        ok($game['home_rank'] >= 0 && $game['home_rank'] <= 25, 'a sentinel rank reached the fixture', json_encode($game['home_rank']));
+        ok($game['away_rank'] >= 0 && $game['away_rank'] <= 25, 'a sentinel rank reached the fixture', json_encode($game['away_rank']));
+    }
+};
+
 $tests['a league no provider covers is skipped, not thrown at'] = function () use ($espn) {
     $provider = $espn('espn-summary-nfl.json');
     $orphan = new League('orphan', 'Orphan', 'espn', '', 'gridiron', false);

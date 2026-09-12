@@ -106,7 +106,7 @@ class EspnSyncService
                 'home_score' => $game['home_score'],
                 'away_score' => $game['away_score'],
                 'result' => $this->result($game),
-            ] + $this->liveState($game);
+            ] + $this->liveState($game) + $this->leadIn($game);
 
             if ($event === null) {
                 PickEvent::query()->create($attributes);
@@ -313,6 +313,30 @@ class EspnSyncService
             'down_distance' => (string) ($game['down_distance'] ?? ''),
             'ball_on' => (string) ($game['ball_on'] ?? ''),
             'red_zone' => (bool) ($game['red_zone'] ?? false),
+        ];
+    }
+
+    /**
+     * The lead-in: who is ranked, what each side has done, where, and on what.
+     *
+     * 🚨 Separate from `liveState` because it ages in the opposite direction.
+     * A clock is worthless a minute later and these are worth most before a ball
+     * is thrown — and unlike the clock, they are still true a year afterwards,
+     * which is the reason the rank is frozen onto the fixture at all.
+     *
+     * @param  array<string, mixed> $game
+     * @return array<string, mixed>
+     */
+    protected function leadIn(array $game): array
+    {
+        return [
+            'home_rank' => (int) ($game['home_rank'] ?? 0),
+            'away_rank' => (int) ($game['away_rank'] ?? 0),
+            'home_record' => (string) ($game['home_record'] ?? ''),
+            'away_record' => (string) ($game['away_record'] ?? ''),
+            'venue' => (string) ($game['venue'] ?? ''),
+            'venue_city' => (string) ($game['venue_city'] ?? ''),
+            'broadcast' => (string) ($game['broadcast'] ?? ''),
         ];
     }
 

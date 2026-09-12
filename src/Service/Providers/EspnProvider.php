@@ -217,6 +217,22 @@ class EspnProvider implements Provider
             'status' => (string) ($status['state'] ?? 'pre'),
             'neutral_site' => (bool) ($competition['neutralSite'] ?? false),
 
+            /* --------------------------------------------------- the lead-in */
+
+            /*
+             * 🚨 Taken from the FIXTURE, which is what makes it free and what
+             * makes it right. Free because this payload is already in hand;
+             * right because a rank belongs to the week the game was played in,
+             * and asking a poll for it later would answer with today's.
+             */
+            'home_rank' => self::rank($home),
+            'away_rank' => self::rank($away),
+            'home_record' => self::record($home),
+            'away_record' => self::record($away),
+            'venue' => trim((string) (((array) ($competition['venue'] ?? []))['fullName'] ?? '')),
+            'venue_city' => self::venueCity((array) ($competition['venue'] ?? [])),
+            'broadcast' => self::broadcast($competition),
+
             /* ------------------------------------------------- live state */
             'period' => (int) ($clock['period'] ?? 0),
             'clock' => trim((string) ($clock['displayClock'] ?? '')),
@@ -276,6 +292,120 @@ class EspnProvider implements Provider
 
         // "& Goal" is what a scoreboard says when the distance IS the end zone.
         return $distance > 0 ? $ordinal.' & '.$distance : $ordinal.' & Goal';
+    }
+
+    /**
+     * Where a team sits in the poll, or 0 for outside it.
+     *
+     * 🚨 99 IS THE FEED'S WORD FOR UNRANKED, and it is the only trap in this
+     * whole block. Every competitor carries a `curatedRank`, so a reader that
+     * takes the number at face value puts "#99" beside two thirds of the teams
+     * playing on any given Saturday — a board that looks like it is counting
+     * something and is not. It is turned into 0 here, once, so nothing
+     * downstream has to know that 99 ever meant anything.
+     *
+     * 🚨 "Curated" rather than AP, and the distinction is ESPN's rather than
+     * ours: in college football it is the AP poll until the selection committee
+     * publishes, and the committee's ranking after that. Which is exactly what
+     * a scoreboard should show — once the CFP rankings exist, they are the ones
+     * every broadcast puts beside a team's name.
+     *
+     * @param array<string, mixed> $side
+     */
+    public static function rank(array $side): int
+    {
+        /*
+         * 🚨 The lookup is bracketed, not cast-then-defaulted. `(int) $a['k'] ?? 0`
+         * binds the CAST first, so a missing key warns and is only then
+         * defaulted — a notice in the log on every fixture the feed sends
+         * without a rank block, which is most of them out of season.
+         */
+        $curated = (array) ($side['curatedRank'] ?? []);
+        $rank = (int) ($curated['current'] ?? 0);
+
+        // Anything outside a 25-team poll is unranked, whatever number the feed
+        // used to say so.
+        return $rank > 0 && $rank <= 25 ? $rank : 0;
+    }
+
+    /**
+     * A team's record — "2-0", "7-4-1" — as the feed writes it.
+     *
+     * 🚨 The OVERALL one, picked by type rather than by position. The array also
+     * carries home, road and conference records, and taking the first would be
+     * right until the day the feed reordered them and every board quietly began
+     * showing road records instead.
+     *
+     * @param array<string, mixed> $side
+     */
+    public static function record(array $side): string
+    {
+        foreach ((array) ($side['records'] ?? []) as $record) {
+            if (is_array($record) && (($record['type'] ?? '') === 'total' || ($record['name'] ?? '') === 'overall')) {
+                return trim((string) ($record['summary'] ?? ''));
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * "College Station, TX" — or as much of it as the feed sent.
+     *
+     * 🚨 Composed from the parts that are actually there. The address block
+     * routinely arrives with a city and no state (and, abroad, a country
+     * instead), so a format string would print "London, " with a comma hanging
+     * off the end of it on a fixture that is not missing anything at all.
+     *
+     * @param array<string, mixed> $venue
+     */
+    public static function venueCity(array $venue): string
+    {
+        $address = (array) ($venue['address'] ?? []);
+
+        $parts = array_values(array_filter([
+            trim((string) ($address['city'] ?? '')),
+            trim((string) ($address['state'] ?? $address['country'] ?? '')),
+        ], fn (string $part): bool => $part !== ''));
+
+        return implode(', ', $parts);
+    }
+
+    /**
+     * Who is showing it.
+     *
+     * 🚨 The NATIONAL listing, where there is one. `broadcasts` also carries
+     * per-market entries — the home team's regional channel, the away team's —
+     * and a reader that took the first would tell everybody on the board to
+     * watch a station most of them cannot receive.
+     *
+     * @param array<string, mixed> $competition
+     */
+    public static function broadcast(array $competition): string
+    {
+        $names = [];
+
+        foreach ((array) ($competition['broadcasts'] ?? []) as $broadcast) {
+            if (! is_array($broadcast)) {
+                continue;
+            }
+
+            $name = trim((string) (((array) ($broadcast['names'] ?? []))[0] ?? ''));
+
+            if ($name === '') {
+                continue;
+            }
+
+            if (($broadcast['market'] ?? '') === 'national') {
+                return $name;
+            }
+
+            $names[] = $name;
+        }
+
+        // No national listing: the first regional one is better than silence,
+        // and on a board built around one team it is usually the right channel.
+        return $names[0] ?? '';
     }
 
     /**
@@ -501,7 +631,7 @@ class EspnProvider implements Provider
                         'id' => (string) ($who['id'] ?? ''),
                         'name' => $displayName,
                         'jersey' => (string) ($who['jersey'] ?? ''),
-                        'headshot' => (string) ((array) ($who['headshot'] ?? []))['href'] ?? '',
+                        'headshot' => (string) (((array) ($who['headshot'] ?? []))['href'] ?? ''),
                         'stats' => $map,
                     ];
                 }

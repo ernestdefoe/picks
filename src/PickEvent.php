@@ -19,6 +19,13 @@ use Flarum\Database\AbstractModel;
  * @property int|null    $home_score
  * @property int|null    $away_score
  * @property string|null $result
+ * @property int         $home_rank
+ * @property int         $away_rank
+ * @property string      $home_record
+ * @property string      $away_record
+ * @property string      $venue
+ * @property string      $venue_city
+ * @property string      $broadcast
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
@@ -58,6 +65,14 @@ class PickEvent extends AbstractModel
         'down_distance',
         'ball_on',
         'red_zone',
+        // The lead-in; see the migration for why a rank belongs to the GAME.
+        'home_rank',
+        'away_rank',
+        'home_record',
+        'away_record',
+        'venue',
+        'venue_city',
+        'broadcast',
     ];
 
     protected $casts = [
@@ -69,6 +84,8 @@ class PickEvent extends AbstractModel
         'period'      => 'integer',
         'clock_at'    => 'integer',
         'red_zone'    => 'boolean',
+        'home_rank'   => 'integer',
+        'away_rank'   => 'integer',
     ];
 
     protected static function booted(): void
