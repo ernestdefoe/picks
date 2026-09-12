@@ -101,6 +101,8 @@ export default class MatchesTab extends Component<TabAttrs> {
     if (isLoser) cls += ' PicksTeamBtn--loser';
     if (!game.can_pick && !isFinished) cls += ' PicksTeamBtn--locked';
 
+    const rank = side === 'home' ? game.home_rank : game.away_rank;
+
     const logoUrl = team?.logo_url;
     const logoDarkUrl = team?.logo_dark_url || logoUrl;
 
@@ -120,7 +122,14 @@ export default class MatchesTab extends Component<TabAttrs> {
             <span>{(team?.abbreviation || team?.name || '?').charAt(0)}</span>
           )}
         </div>
-        <div className="PicksTeamBtn-name">{team?.name || '—'}</div>
+        <div className="PicksTeamBtn-name">
+          {/* 🚨 Inside the name, not above it. These buttons are a fixed grid —
+              logo, name, conference — and a rank on a line of its own would
+              make a ranked side taller than the one beside it, so every card
+              with one ranked team in it would sit crooked. */}
+          {rank ? <span className="PicksTeamBtn-rank">#{rank}</span> : null}
+          {team?.name || '—'}
+        </div>
         <div className="PicksTeamBtn-conf">{team?.conference || ''}</div>
       </button>
     );

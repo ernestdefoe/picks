@@ -14,6 +14,9 @@ export default class PickEvent extends Model {
   homeScore    = Model.attribute<number | null>('homeScore');
   awayScore    = Model.attribute<number | null>('awayScore');
   result       = Model.attribute<string | null>('result');
+  // Where each side was ranked going INTO this game; null when unranked.
+  homeRank     = Model.attribute<number | null>('homeRank');
+  awayRank     = Model.attribute<number | null>('awayRank');
   canPick      = Model.attribute<boolean>('canPick');
 
   week     = Model.hasOne<Week | false>('week');

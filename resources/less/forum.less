@@ -201,6 +201,21 @@
     font-weight: 400;
   }
 
+  /*
+   * The poll ranking, in front of the name.
+   *
+   * 🚨 Muted and bold rather than coloured. This button already uses colour to
+   * say three things — picked, won, lost — and a rank in a fourth colour would
+   * be a signal competing with the ones somebody is actually clicking on. Every
+   * state rule above targets `-name`, so the rank keeps its own colour through
+   * all of them, which is what stops it turning green on a winner.
+   */
+  &-rank {
+    margin-inline-end: 4px;
+    font-weight: 700;
+    color: var(--muted-color);
+  }
+
   &-conf {
     font-size: 11px;
     color: var(--muted-color);

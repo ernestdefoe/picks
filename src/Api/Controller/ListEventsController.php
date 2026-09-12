@@ -68,6 +68,16 @@ class ListEventsController implements RequestHandlerInterface
                 'home_score' => $e->home_score,
                 'away_score' => $e->away_score,
                 'result'     => $e->result,
+                /*
+                 * 🚨 On the GAME, beside the score, not folded into the team.
+                 * A rank belongs to the week the fixture was played in — see
+                 * the lead-in migration — and a board that read it off the club
+                 * would relabel every finished game each time the poll moved.
+                 * Nesting it under `home_team` would say the opposite, to
+                 * whoever reads this payload next.
+                 */
+                'home_rank'  => (int) $e->home_rank ?: null,
+                'away_rank'  => (int) $e->away_rank ?: null,
                 'home_team'  => $this->serializeTeam($e->homeTeam),
                 'away_team'  => $this->serializeTeam($e->awayTeam),
             ])->values()->toArray(),

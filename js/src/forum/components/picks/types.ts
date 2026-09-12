@@ -24,6 +24,16 @@ export interface Game {
   home_score: number | null;
   away_score: number | null;
   result: string | null;
+  /**
+   * Where each side was ranked GOING INTO this game, or null for unranked.
+   *
+   * 🚨 On the game rather than on the team, and null rather than 0 — both for
+   * the same reason the scoreboard does it that way. A rank is a fact about the
+   * week, and `0` is a falsy number, which is exactly the value that gets
+   * printed as "#0" by a template asking the wrong question.
+   */
+  home_rank: number | null;
+  away_rank: number | null;
   home_team: GameTeam | null;
   away_team: GameTeam | null;
   my_pick: MyPick | null;

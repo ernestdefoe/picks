@@ -118,6 +118,25 @@ class EventResource extends AbstractDatabaseResource
                 ->nullable()
                 ->get(fn (PickEvent $e) => $e->result),
 
+            /*
+             * 🚨 Read-only, like the scores above and for a stronger version of
+             * the same reason: these are not somebody's to set. The rank a side
+             * carried into a game is a fact about that week, written once by the
+             * sync from the fixture feed and never revised — a writable field
+             * here would be a second path to a number whose whole value is that
+             * it cannot be changed after the fact.
+             *
+             * Null for unranked rather than 0: `0` is falsy AND a number, which
+             * is the combination that gets drawn as "#0".
+             */
+            Schema\Integer::make('homeRank')
+                ->nullable()
+                ->get(fn (PickEvent $e) => (int) $e->home_rank ?: null),
+
+            Schema\Integer::make('awayRank')
+                ->nullable()
+                ->get(fn (PickEvent $e) => (int) $e->away_rank ?: null),
+
             Schema\Boolean::make('canPick')
                 ->get(fn (PickEvent $e) => $e->canPick()),
 
