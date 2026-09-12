@@ -33,6 +33,7 @@ use Resofire\Picks\Api\Resource\EventResource;
 use Resofire\Picks\Api\Resource\SeasonResource;
 use Resofire\Picks\Api\Resource\TeamResource;
 use Resofire\Picks\Api\Resource\WeekResource;
+use Resofire\Picks\Console\BackfillLeadInCommand;
 use Resofire\Picks\Console\PollLiveScoresCommand;
 use Resofire\Picks\Console\SyncBoxScoresCommand;
 use Resofire\Picks\Console\SyncEspnCommand;
@@ -162,6 +163,13 @@ $extenders = [
         ->command(PollLiveScoresCommand::class)
         ->command(SyncBoxScoresCommand::class)
         ->command(SyncEspnCommand::class)
+        /*
+         * 🚨 Not scheduled, and deliberately not. The live poll keeps today's
+         * fixtures current; this is the one-off that reaches back over a season
+         * the poll was never able to see. A season does not need filling in
+         * twice.
+         */
+        ->command(BackfillLeadInCommand::class)
         /*
          * Every minute, not every five.
          *

@@ -400,6 +400,32 @@ $tests['a fixture carries its lead-in through the adapter'] = function () use ($
     }
 };
 
+$tests['a finished record has that game taken back out of it'] = function () {
+    /*
+     * 🚨 The feed's record for a past game INCLUDES that game. Ball State read
+     * 0-1 on the day they lost their opener, not 0-0 — so a backfill that
+     * stored it as sent would put the loss of the game you are looking at into
+     * the record printed beside it, giving the result away above the result.
+     */
+    same('0-0', EspnProvider::recordBefore('0-1', false), 'a loss was not taken back out');
+    same('0-0', EspnProvider::recordBefore('1-0', true), 'a win was not taken back out');
+    same('3-1', EspnProvider::recordBefore('4-1', true), 'the wrong column was decremented');
+    same('4-0', EspnProvider::recordBefore('4-1', false), 'the wrong column was decremented');
+
+    // A ties column is carried through rather than parsed and rebuilt.
+    same('2-1-1', EspnProvider::recordBefore('3-1-1', true), 'a ties column did not survive');
+
+    /*
+     * 🚨 It refuses rather than guesses. A board with no record on it reads as
+     * a board that has not got one, which is true; a wrong record reads as a
+     * fact.
+     */
+    same('', EspnProvider::recordBefore('0-0', true), 'a win was unwound out of a team that had not won one');
+    same('', EspnProvider::recordBefore('0-0', false), 'a loss was unwound out of a team that had not lost one');
+    same('', EspnProvider::recordBefore('', true), 'an empty record produced one');
+    same('', EspnProvider::recordBefore('TBD', false), 'an unparseable record produced one');
+};
+
 $tests['a league no provider covers is skipped, not thrown at'] = function () use ($espn) {
     $provider = $espn('espn-summary-nfl.json');
     $orphan = new League('orphan', 'Orphan', 'espn', '', 'gridiron', false);

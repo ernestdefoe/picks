@@ -350,6 +350,41 @@ class EspnProvider implements Provider
     }
 
     /**
+     * A record with one game taken back out of it.
+     *
+     * 🚨 The feed's record for a PAST game already includes that game — Ball
+     * State read 0-1 the day they lost their opener, not 0-0 — and everything
+     * that draws these columns says "what they brought in". A board showing the
+     * loser of the game you are looking at already carrying the loss is not
+     * inconsistent in some abstract way; it has given away the result above the
+     * result.
+     *
+     * So the outcome is subtracted back out. Exact arithmetic on a result this
+     * database already holds, not an estimate.
+     *
+     * 🚨 It REFUSES rather than guesses. An unparseable record or a subtraction
+     * that would go negative yields an empty string, because a board with no
+     * record on it reads as a board that does not have one — which is true — and
+     * a wrong record reads as a fact.
+     */
+    public static function recordBefore(string $record, bool $won): string
+    {
+        if (! preg_match('/^(\d+)\s*-\s*(\d+)(.*)$/', trim($record), $m)) {
+            return '';
+        }
+
+        $wins = (int) $m[1] - ($won ? 1 : 0);
+        $losses = (int) $m[2] - ($won ? 0 : 1);
+
+        if ($wins < 0 || $losses < 0) {
+            return '';
+        }
+
+        // Whatever trailed it — a ties column — is carried through untouched.
+        return $wins . '-' . $losses . $m[3];
+    }
+
+    /**
      * "College Station, TX" — or as much of it as the feed sent.
      *
      * 🚨 Composed from the parts that are actually there. The address block
