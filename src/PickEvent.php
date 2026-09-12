@@ -56,6 +56,7 @@ class PickEvent extends AbstractModel
         'clock_at',
         'possession',
         'down_distance',
+        'ball_on',
         'red_zone',
     ];
 

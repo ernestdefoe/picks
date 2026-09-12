@@ -300,6 +300,9 @@ class SyncScoresService
             $event->clock_at      = ($clock !== '' || $period > 0) ? time() : 0;
             $event->possession    = $possession;
             $event->down_distance = EspnProvider::downAndDistance($situation);
+            // The feed's own text - "BC 49", "50" - printed as sent. See the
+            // migration for why this is not stored as a number.
+            $event->ball_on       = trim((string) ($situation['possessionText'] ?? ''));
             $event->red_zone      = ! empty($situation['isRedZone']);
 
             $event->save();

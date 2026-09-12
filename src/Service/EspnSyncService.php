@@ -311,6 +311,7 @@ class EspnSyncService
                 ? (string) $game['possession']
                 : '',
             'down_distance' => (string) ($game['down_distance'] ?? ''),
+            'ball_on' => (string) ($game['ball_on'] ?? ''),
             'red_zone' => (bool) ($game['red_zone'] ?? false),
         ];
     }

@@ -230,6 +230,7 @@ class EspnProvider implements Provider
              * the least durable thing on the strip.
              */
             'down_distance' => self::downAndDistance($situation),
+            'ball_on' => trim((string) ($situation['possessionText'] ?? '')),
             'red_zone' => ! empty($situation['isRedZone']),
         ];
     }
