@@ -426,6 +426,38 @@ $tests['a finished record has that game taken back out of it'] = function () {
     same('', EspnProvider::recordBefore('TBD', false), 'an unparseable record produced one');
 };
 
+$tests['no console command narrows a helper the base class already has'] = function () {
+    /*
+     * 🚨 This took the whole CLI down on a live board, silently, mid-season.
+     *
+     * `Flarum\Console\AbstractCommand` declares `info()` and `error()` as
+     * PROTECTED. Redeclaring either as `private` in a subclass is a fatal at
+     * CLASS-LOAD time — "access level must be protected or weaker" — and every
+     * console command is loaded when the console boots. So one private helper
+     * in one command does not break that command: it breaks `php flarum`
+     * entirely, including `schedule:run`, which is what polls live scores.
+     *
+     * It is invisible from the web, because nothing there ever loads a console
+     * class, and PHP writes a compile-time fatal to the error log rather than
+     * to stdout — so the symptom is `php flarum list` printing NOTHING and
+     * exiting 255. Nothing anywhere says why.
+     *
+     * A static check rather than reflection, because loading these classes
+     * needs Flarum itself and this suite deliberately does not.
+     */
+    foreach (glob(__DIR__ . '/../src/Console/*.php') ?: [] as $file) {
+        $source = (string) file_get_contents($file);
+
+        foreach (['info', 'error'] as $helper) {
+            ok(
+                preg_match('/private\s+(static\s+)?function\s+' . $helper . '\s*\(/', $source) !== 1,
+                basename($file) . ' declares ' . $helper . '() private, which the base class declares protected',
+                'a private override of a protected method is a fatal at class-load time, and it takes the whole console with it'
+            );
+        }
+    }
+};
+
 $tests['a league no provider covers is skipped, not thrown at'] = function () use ($espn) {
     $provider = $espn('espn-summary-nfl.json');
     $orphan = new League('orphan', 'Orphan', 'espn', '', 'gridiron', false);

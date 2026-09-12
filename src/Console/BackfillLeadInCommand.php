@@ -339,9 +339,4 @@ class BackfillLeadInCommand extends AbstractCommand
 
         return is_array($decoded) ? $decoded : null;
     }
-
-    private function error(string $line): void
-    {
-        $this->output->writeln('<error>' . $line . '</error>');
-    }
 }
