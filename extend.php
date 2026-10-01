@@ -38,6 +38,7 @@ use Resofire\Picks\Console\PollLiveScoresCommand;
 use Resofire\Picks\Console\SyncBoxScoresCommand;
 use Resofire\Picks\Console\SyncEspnCommand;
 use Resofire\Picks\Console\SyncTeamsCommand;
+use Resofire\Picks\Frontend\PicksPageContent;
 use Resofire\Picks\PicksServiceProvider;
 
 $extenders = [
@@ -53,8 +54,8 @@ $extenders = [
     (new Extend\Frontend('forum'))
         ->js(__DIR__.'/js/dist/forum.js')
         ->css(__DIR__.'/resources/less/forum.less')
-        ->route('/picks', 'picks')
-        ->route('/picks/week/{weekId}', 'picks.week')
+        ->route('/picks', 'picks', PicksPageContent::class)
+        ->route('/picks/week/{weekId}', 'picks.week', PicksPageContent::class)
         ->route('/u/{username}/picks-history', 'user.picks-history'),
 
     (new Extend\Frontend('admin'))
