@@ -1,5 +1,4 @@
 import app from 'flarum/forum/app';
-import SignUpModal from 'flarum/forum/components/SignUpModal';
 import type {
   Game,
   WeekInfo,
@@ -283,7 +282,15 @@ export default class PicksState {
         // A browser refusing storage is not a reason to refuse the sign-up.
       }
 
-      app.modal.show(SignUpModal);
+      /*
+       * 🚨 A lazy import, which is how core itself opens this. Flarum 2 ships
+       * its modals as separate chunks, so a static `import SignUpModal from
+       * 'flarum/forum/components/SignUpModal'` resolves to undefined and the
+       * click dies on "Cannot read properties of undefined (reading
+       * 'prototype')" — measured, after the first fix had already stashed the
+       * pick and looked like it worked.
+       */
+      app.modal.show(() => import('flarum/forum/components/SignUpModal'));
 
       return;
     }
