@@ -228,7 +228,16 @@ $extenders = [
          */
         ->schedule(BackfillLeadInCommand::class, function ($event) {
             $event->dailyAt('05:30')->withoutOverlapping();
-        }, ['--upcoming' => true]),
+        /*
+         * 🚨 Passed positionally, NOT as ['--upcoming' => true].
+         *
+         * A keyed entry renders as `--upcoming='1'`, and a no-value option
+         * refuses that: "The --upcoming option does not accept a value." The
+         * scheduler sends its output to /dev/null, so the task would have
+         * failed silently every night and the board would have gone on showing
+         * September's records with nothing anywhere saying why.
+         */
+        }, ['--upcoming']),
 ];
 
 /*
