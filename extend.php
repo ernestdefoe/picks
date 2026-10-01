@@ -37,6 +37,7 @@ use Resofire\Picks\Console\BackfillLeadInCommand;
 use Resofire\Picks\Console\PollLiveScoresCommand;
 use Resofire\Picks\Console\SyncBoxScoresCommand;
 use Resofire\Picks\Console\SyncEspnCommand;
+use Resofire\Picks\Console\PostStandingsCommand;
 use Resofire\Picks\Console\SyncTeamsCommand;
 use Resofire\Picks\Frontend\PicksPageContent;
 use Resofire\Picks\PicksServiceProvider;
@@ -165,6 +166,7 @@ $extenders = [
         ->command(SyncBoxScoresCommand::class)
         ->command(SyncEspnCommand::class)
         ->command(BackfillLeadInCommand::class)
+        ->command(PostStandingsCommand::class)
         /*
          * Every minute, not every five.
          *
@@ -227,6 +229,15 @@ $extenders = [
          * command's own ceiling of forty requests a run bounds it whatever
          * happens.
          */
+        /*
+         * 🚨 Tuesday morning, not Sunday night. The week's last games finish
+         * late on Saturday and a handful of fixtures run into Monday; posting
+         * before they are scored puts a table on the board that changes
+         * underneath the people replying to it.
+         */
+        ->schedule(PostStandingsCommand::class, function ($event) {
+            $event->weeklyOn(2, '09:00')->withoutOverlapping();
+        })
         ->schedule(BackfillLeadInCommand::class, function ($event) {
             $event->dailyAt('05:30')->withoutOverlapping();
         /*
