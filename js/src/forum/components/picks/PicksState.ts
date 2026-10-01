@@ -1,4 +1,5 @@
 import app from 'flarum/forum/app';
+import SignUpModal from 'flarum/forum/components/SignUpModal';
 import type {
   Game,
   WeekInfo,
@@ -91,6 +92,37 @@ export default class PicksState {
       });
   }
 
+  /**
+   * The pick a guest made just before signing up, now that they can have it.
+   *
+   * 🚨 Cleared whether or not it can be applied. A pick left in storage would
+   * be re-applied on some later visit to a game that had long since kicked off
+   * — a choice the member never made, appearing days afterwards.
+   */
+  applyPendingPick(): void {
+    if (!app.session.user) return;
+
+    let pending: { game?: number; outcome?: 'home' | 'away'; week?: number } | null = null;
+
+    try {
+      const raw = sessionStorage.getItem(PicksState.PENDING);
+      if (!raw) return;
+      sessionStorage.removeItem(PicksState.PENDING);
+      pending = JSON.parse(raw);
+    } catch (e) {
+      return;
+    }
+
+    if (!pending?.game || !pending.outcome) return;
+
+    const game = this.games.find((g) => g.id === pending!.game);
+
+    // Still open, still theirs to make: anything else is silently dropped.
+    if (game && game.can_pick && !game.my_pick) {
+      this.submitPick(game, pending.outcome);
+    }
+  }
+
   loadGames(): void {
     if (!this.currentWeekId) return;
 
@@ -108,6 +140,7 @@ export default class PicksState {
         this.weeksMeta = r.meta || {};
         this.weekOpen = r.meta?.week_open ?? false;
         this.gamesLoading = false;
+        this.applyPendingPick();
         m.redraw();
       })
       .catch(() => {
@@ -223,9 +256,35 @@ export default class PicksState {
       });
   }
 
+  /** Where a guest's intended pick waits while they make an account. */
+  static readonly PENDING = 'picks.pendingPick';
+
   submitPick(game: Game, outcome: 'home' | 'away'): void {
     if (!app.session.user) {
-      m.route.set(app.route('login'));
+      /*
+       * 🚨 This threw. `app.route('login')` is a route name Flarum 2 does not
+       * have, so clicking a team as a guest raised "Route 'login' does not
+       * exist" and the page showed the generic "something went wrong" banner.
+       * The single moment the pick'em has to turn a visitor into a member was
+       * a JavaScript error.
+       *
+       * 🚨 The pick is KEPT across the sign-up. Flarum reloads the page once an
+       * account is made, so an in-memory choice would be gone and the new
+       * member would land on a board that had forgotten what they came to do.
+       * sessionStorage survives that one reload and nothing more, which is
+       * exactly as long as it is wanted.
+       */
+      try {
+        sessionStorage.setItem(
+          PicksState.PENDING,
+          JSON.stringify({ game: game.id, outcome, week: this.currentWeekId })
+        );
+      } catch (e) {
+        // A browser refusing storage is not a reason to refuse the sign-up.
+      }
+
+      app.modal.show(SignUpModal);
+
       return;
     }
     if (!game.can_pick) return;

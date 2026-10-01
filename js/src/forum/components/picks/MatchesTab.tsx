@@ -95,11 +95,24 @@ export default class MatchesTab extends Component<TabAttrs> {
     const isWinner = isFinished && game.result === side;
     const isLoser = isFinished && game.result !== null && game.result !== side;
 
+    /*
+     * 🚨 A guest can press this, and that is the point.
+     *
+     * `can_pick` is false for everybody who is not signed in, so the button was
+     * `disabled` and the click never fired — the pick'em's one conversion
+     * moment was a control that did nothing at all. A visitor is offered the
+     * sign-up instead, and only for a game that has not started: inviting
+     * somebody to join so they can pick a game already being played is worse
+     * than not asking.
+     */
+    const guest = !app.session.user;
+    const openToGuest = guest && game.status === 'scheduled';
+
     let cls = 'PicksTeamBtn';
     if (isSelected) cls += ' PicksTeamBtn--selected';
     if (isWinner) cls += ' PicksTeamBtn--winner';
     if (isLoser) cls += ' PicksTeamBtn--loser';
-    if (!game.can_pick && !isFinished) cls += ' PicksTeamBtn--locked';
+    if (!game.can_pick && !isFinished && !openToGuest) cls += ' PicksTeamBtn--locked';
 
     const rank = side === 'home' ? game.home_rank : game.away_rank;
 
@@ -109,8 +122,8 @@ export default class MatchesTab extends Component<TabAttrs> {
     return (
       <button
         className={cls}
-        disabled={!game.can_pick || state.submitting[game.id] || undefined}
-        onclick={() => game.can_pick && state.submitPick(game, side)}
+        disabled={(!game.can_pick && !openToGuest) || state.submitting[game.id] || undefined}
+        onclick={() => (game.can_pick || openToGuest) && state.submitPick(game, side)}
       >
         <div className="PicksTeamBtn-logo">
           {logoUrl ? (
