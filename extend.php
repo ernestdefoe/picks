@@ -163,12 +163,6 @@ $extenders = [
         ->command(PollLiveScoresCommand::class)
         ->command(SyncBoxScoresCommand::class)
         ->command(SyncEspnCommand::class)
-        /*
-         * 🚨 Not scheduled, and deliberately not. The live poll keeps today's
-         * fixtures current; this is the one-off that reaches back over a season
-         * the poll was never able to see. A season does not need filling in
-         * twice.
-         */
         ->command(BackfillLeadInCommand::class)
         /*
          * Every minute, not every five.
@@ -206,7 +200,35 @@ $extenders = [
          */
         ->schedule(SyncEspnCommand::class, function ($event) {
             $event->everyFifteenMinutes()->withoutOverlapping();
-        }),
+        })
+        /*
+         * 🚨 The ranks and records on a fixture, kept current.
+         *
+         * Nothing was refreshing these. College football syncs its schedule
+         * from CFBD, and that path writes no rank and no record at all — the
+         * values on the board came from a single hand-run backfill and then
+         * stood still. Measured on fbsfb: every unplayed fixture still carried
+         * the records of 12 September, so on 1 October the board showed Pitt
+         * 1-0 and Virginia Tech 2-0 when both were 4-0.
+         *
+         * 🚨 `--upcoming` only. A finished game keeps the lead-in it was played
+         * under: the rank and record ESPN reports for a past fixture are the
+         * ones each side carried INTO it, and rewriting those later with
+         * today's poll would restate every result on the board.
+         *
+         * Daily rather than weekly, though the polls themselves move weekly —
+         * records change every Saturday, and a board a week behind on those is
+         * wrong far more often than it is right.
+         *
+         * The cost is one request per week that still has unplayed fixtures —
+         * about a dozen a day early in a season, falling to one or two by the
+         * end — against a feed that answers a whole week at a time. The
+         * command's own ceiling of forty requests a run bounds it whatever
+         * happens.
+         */
+        ->schedule(BackfillLeadInCommand::class, function ($event) {
+            $event->dailyAt('05:30')->withoutOverlapping();
+        }, ['--upcoming' => true]),
 ];
 
 /*

@@ -67,6 +67,7 @@ class BackfillLeadInCommand extends AbstractCommand
             ->addOption('weeks', null, InputOption::VALUE_REQUIRED, 'Weeks to walk: "1-15", "3", "1,2,7". Defaults to every week that has fixtures.')
             ->addOption('postseason', null, InputOption::VALUE_NONE, 'Walk the postseason instead of the regular season.')
             ->addOption('force', null, InputOption::VALUE_NONE, 'Rewrite fixtures that already carry a lead-in.')
+            ->addOption('upcoming', null, InputOption::VALUE_NONE, 'Only weeks that still have unplayed fixtures, rewriting those. Safe to run on a schedule.')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Say what would change and write nothing.');
     }
 
@@ -74,10 +75,11 @@ class BackfillLeadInCommand extends AbstractCommand
     {
         $year = (int) ($this->input->getOption('season') ?: $this->settings->get('ernestdefoe-picks.season_year', (int) date('Y')));
         $postseason = (bool) $this->input->getOption('postseason');
-        $force = (bool) $this->input->getOption('force');
+        $upcoming = (bool) $this->input->getOption('upcoming');
+        $force = (bool) $this->input->getOption('force') || $upcoming;
         $dry = (bool) $this->input->getOption('dry-run');
 
-        $weeks = $this->weeks($year, $postseason);
+        $weeks = $this->weeks($year, $postseason, $upcoming);
 
         if ($weeks === []) {
             $this->error('No weeks with fixtures for ' . $year . '. Sync the schedule first.');
@@ -138,6 +140,20 @@ class BackfillLeadInCommand extends AbstractCommand
 
                 if ($row === null) {
                     $unmatched++;
+
+                    continue;
+                }
+
+                /*
+                 * 🚨 A finished game keeps the lead-in it was played under.
+                 *
+                 * The rank and record ESPN reports for a past fixture are the
+                 * ones each side carried INTO it, and that is what the board
+                 * should keep showing. Rewriting them later with today's poll
+                 * would quietly restate every result on the board.
+                 */
+                if ($upcoming && $row->status === 'finished') {
+                    $skipped++;
 
                     continue;
                 }
@@ -252,7 +268,7 @@ class BackfillLeadInCommand extends AbstractCommand
      *
      * @return list<int>
      */
-    private function weeks(int $year, bool $postseason): array
+    private function weeks(int $year, bool $postseason, bool $upcoming = false): array
     {
         $given = trim((string) $this->input->getOption('weeks'));
 
@@ -263,7 +279,11 @@ class BackfillLeadInCommand extends AbstractCommand
         return \Resofire\Picks\Week::query()
             ->where('season_type', $postseason ? 'postseason' : 'regular')
             ->whereHas('season', fn ($q) => $q->where('year', $year))
-            ->whereHas('events')
+            // 🚨 A week whose games have all been played is already settled, and
+            // its lead-in is the one each side carried in — a fact that does not
+            // change. Walking it again on every run would spend requests to
+            // rewrite history with today's poll.
+            ->whereHas('events', fn ($q) => $upcoming ? $q->where('status', '!=', 'finished') : $q)
             ->orderBy('week_number')
             ->pluck('week_number')
             ->map(fn ($n) => (int) $n)
