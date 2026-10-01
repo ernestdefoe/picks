@@ -214,7 +214,7 @@ class BoxScoreService
                 continue;
             }
 
-            $document = $this->normalise((int) $event->id, $sides['teams'], $sides['players'], $league);
+            $document = $this->normalise((int) $event->id, $sides['teams'], $sides['players'], $league, $sides);
 
             if ($document === null) {
                 continue;
@@ -279,8 +279,13 @@ class BoxScoreService
      * @param  array<int, array<string, mixed>> $playerSides
      * @return array<string, mixed>|null
      */
-    public function normalise(int $gameId, array $teamSides, array $playerSides, ?League $league = null): ?array
-    {
+    public function normalise(
+        int $gameId,
+        array $teamSides,
+        array $playerSides,
+        ?League $league = null,
+        array $extra = []
+    ): ?array {
         $league ??= (new Leagues())->get(Leagues::DEFAULT);
 
         $document = ['game' => $gameId];
@@ -298,6 +303,24 @@ class BoxScoreService
 
         if (!isset($document['home'], $document['away'])) {
             return null;
+        }
+
+        /*
+         * 🚨 Only written when there is something to write.
+         *
+         * A box score stored before these were captured has no such keys, and
+         * everything reading them already copes with that. Writing empty arrays
+         * would turn "we never had this" into "this game had no scoring plays",
+         * which reads as a fact.
+         */
+        foreach (['linescores', 'scoring', 'market', 'swing'] as $key) {
+            if (!empty($extra[$key])) {
+                $document[$key] = $extra[$key];
+            }
+        }
+
+        if (array_key_exists('neutral', $extra)) {
+            $document['neutral'] = (bool) $extra['neutral'];
         }
 
         foreach ($playerSides as $side) {

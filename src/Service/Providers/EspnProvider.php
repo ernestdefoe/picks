@@ -122,10 +122,189 @@ class EspnProvider implements Provider
             return null;
         }
 
+        /*
+         * 🚨 The quarter scores, the scoring plays and the market come out of
+         * the SAME response, at no extra cost.
+         *
+         * This endpoint is already one request per finished game, and it was
+         * answering with all of this while only the two statistics blocks were
+         * being read. A recap that wants to say how a game was won needs the
+         * scoring plays; fetching them separately would have doubled the
+         * traffic for something already on the wire.
+         */
+        $competition = (array) (((array) (($summary['header'] ?? [])['competitions'] ?? [[]]))[0] ?? []);
+
         return [
             'teams' => $teams,
             'players' => $this->playerSides((array) ($box['players'] ?? []), (array) ($box['teams'] ?? [])),
+            'linescores' => $this->lineScores($competition),
+            'scoring' => $this->scoringPlays((array) ($summary['scoringPlays'] ?? [])),
+            'market' => $this->market((array) ($summary['pickcenter'] ?? [])),
+            'swing' => $this->biggestSwing(
+                (array) ($summary['winprobability'] ?? []),
+                (array) ($summary['drives'] ?? [])
+            ),
+            'neutral' => (bool) ($competition['neutralSite'] ?? false),
         ];
+    }
+
+    /**
+     * The single play that moved the game most, with its text.
+     *
+     * 🚨 Computed here and stored as five fields, rather than keeping the win
+     * probability itself. The feed sends a reading per play — 182 of them for
+     * one game — and all a recap needs is which play swung it and by how much.
+     * Storing the array would multiply every box score for an answer that never
+     * changes once the game is over.
+     *
+     * 🚨 The swing is measured between CONSECUTIVE readings, so it is the
+     * effect of one play rather than the distance from the start of the game.
+     *
+     * @param array<int, mixed> $probability
+     * @param array<string, mixed> $drives
+     *
+     * @return array<string, mixed>
+     */
+    protected function biggestSwing(array $probability, array $drives): array
+    {
+        $best = null;
+        $previous = null;
+
+        foreach ($probability as $point) {
+            if (! is_array($point) || ! isset($point['homeWinPercentage'])) {
+                continue;
+            }
+
+            $now = (float) $point['homeWinPercentage'];
+
+            if ($previous !== null) {
+                $delta = $now - $previous;
+
+                if ($best === null || abs($delta) > abs($best['delta'])) {
+                    $best = ['delta' => $delta, 'after' => $now, 'play' => (string) ($point['playId'] ?? '')];
+                }
+            }
+
+            $previous = $now;
+        }
+
+        if ($best === null || $best['play'] === '') {
+            return [];
+        }
+
+        $text = '';
+
+        foreach ((array) ($drives['previous'] ?? []) as $drive) {
+            foreach ((array) (($drive['plays'] ?? [])) as $play) {
+                if ((string) ($play['id'] ?? '') === $best['play']) {
+                    $text = trim((string) ($play['text'] ?? ''));
+
+                    break 2;
+                }
+            }
+        }
+
+        // 🚨 A swing nobody can name is not worth reporting. Without the play's
+        // own words the recap could only say that something big happened.
+        if ($text === '') {
+            return [];
+        }
+
+        return [
+            'text' => $text,
+            // Positive swung it the home team's way, negative the away team's.
+            'toward' => $best['delta'] > 0 ? 'home' : 'away',
+            'points' => (int) round(abs($best['delta']) * 100),
+            'after' => (int) round($best['after'] * 100),
+        ];
+    }
+
+    /**
+     * Each side's points by period: ['home' => [3, 14, 0, 0], 'away' => [...]].
+     *
+     * 🚨 However many periods were actually played. An overtime game has five
+     * or more, and anything assuming four drops the period the game was decided
+     * in — which is the one worth reading.
+     *
+     * @param array<string, mixed> $competition
+     *
+     * @return array<string, list<int>>
+     */
+    protected function lineScores(array $competition): array
+    {
+        $out = [];
+
+        foreach ((array) ($competition['competitors'] ?? []) as $side) {
+            $where = ($side['homeAway'] ?? '') === 'away' ? 'away' : 'home';
+            $out[$where] = array_map(
+                fn ($p) => (int) ($p['value'] ?? $p['displayValue'] ?? 0),
+                (array) ($side['linescores'] ?? [])
+            );
+        }
+
+        return $out;
+    }
+
+    /**
+     * The scoring plays, in order, each with the score it produced.
+     *
+     * 🚨 The running score is kept with the play, not recomputed. The feed
+     * states what the board read after each score; adding points up again here
+     * would quietly disagree with it the first time a two-point conversion or a
+     * safety appeared.
+     *
+     * @param array<int, mixed> $plays
+     *
+     * @return list<array<string, mixed>>
+     */
+    protected function scoringPlays(array $plays): array
+    {
+        $out = [];
+
+        foreach ($plays as $play) {
+            if (! is_array($play)) {
+                continue;
+            }
+
+            $out[] = [
+                'period' => (int) (($play['period'] ?? [])['number'] ?? 0),
+                'clock' => (string) (($play['clock'] ?? [])['displayValue'] ?? ''),
+                'team' => (string) (($play['team'] ?? [])['abbreviation'] ?? ''),
+                'type' => (string) (($play['type'] ?? [])['text'] ?? ''),
+                'text' => trim((string) ($play['text'] ?? '')),
+                'home' => (int) ($play['homeScore'] ?? 0),
+                'away' => (int) ($play['awayScore'] ?? 0),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * The closing line, or an empty array when nobody published one.
+     *
+     * 🚨 One book's number, named. "The spread" with no source is a number
+     * presented as a fact of the universe, and two books rarely agree.
+     *
+     * @param array<int, mixed> $pickcenter
+     *
+     * @return array<string, mixed>
+     */
+    protected function market(array $pickcenter): array
+    {
+        foreach ($pickcenter as $entry) {
+            if (! is_array($entry) || trim((string) ($entry['details'] ?? '')) === '') {
+                continue;
+            }
+
+            return [
+                'provider' => (string) (($entry['provider'] ?? [])['name'] ?? ''),
+                'line' => trim((string) $entry['details']),
+                'total' => isset($entry['overUnder']) ? (float) $entry['overUnder'] : null,
+            ];
+        }
+
+        return [];
     }
 
     /* ------------------------------------------------------------- fixtures */
