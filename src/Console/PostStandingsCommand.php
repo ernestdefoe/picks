@@ -5,6 +5,7 @@ namespace Resofire\Picks\Console;
 use Carbon\Carbon;
 use Flarum\Console\AbstractCommand;
 use Flarum\Discussion\Discussion;
+use Flarum\Foundation\Config;
 use Flarum\Post\CommentPost;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\User\User;
@@ -36,7 +37,8 @@ class PostStandingsCommand extends AbstractCommand
 
     public function __construct(
         protected SettingsRepositoryInterface $settings,
-        protected ConnectionInterface $db
+        protected ConnectionInterface $db,
+        protected Config $config
     ) {
         parent::__construct();
     }
@@ -78,9 +80,11 @@ class PostStandingsCommand extends AbstractCommand
         $body = $this->body($week, $rows);
 
         if ($this->input->getOption('dry-run')) {
-            $this->info($title);
-            $this->line('');
-            $this->line($body);
+            // 🚨 writeln, not line(): Flarum's AbstractCommand swallowed a
+            // multi-line body and printed only the title, with no error.
+            $this->output->writeln($title);
+            $this->output->writeln('');
+            $this->output->writeln($body);
 
             return 0;
         }
@@ -273,9 +277,16 @@ class PostStandingsCommand extends AbstractCommand
         );
     }
 
+    /**
+     * 🚨 From the application's own config, not the `forum_url` setting.
+     *
+     * That setting is empty on a perfectly healthy install — it was on fbsfb —
+     * and the post then invited everybody to visit "/picks", which is not a
+     * link anywhere outside the site and is useless in an email.
+     */
     protected function url(): string
     {
-        return rtrim((string) $this->settings->get('forum_url', ''), '/');
+        return rtrim((string) $this->config->url(), '/');
     }
 
     protected function author(): ?User
