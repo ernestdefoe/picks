@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Console;
 
 use Illuminate\Console\Command;
+use Psr\Log\LoggerInterface;
 use Resofire\Picks\Service\BoxScoreService;
 
 /**
@@ -21,7 +22,7 @@ class SyncBoxScoresCommand extends Command
 
     protected $description = 'Fetch team and player box scores for finished games.';
 
-    public function handle(BoxScoreService $boxScores): int
+    public function handle(BoxScoreService $boxScores, LoggerInterface $log): int
     {
         $result = $boxScores->sync();
 
@@ -32,6 +33,13 @@ class SyncBoxScoresCommand extends Command
         }
 
         if ($result['error'] !== '') {
+            /*
+             * 🚨 Logged, not only printed. The scheduler sends this command's
+             * output to /dev/null, so for two weeks of September the only trace
+             * was "failed with exit code [1]" while the reason — the provider's
+             * monthly allowance was spent — went nowhere.
+             */
+            $log->error("[picks] Box score sync stopped: {$result['error']}");
             $this->error($result['error']);
             $this->line("Stored {$result['fetched']} before stopping.");
 
