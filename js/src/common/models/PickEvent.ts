@@ -9,6 +9,7 @@ export default class PickEvent extends Model {
   cfbdId       = Model.attribute<number | null>('cfbdId');
   neutralSite  = Model.attribute<boolean>('neutralSite');
   matchDate    = Model.attribute<string>('matchDate');
+  timeTbd      = Model.attribute<boolean>('timeTbd');
   cutoffDate   = Model.attribute<string>('cutoffDate');
   status       = Model.attribute<string>('status');
   homeScore    = Model.attribute<number | null>('homeScore');

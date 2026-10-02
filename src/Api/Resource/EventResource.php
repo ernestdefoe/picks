@@ -87,6 +87,8 @@ class EventResource extends AbstractDatabaseResource
 
             Schema\DateTime::make('matchDate')
                 ->get(fn (PickEvent $e) => $e->match_date),
+            Schema\Boolean::make('timeTbd')
+                ->get(fn (PickEvent $e) => (bool) $e->time_tbd),
 
             Schema\DateTime::make('cutoffDate')
                 ->writable()

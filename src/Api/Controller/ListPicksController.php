@@ -66,6 +66,7 @@ class ListPicksController implements RequestHandlerInterface
                 'status'      => $e->status,
                 'can_pick'    => $e->canPick(),
                 'match_date'  => $e->match_date?->toIso8601String(),
+                'time_tbd'    => (bool) $e->time_tbd,
                 'cutoff_date' => $e->cutoff_date?->toIso8601String(),
                 'neutral_site'=> $e->neutral_site,
                 'home_score'  => $e->home_score,

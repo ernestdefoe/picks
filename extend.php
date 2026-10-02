@@ -239,7 +239,10 @@ $extenders = [
             $event->weeklyOn(2, '09:00')->withoutOverlapping();
         })
         ->schedule(BackfillLeadInCommand::class, function ($event) {
-            $event->dailyAt('05:30')->withoutOverlapping();
+            // Every six hours, not daily: it also carries kickoff times, and a
+            // time announced in the afternoon has to land before Game Day opens
+            // that game's thread. Four runs a day is still a few dozen requests.
+            $event->cron('30 */6 * * *')->withoutOverlapping();
         /*
          * 🚨 Passed positionally, NOT as ['--upcoming' => true].
          *

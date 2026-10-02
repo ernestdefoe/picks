@@ -273,6 +273,7 @@ class ScheduleSyncService
             $event->away_team_id = $awayTeamId;
             $event->neutral_site = $neutralSite;
             $event->match_date   = $matchDate;
+            $event->time_tbd     = $startTimeTbd;
             $event->cutoff_date  = $cutoffDate;
 
             // Only update scores/status if the game is completed

@@ -73,13 +73,17 @@ export default class MatchesTab extends Component<TabAttrs> {
     );
   }
 
-  private formatDate(dateStr: string | null): string {
+  private formatDate(dateStr: string | null, timeTbd = false): string {
     if (!dateStr) return '';
     try {
+      // 🚨 An unannounced kickoff is a placeholder of midnight Eastern on game
+      // day. Read in the visitor's own zone that is the evening BEFORE west of
+      // New York, so the date is read where the placeholder was set.
       return new Date(dateStr).toLocaleDateString(undefined, {
         weekday: 'short',
         month: 'short',
         day: 'numeric',
+        ...(timeTbd ? { timeZone: 'America/New_York' } : {}),
       });
     } catch {
       return dateStr;
@@ -162,7 +166,7 @@ export default class MatchesTab extends Component<TabAttrs> {
     return (
       <div className={cardCls} key={String(game.id)}>
         <div className="PicksGameCard-meta">
-          <span>{this.formatDate(game.match_date)}</span>
+          <span>{this.formatDate(game.match_date, game.time_tbd)}</span>
           {game.neutral_site && <span>· Neutral site</span>}
           {!game.can_pick && game.status === 'scheduled' && <span>· Locked</span>}
         </div>

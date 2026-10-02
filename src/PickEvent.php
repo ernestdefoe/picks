@@ -25,6 +25,7 @@ use Flarum\Database\AbstractModel;
  * @property string      $away_record
  * @property string      $venue
  * @property string      $venue_city
+ * @property bool        $time_tbd
  * @property string      $broadcast
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
@@ -73,6 +74,8 @@ class PickEvent extends AbstractModel
         'venue',
         'venue_city',
         'broadcast',
+        // Kickoff date known, time not yet announced; see its migration.
+        'time_tbd',
     ];
 
     protected $casts = [
@@ -86,6 +89,7 @@ class PickEvent extends AbstractModel
         'red_zone'    => 'boolean',
         'home_rank'   => 'integer',
         'away_rank'   => 'integer',
+        'time_tbd'    => 'boolean',
     ];
 
     protected static function booted(): void

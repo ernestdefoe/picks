@@ -19,6 +19,8 @@ export interface Game {
   status: string;
   can_pick: boolean;
   match_date: string | null;
+  /** The date is set, the kickoff time is not announced yet. */
+  time_tbd?: boolean;
   cutoff_date: string | null;
   neutral_site: boolean;
   home_score: number | null;

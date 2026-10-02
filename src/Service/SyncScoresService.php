@@ -269,8 +269,10 @@ class SyncScoresService
             }
 
             // A game that has not started has no score, no clock and no result
-            // — but it does now have everything above.
+            // — but it does now have everything above, and its kickoff time,
+            // which is often announced only days out (see Kickoff).
             if ($state === 'pre') {
+                Kickoff::apply($event, $competition, $this->lockOffset());
                 if ($event->isDirty()) {
                     $event->save();
                     $updated++;
@@ -532,5 +534,10 @@ class SyncScoresService
             ->sort()
             ->values()
             ->toArray();
+    }
+
+    private function lockOffset(): int
+    {
+        return (int) $this->settings->get('ernestdefoe-picks.picks_lock_offset_minutes', 0);
     }
 }

@@ -6,6 +6,7 @@ use Flarum\Console\AbstractCommand;
 use Flarum\Settings\SettingsRepositoryInterface;
 use GuzzleHttp\Client as HttpClient;
 use Resofire\Picks\PickEvent;
+use Resofire\Picks\Service\Kickoff;
 use Resofire\Picks\Service\Providers\EspnProvider;
 use Symfony\Component\Console\Input\InputOption;
 
@@ -62,7 +63,7 @@ class BackfillLeadInCommand extends AbstractCommand
     {
         $this
             ->setName('picks:backfill-lead-in')
-            ->setDescription("Fill in each fixture's rank, record, venue and channel from the ESPN scoreboard.")
+            ->setDescription("Fill in each fixture's rank, record, venue, channel and kickoff time from the ESPN scoreboard.")
             ->addOption('season', null, InputOption::VALUE_REQUIRED, 'Season year. Defaults to the configured one.')
             ->addOption('weeks', null, InputOption::VALUE_REQUIRED, 'Weeks to walk: "1-15", "3", "1,2,7". Defaults to every week that has fixtures.')
             ->addOption('postseason', null, InputOption::VALUE_NONE, 'Walk the postseason instead of the regular season.')
@@ -214,6 +215,14 @@ class BackfillLeadInCommand extends AbstractCommand
 
         $row->home_record = $this->record($home, $finished, $row->result === PickEvent::RESULT_HOME, $row->result);
         $row->away_record = $this->record($away, $finished, $row->result === PickEvent::RESULT_AWAY, $row->result);
+
+        /*
+         * 🚨 And the kickoff. The live poll only sees today, so a time the
+         * networks announce on a Monday for Saturday reached nothing until game
+         * day — by which point Game Day had already opened the thread at the
+         * placeholder and told everyone the wrong time.
+         */
+        Kickoff::apply($row, $competition, (int) $this->settings->get('ernestdefoe-picks.picks_lock_offset_minutes', 0));
     }
 
     /**
