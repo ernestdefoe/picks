@@ -64,6 +64,9 @@ interface UserHistory {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+const t = (key: string, params: Record<string, unknown> = {}) =>
+  app.translator.trans(`ernestdefoe-picks.forum.profile_stats.${key}`, params);
+
 function fmt(n: number | null | undefined, suffix = ''): string {
   if (n == null) return '—';
   return `${n}${suffix}`;
@@ -234,80 +237,45 @@ export default class UserPicksPage extends UserPage {
       <div className="Picks-profile-scope">
         <div className="Picks-profile-grid">
 
-          {/* Picks */}
-          <div className="StatCards-card">
-            <div className="StatCards-card-icon">
-              <i className="fas fa-football" aria-hidden="true" />
-            </div>
-            <div className="StatCards-card-value">{s.total_picks}</div>
-            <div className="StatCards-card-label">
-              {tab === 'week' ? 'Picks this week' : tab === 'season' ? 'Picks this season' : 'Total picks'}
-            </div>
-            <div className="StatCards-profile-sub">{s.correct_picks} correct · {wrongPicks} wrong</div>
-          </div>
+          {this.statCard('fas fa-football', String(s.total_picks),
+            t(tab === 'week' ? 'picks_week' : tab === 'season' ? 'picks_season' : 'picks_total'),
+            t('correct_wrong', { correct: s.correct_picks, wrong: wrongPicks }))}
 
-          {/* Accuracy */}
-          <div className="StatCards-card">
-            <div className="StatCards-card-icon StatCards-card-icon--primary">
-              <i className="fas fa-bullseye" aria-hidden="true" />
-            </div>
-            <div className="StatCards-card-value">{fmt(s.accuracy, '%')}</div>
-            <div className="StatCards-card-label">Accuracy</div>
-          </div>
+          {this.statCard('fas fa-bullseye', fmt(s.accuracy, '%'), t('accuracy'))}
 
-          {/* Rank */}
-          <div className="StatCards-card">
-            <div className="StatCards-card-icon">
-              <i className="fas fa-trophy" aria-hidden="true" />
-            </div>
-            <div className="StatCards-card-value">
-              {s.rank != null ? `#${s.rank}` : '—'}
-            </div>
-            <div className="StatCards-card-label">Rank</div>
-            {s.rank != null && s.total_players > 0 && (
-              <div className="StatCards-profile-sub">of {s.total_players} players</div>
-            )}
-          </div>
+          {this.statCard('fas fa-trophy', s.rank != null ? `#${s.rank}` : '—', t('rank'),
+            s.rank != null && s.total_players > 0 ? t('of_players', { count: s.total_players }) : null)}
 
-          {/* Total points — all tabs */}
-          <div className="StatCards-card">
-            <div className="StatCards-card-icon">
-              <i className="fas fa-star" aria-hidden="true" />
-            </div>
-            <div className="StatCards-card-value">{s.total_points}</div>
-            <div className="StatCards-card-label">Points</div>
-          </div>
+          {this.statCard('fas fa-star', String(s.total_points), t('points'))}
 
-          {/* Best week — alltime tab only */}
-          {tab === 'alltime' && alltime?.best_week && (
-            <div className="StatCards-card Picks-profile-card--accent">
-              <div className="StatCards-card-icon">
-                <i className="fas fa-medal" aria-hidden="true" />
-              </div>
-              <div className="StatCards-card-value" style="font-size: 18px;">
-                {alltime.best_week.week_name}
-              </div>
-              <div className="StatCards-card-label">Best week · {alltime.best_week.season_year}</div>
-              <div className="StatCards-profile-sub">
-                {alltime.best_week.correct_picks}/{alltime.best_week.total_picks} · {alltime.best_week.accuracy.toFixed(0)}%
-              </div>
-            </div>
-          )}
+          {tab === 'alltime' && alltime?.best_week && this.statCard('fas fa-medal', alltime.best_week.week_name,
+            t('best_week', { year: alltime.best_week.season_year }),
+            `${alltime.best_week.correct_picks}/${alltime.best_week.total_picks} · ${alltime.best_week.accuracy.toFixed(0)}%`,
+            'PicksStat--accent PicksStat--text')}
 
-          {/* Longest streak — alltime tab only */}
-          {tab === 'alltime' && alltime != null && (
-            <div className="StatCards-card Picks-profile-card--streak">
-              <div className="StatCards-card-icon">
-                <i className="fas fa-fire" aria-hidden="true" />
-              </div>
-              <div className="StatCards-card-value Picks-profile-streakVal">
-                {alltime.longest_streak}
-              </div>
-              <div className="StatCards-card-label">Longest streak</div>
-              <div className="StatCards-profile-sub">consecutive correct picks</div>
-            </div>
-          )}
+          {tab === 'alltime' && alltime != null && this.statCard('fas fa-fire', String(alltime.longest_streak),
+            t('longest_streak'), t('streak_sub'), 'PicksStat--accent')}
 
+        </div>
+      </div>
+    );
+  }
+
+  /**
+   * One stat on the profile header.
+   *
+   * 🚨 Styled HERE, by Picks. These cards were written against the class names
+   * of a separate StatCards extension and borrowed its styling; on a forum
+   * without it (every forum, now) they rendered as bare stacked text.
+   */
+  private statCard(icon: string, value: string, label: Mithril.Children, sub: Mithril.Children = null, extra = ''): Mithril.Children {
+    return (
+      <div className={`PicksStat ${extra}`}>
+        <div className="PicksStat-icon"><i className={icon} aria-hidden="true" /></div>
+        <div className="PicksStat-body">
+          <div className="PicksStat-value">{value}</div>
+          <div className="PicksStat-label">{label}</div>
+          {sub ? <div className="PicksStat-sub">{sub}</div> : null}
         </div>
       </div>
     );

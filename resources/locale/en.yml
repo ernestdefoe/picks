@@ -218,5 +218,17 @@ ernestdefoe-picks:
       time_tba: time TBA
       locks_at: "picks lock {time}"
       locked: Locked
+    profile_stats:
+      picks_total: Total picks
+      picks_season: Picks this season
+      picks_week: Picks this week
+      correct_wrong: "{correct} correct · {wrong} wrong"
+      accuracy: Accuracy
+      rank: Rank
+      of_players: "{count, plural, one {of # player} other {of # players}}"
+      points: Points
+      best_week: "Best week · {year}"
+      longest_streak: Longest streak
+      streak_sub: consecutive correct picks
     leaderboard_block:
       empty: No picks have been scored yet this season.

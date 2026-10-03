@@ -695,18 +695,71 @@
   margin-bottom: 24px;
 }
 
-// Reuse StatCards card shell — already defined in StatCards but we alias
-// the two special cards so they have accent borders
-.Picks-profile-card--accent {
-  border-left: 2px solid var(--primary-color);
-}
+// One stat on the profile header. Owned here: these used to borrow the class
+// names of a separate StatCards extension and rendered as bare text without it.
+// Same shell as the season cards below, so the page reads as one surface.
+.PicksStat {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--control-bg);
+  border-radius: 12px;
+  background: var(--body-bg);
 
-.Picks-profile-card--streak {
-  border-left: 2px solid #1D9E75;
-}
+  &-icon {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--control-bg);
+    color: var(--muted-color);
+    font-size: 15px;
+  }
 
-.Picks-profile-streakVal {
-  color: #0F6E56;
+  &-body {
+    min-width: 0;
+  }
+
+  &-value {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--heading-color, var(--text-color));
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &-label {
+    margin-top: 2px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted-color);
+  }
+
+  &-sub {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--muted-more-color, var(--muted-color));
+  }
+
+  // A name rather than a number (Best week) sits a size smaller.
+  &--text &-value {
+    font-size: 17px;
+    line-height: 1.4;
+  }
+
+  // The two all-time highlights: the icon takes the forum's own colour.
+  &--accent &-icon {
+    color: var(--primary-color);
+    background: ~"color-mix(in srgb, var(--primary-color) 14%, transparent)";
+  }
 }
 
 .Picks-profile-sectionLabel {
@@ -985,7 +1038,13 @@
 
 @media (max-width: 767px) {
   .Picks-profile-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .PicksStat {
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
   }
 
   .Picks-profile-tabRow {
