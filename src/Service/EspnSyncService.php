@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Service;
 
 use Carbon\Carbon;
+use Flarum\Settings\SettingsRepositoryInterface;
 use Illuminate\Support\Str;
 use Resofire\Picks\PickEvent;
 use Resofire\Picks\Season;
@@ -28,7 +29,8 @@ use Resofire\Picks\Week;
 class EspnSyncService
 {
     public function __construct(
-        protected EspnProvider $espn
+        protected EspnProvider $espn,
+        protected SettingsRepositoryInterface $settings
     ) {
     }
 
@@ -67,6 +69,8 @@ class EspnSyncService
 
         $weeks = [];
 
+        $offset = (int) $this->settings->get('ernestdefoe-picks.picks_lock_offset_minutes', 0);
+
         foreach ($games as $game) {
             if ($game['external_id'] === '' || $game['home'] === '' || $game['away'] === '') {
                 $summary['skipped']++;
@@ -100,8 +104,12 @@ class EspnSyncService
                  * round would either close Monday's game on Saturday morning or
                  * leave Saturday's open until Monday night — and the second of
                  * those lets somebody pick a game they have already watched.
+                 *
+                 * Less the board's lock offset, which this sync used to ignore:
+                 * "lock 30 minutes before kickoff" held for college football
+                 * and nowhere else.
                  */
-                'cutoff_date' => $start,
+                'cutoff_date' => Kickoff::cutoff($start, false, $offset),
                 'status' => $this->status($game),
                 'home_score' => $game['home_score'],
                 'away_score' => $game['away_score'],

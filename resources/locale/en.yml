@@ -214,5 +214,9 @@ ernestdefoe-picks:
       login_required: Please log in to participate.
 
   forum:
+    game:
+      time_tba: time TBA
+      locks_at: "picks lock {time}"
+      locked: Locked
     leaderboard_block:
       empty: No picks have been scored yet this season.

@@ -90,6 +90,41 @@ export default class MatchesTab extends Component<TabAttrs> {
     }
   }
 
+  private formatTime(dateStr: string): string {
+    return new Date(dateStr).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  }
+
+  private formatKickoff(game: Game): string {
+    if (game.time_tbd) return app.translator.trans('ernestdefoe-picks.forum.game.time_tba') as string;
+    try {
+      return this.formatTime(game.match_date as string);
+    } catch {
+      return '';
+    }
+  }
+
+  /**
+   * 🚨 When picks close, said out loud. The card used to show the date and
+   * nothing else, so a game that locked at 8am for an unannounced kickoff read
+   * "Locked" all afternoon with no clue why, and the lock offset looked like it
+   * was counting days. Shown only when it is not simply the kickoff.
+   */
+  private lockLabel(game: Game): Mithril.Children {
+    if (!game.cutoff_date || !game.match_date) return null;
+    const cutoff = new Date(game.cutoff_date);
+    if (!game.time_tbd && cutoff.getTime() === new Date(game.match_date).getTime()) return null;
+    try {
+      const sameDay = cutoff.toDateString() === new Date().toDateString()
+        || cutoff.toDateString() === new Date(game.match_date).toDateString();
+      const when = sameDay
+        ? this.formatTime(game.cutoff_date)
+        : cutoff.toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+      return <span>· {app.translator.trans('ernestdefoe-picks.forum.game.locks_at', { time: when })}</span>;
+    } catch {
+      return null;
+    }
+  }
+
   private renderTeamButton(game: Game, side: 'home' | 'away'): Mithril.Children {
     const state = this.attrs.state;
     const team = side === 'home' ? game.home_team : game.away_team;
@@ -167,8 +202,10 @@ export default class MatchesTab extends Component<TabAttrs> {
       <div className={cardCls} key={String(game.id)}>
         <div className="PicksGameCard-meta">
           <span>{this.formatDate(game.match_date, game.time_tbd)}</span>
+          {game.status === 'scheduled' && game.match_date && <span>· {this.formatKickoff(game)}</span>}
           {game.neutral_site && <span>· Neutral site</span>}
-          {!game.can_pick && game.status === 'scheduled' && <span>· Locked</span>}
+          {game.can_pick && this.lockLabel(game)}
+          {!game.can_pick && game.status === 'scheduled' && <span>· {app.translator.trans('ernestdefoe-picks.forum.game.locked')}</span>}
         </div>
 
         <div className="PicksGameCard-teams">

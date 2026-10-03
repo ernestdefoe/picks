@@ -108,6 +108,26 @@ class PickEvent extends AbstractModel
                 }
             }
 
+            /*
+             * 🚨 A lock that moved LATER reopens the game it had closed.
+             *
+             * A fixture synced before its kickoff was announced carries a
+             * placeholder lock of noon UTC on game day (see Kickoff). Any save
+             * after that — a lead-in refresh, a re-sync — closed it, and when
+             * the real 7:30pm kickoff arrived the lock moved but the status did
+             * not, so the game stayed locked all afternoon. Nothing else sets
+             * `closed`, and a closed game with a lock still ahead has not
+             * kicked off, so reopening it is always right.
+             */
+            if (
+                $event->status === self::STATUS_CLOSED
+                && $event->result === null
+                && $event->cutoff_date !== null
+                && Carbon::now()->isBefore($event->cutoff_date)
+            ) {
+                $event->status = self::STATUS_SCHEDULED;
+            }
+
             // Auto-close when the cutoff has passed and the event is still scheduled.
             if (
                 $event->status === self::STATUS_SCHEDULED

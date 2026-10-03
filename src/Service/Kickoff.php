@@ -25,7 +25,10 @@ class Kickoff
     {
         // Once a game is under way its kickoff is history; the feed's `date`
         // stays put anyway, but nothing should be able to move a played game.
-        if ($event->status !== PickEvent::STATUS_SCHEDULED) {
+        // 🚨 `closed` is NOT under way: it only means the lock passed, and a
+        // placeholder lock passes at noon UTC on game day. Skipping closed
+        // games left every one of those locked after its real time arrived.
+        if (! in_array($event->status, [PickEvent::STATUS_SCHEDULED, PickEvent::STATUS_CLOSED], true)) {
             return;
         }
 
@@ -56,6 +59,12 @@ class Kickoff
 
         if ($event->cutoff_date === null || ! $event->cutoff_date->equalTo($cutoff)) {
             $event->cutoff_date = $cutoff;
+        }
+
+        // Reopened HERE as well as on save: a row whose lock was already
+        // corrected (a schedule re-sync) is not dirty, so it is never saved.
+        if ($event->status === PickEvent::STATUS_CLOSED && $event->result === null && Carbon::now()->isBefore($cutoff)) {
+            $event->status = PickEvent::STATUS_SCHEDULED;
         }
     }
 
