@@ -11,6 +11,7 @@ import MyPicksTab from './picks/MyPicksTab';
 import LeaderboardTab from './picks/LeaderboardTab';
 import HistoryTab from './picks/HistoryTab';
 import PicksSkeleton, { measure } from './PicksSkeleton';
+import { claimWaymarkRoutes, waymark } from '../waymark';
 
 /**
  * Thin orchestrator for the /picks page. All state + data loading lives in
@@ -23,11 +24,15 @@ export default class PicksPage extends Page {
   oninit(vnode: Mithril.Vnode) {
     super.oninit(vnode);
 
-    app.setTitle(
-      String(app.forum.attribute('picksNavLabel') || app.translator.trans('ernestdefoe-picks.lib.nav.picks')),
-    );
+    claimWaymarkRoutes();
+
+    app.setTitle(this.title());
 
     this.picksState.init(parseInt(String(m.route.param('weekId') ?? ''), 10));
+  }
+
+  private title(): string {
+    return String(app.forum.attribute('picksNavLabel') || app.translator.trans('ernestdefoe-picks.lib.nav.picks'));
   }
 
   view() {
@@ -60,6 +65,8 @@ export default class PicksPage extends Page {
     return (
       <PageStructure className="PicksPage" sidebar={() => <IndexSidebar />}>
         <div className="PicksPage-inner">
+          {waymark([{ label: this.title() }])}
+
           <div className="PicksPage-tabs">
             {tabs.map((tab) => (
               <button
