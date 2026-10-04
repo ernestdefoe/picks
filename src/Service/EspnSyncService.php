@@ -157,6 +157,23 @@ class EspnSyncService
             'logo_path' => (string) ($club['logo'] ?? ''),
         ];
 
+        /*
+         * 🚨 ESPN numbers its teams PER LEAGUE, and `picks_teams.espn_id` is
+         * unique across every league. The Buffalo Bills are team 2 in the NFL
+         * and Auburn is team 2 in college football, so on a forum that already
+         * carries a college season the first NFL sync died on a duplicate key
+         * and imported nothing. The id is only a crest lookup — the crest
+         * itself comes off the fixture below — so a club whose number is
+         * already taken simply goes without it.
+         */
+        if ($crest['espn_id'] !== null) {
+            $holder = Team::query()->where('espn_id', $crest['espn_id'])->value('slug');
+
+            if ($holder !== null && $holder !== $slug) {
+                $crest['espn_id'] = null;
+            }
+        }
+
         if ($teams->has($slug)) {
             $team = $teams->get($slug);
 
