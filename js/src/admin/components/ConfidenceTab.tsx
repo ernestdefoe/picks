@@ -195,7 +195,7 @@ export default class ConfidenceTab extends Component {
           {!v.week_open && <span className="PicksC10Admin-note">{t('week_not_open')}</span>}
           <Button
             className="Button"
-            icon="fas fa-magic"
+            icon="fas fa-wand-magic-sparkles"
             loading={this.busy}
             disabled={v.frozen}
             onclick={() => {

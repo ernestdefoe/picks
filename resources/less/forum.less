@@ -1579,7 +1579,17 @@
     &-handle { grid-area: handle; align-self: stretch; height: auto; }
     &-value { grid-area: value; align-self: end; }
     &-body { grid-area: body; }
-    &-select { grid-area: select; align-self: start; min-width: 0; padding-inline: 6px; }
+    &-select {
+      grid-area: select;
+      align-self: start;
+      width: 40px;
+      min-width: 0;
+      height: 34px;
+      padding: 0 2px;
+      line-height: 34px;
+      text-align: center;
+      text-align-last: center;
+    }
   }
 
   .C10Row-teams { flex-direction: column; }

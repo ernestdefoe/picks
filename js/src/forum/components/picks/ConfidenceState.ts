@@ -220,7 +220,9 @@ export default class ConfidenceState {
         this.error = e?.response?.code || 'generic';
         m.redraw();
         // The week as it really is — a game may have locked under the member.
-        if (this.weekId) this.load(this.weekId);
+        // Not for a bad tiebreaker: nothing else changed, and a reload would
+        // throw away the ranking they just made.
+        if (this.weekId && this.error !== 'bad_tiebreaker') this.load(this.weekId);
       });
   }
 
