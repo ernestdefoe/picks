@@ -68,9 +68,15 @@ class SeasonResource extends AbstractDatabaseResource
                 ->writable()
                 ->maxLength(100),
 
+            /*
+             * 🚨 Checked here, not left to the index. The admin derives the
+             * slug from the name, so a second "NFL 2026" reached the unique
+             * key and came back as a raw database error instead of a message.
+             */
             Schema\Str::make('slug')
                 ->writable()
-                ->maxLength(100),
+                ->maxLength(100)
+                ->unique('picks_seasons', 'slug', true),
 
             /*
              * 🚨 Writable, because a season for a league nobody syncs from a
