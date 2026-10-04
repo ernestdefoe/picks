@@ -53,7 +53,16 @@ class CurrentSeasonService
             ->join('picks_seasons', 'picks_seasons.id', '=', 'picks_weeks.season_id')
             ->orderBy('picks_seasons.year')
             ->orderBy('picks_weeks.season_id')
-            ->orderByRaw("CASE picks_weeks.season_type WHEN 'regular' THEN 0 ELSE 1 END")
+            /*
+             * 🚨 Through the grammar, not a bare column name. orderByRaw() is
+             * passed through VERBATIM — the query builder prefixes the tables
+             * it is given, never the text of a raw clause — so on a forum with
+             * a table prefix "picks_weeks.season_type" names a table that does
+             * not exist, and every request that asks for the board's week
+             * failed with "Database query failed". Forums without a prefix
+             * never saw it.
+             */
+            ->orderByRaw('CASE '.Week::query()->getQuery()->getGrammar()->wrap('picks_weeks.season_type')." WHEN 'regular' THEN 0 ELSE 1 END")
             ->orderBy('picks_weeks.week_number')
             ->orderBy('picks_weeks.id')
             ->get(['picks_weeks.id', 'picks_weeks.is_open']);
