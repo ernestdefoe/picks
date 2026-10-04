@@ -28,6 +28,9 @@ throughout.
   history (`/u/{username}/picks-history`).
 - **Confidence mode (optional)** — members rank their picks by confidence for
   weighted scoring, with a configurable penalty for missed high-confidence picks.
+- **Confidence 10 (optional)** — a harder contest that runs beside the full
+  board on the same weeks: the week's biggest matchups, a winner for each, and
+  every game ranked 10 down to 1. Its own standings; see below.
 - **Admin management** — sync teams/schedule/scores, open/unlock weeks, enter or
   override results, refresh team logos, and reset data, all from the admin panel.
 - **Per-permission access** — separate abilities for viewing, making picks,
@@ -80,9 +83,64 @@ namespace):
 - **Sync regular season / postseason**, **auto-sync**
 - **Picks lock offset** (minutes before kickoff)
 - **Confidence mode** + **confidence penalty** (`none` / `half` / `full`)
+- **Confidence contest**: on/off (off by default), **games per week** (3 to 20,
+  default 10) and its own **penalty** (`none` / `half` / `full`)
 - **Auto-unlock weeks**, **default week view**
 - **ESPN polling** + **poll interval**
 - **Nav label** (the forum nav link text)
+
+## Confidence 10
+
+A second contest that sits beside the full board rather than replacing it. The
+full board stays a "pick every FBS game" game; Confidence 10 is ten games, and
+the order you put them in matters. Turn it on under **Picks Settings → Confidence
+Contest**. The number of games is a setting, and the contest takes its name
+from it.
+
+![A member's Confidence 10 board: ten games, each with a value from 10 down to 1](screenshots/confidence-board.png)
+
+**The games.** They are chosen automatically when a week opens. Games between
+two ranked teams come first, by the two rankings added together, then games
+with one ranked team, by that ranking. After those come the best combined
+records. A national broadcast, then a primetime kickoff, settles a tie. Only
+games that have not started are chosen. Under **Confidence Games** an admin can
+add and remove games, drag them into a different order, or run the automatic
+choice again. All of this stays open until the first chosen game locks. After
+that the week's games are frozen.
+
+![The admin's Confidence Games tab: the chosen games in order, the tiebreaker first](screenshots/confidence-admin.png)
+
+**Playing.** A member picks a winner in each game and ranks them: 10 for the
+pick they are surest of, down to 1. There are three ways to rank, and each
+keeps every value unique:
+
+- drag a row by its handle (this works on a phone),
+- choose a number from the row's menu, which swaps it with the game holding it,
+- focus a handle and press Alt+Up or Alt+Down.
+
+Each game locks at its own kickoff, as on the full board. A locked pick keeps
+its value. The games still open can be reshuffled among the values that are
+left. Changes save as they are made. The server checks every rule again: values
+must be unique and in range, the game must be in the contest, and a locked pick
+cannot change.
+
+**Scoring.** A correct pick earns its value. A wrong pick costs nothing, half
+its value or all of it, depending on the contest's penalty setting. With a
+penalty a week can go negative, and the season is the sum of its weeks. Members
+also guess the total points in the first game, the tiebreaker. When two members
+are level on points, the closer guess ranks higher. Scoring runs on the same
+queued job as the full board, and its tables are separate, so the full board's
+scores never change.
+
+![Confidence 10 week standings, with the tiebreaker column](screenshots/confidence-leaderboard.png)
+
+The **Leaderboard** and **History** tabs get a *Full board / Confidence 10*
+switch, with week and season standings for the contest.
+
+<p>
+  <img src="screenshots/confidence-results.png" alt="A finished Confidence week: each pick marked correct or incorrect with its points" width="380">
+  <img src="screenshots/confidence-board-phone.png" alt="The Confidence board on a phone" width="240">
+</p>
 
 ## Scheduler
 
