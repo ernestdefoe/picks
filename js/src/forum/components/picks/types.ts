@@ -49,6 +49,8 @@ export interface WeekInfo {
   start_date: string | null;
   end_date: string | null;
   is_open: boolean;
+  is_current: boolean;
+  season_id: number | null;
 }
 
 export interface WeeksMeta {

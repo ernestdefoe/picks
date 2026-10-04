@@ -20,7 +20,10 @@ export default class PicksState {
   activeTab: string = 'matches';
   weeks: WeekInfo[] = [];
   weeksLoaded: boolean = false;
+  /** The week being VIEWED — not necessarily this week; see thisWeekId. */
   currentWeekId: number | null = null;
+  /** This week, as the server works it out (WeekResource `isCurrent`). */
+  thisWeekId: number | null = null;
   weekOpen: boolean = false;
   games: Game[] = [];
   gamesLoading: boolean = false;
@@ -52,6 +55,8 @@ export default class PicksState {
             start_date: w.startDate(),
             end_date: w.endDate(),
             is_open: w.isOpen() ?? false,
+            is_current: w.isCurrent() ?? false,
+            season_id: w.seasonId?.() ?? null,
           }))
           .sort((a, b) => {
             if (a.season_type !== b.season_type) return a.season_type === 'regular' ? -1 : 1;
@@ -64,17 +69,12 @@ export default class PicksState {
           this.seasonId = firstWeek.seasonId?.() ?? null;
         }
 
+        this.thisWeekId = this.weeks.find((w) => w.is_current)?.id ?? null;
+
         if (weekIdParam && this.weeks.find((w) => w.id === weekIdParam)) {
           this.currentWeekId = weekIdParam;
         } else {
-          // Default to the last open week (highest week number that is open).
-          // Handles multiple weeks being open after auto-unlock.
-          const openWeeks = this.weeks.filter((w) => w.is_open);
-          if (openWeeks.length > 0) {
-            this.currentWeekId = openWeeks[openWeeks.length - 1].id;
-          } else if (this.weeks.length > 0) {
-            this.currentWeekId = this.weeks[this.weeks.length - 1].id;
-          }
+          this.currentWeekId = this.landingWeekId();
         }
 
         if (this.currentWeekId) {
@@ -396,6 +396,39 @@ export default class PicksState {
         if (game.my_pick) game.my_pick.confidence = prevConfidence;
         m.redraw();
       });
+  }
+
+  /**
+   * Where the board opens without a week in the URL.
+   *
+   * 🚨 This used to be the LAST open week, so a board that opens two weeks at
+   * a time sent everybody to next week while this week was still being
+   * played. "This week" is now the server's answer (CurrentWeek::pick), and
+   * the "This week" button returns to the same one.
+   */
+  landingWeekId(): number | null {
+    if (this.weeks.length === 0) return null;
+
+    const thisWeek = this.weeks.find((w) => w.id === this.thisWeekId);
+
+    if (app.forum.attribute('picksDefaultWeekView') === 'first') {
+      const season = thisWeek?.season_id ?? null;
+      const first = this.weeks.find((w) => season === null || w.season_id === season);
+      if (first) return first.id;
+    }
+
+    if (thisWeek) return thisWeek.id;
+
+    // A server too old to say: the earliest open week, never the last.
+    const open = this.weeks.find((w) => w.is_open);
+    return (open ?? this.weeks[this.weeks.length - 1]).id;
+  }
+
+  /** Back to this week from wherever the visitor has browsed to. */
+  goToThisWeek(): void {
+    if (!this.thisWeekId || this.thisWeekId === this.currentWeekId) return;
+    this.currentWeekId = this.thisWeekId;
+    this.loadGames();
   }
 
   currentWeek(): WeekInfo | undefined {

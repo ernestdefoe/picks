@@ -30,6 +30,11 @@ export default class MatchesTab extends Component<TabAttrs> {
             )}
           </div>
           <div className="PicksWeekNav-arrows">
+            {state.thisWeekId && state.thisWeekId !== state.currentWeekId && (
+              <Button className="Button PicksWeekNav-thisWeek" icon="fas fa-calendar-day" onclick={() => state.goToThisWeek()}>
+                {app.translator.trans('ernestdefoe-picks.lib.nav.this_week')}
+              </Button>
+            )}
             <Button
               className="Button Button--icon"
               icon="fas fa-chevron-left"

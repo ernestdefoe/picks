@@ -22,7 +22,9 @@ require __DIR__ . '/../src/Service/Leagues/League.php';
 require __DIR__ . '/../src/Service/Leagues/Leagues.php';
 require __DIR__ . '/../src/Service/Providers/Provider.php';
 require __DIR__ . '/../src/Service/Providers/EspnProvider.php';
+require __DIR__ . '/../src/Service/CurrentWeek.php';
 
+use Resofire\Picks\Service\CurrentWeek;
 use Resofire\Picks\Service\Leagues\League;
 use Resofire\Picks\Service\Leagues\Leagues;
 use Resofire\Picks\Service\Providers\EspnProvider;
@@ -465,6 +467,83 @@ $tests['a league no provider covers is skipped, not thrown at'] = function () us
     ok(!$provider->supports($orphan), 'an ESPN league with no path claimed support');
     same([], $provider->games($orphan, 2026), 'it tried to sync anyway');
     same(null, $provider->boxScore($orphan, '1', 2026), 'it tried to fetch anyway');
+};
+
+/*
+ * Which week the board opens on (CurrentWeek::pick).
+ *
+ * 🚨 college-football.co.uk opens two weeks at a time and the board always
+ * landed on the LATER one — next week, while this week was still being
+ * played. Week 6 here is played on Saturday 3 October 2026; week 7 the
+ * Saturday after. Kickoffs are UTC, as stored: 16:00Z is noon Eastern.
+ */
+$weekSix = static function (string $status) {
+    return [
+        ['2026-10-03 16:00:00', $status],
+        ['2026-10-03 19:30:00', $status],
+        ['2026-10-04 00:00:00', $status],   // Saturday 8pm Eastern
+        ['2026-10-04 02:30:00', $status],   // the last, 10:30pm Eastern
+    ];
+};
+
+$weekSeven = [
+    ['2026-10-10 16:00:00', 'scheduled'],
+    ['2026-10-11 00:00:00', 'scheduled'],
+];
+
+$board = static function (array ...$weeks): array {
+    $rows = [];
+    foreach ($weeks as [$id, $open, $games]) {
+        $row = ['id' => $id, 'is_open' => $open, 'unfinished' => [], 'last_kickoff' => null];
+        foreach ($games as [$kickoff, $status]) {
+            if (in_array($status, ['scheduled', 'in_progress'], true)) {
+                $row['unfinished'][] = $kickoff;
+            }
+            if ($row['last_kickoff'] === null || $kickoff > $row['last_kickoff']) {
+                $row['last_kickoff'] = $kickoff;
+            }
+        }
+        $rows[] = $row;
+    }
+
+    return $rows;
+};
+
+$at = static fn (string $utc) => new DateTimeImmutable($utc, new DateTimeZone('UTC'));
+
+$tests['two open weeks: Sunday midday is still this week, not next'] = function () use ($board, $weekSix, $weekSeven, $at) {
+    $old = [['2026-09-26 16:00:00', 'finished']];
+
+    // Sunday 4 October, 12:00 Eastern. Week 6 is final, the last game ended
+    // around 2am — inside the day's grace.
+    same(6, CurrentWeek::pick($board([5, false, $old], [6, true, $weekSix('finished')], [7, true, $weekSeven]), $at('2026-10-04 16:00:00')), 'Sunday midday ET jumped past week 6');
+
+    // Saturday afternoon with games still to play.
+    same(6, CurrentWeek::pick($board([6, true, $weekSix('scheduled')], [7, true, $weekSeven]), $at('2026-10-03 20:00:00')), 'game day itself jumped past week 6');
+
+    // The following Tuesday, week 6 final: next week is now this week.
+    same(7, CurrentWeek::pick($board([5, false, $old], [6, true, $weekSix('finished')], [7, true, $weekSeven]), $at('2026-10-06 16:00:00')), 'the Tuesday after did not move on to week 7');
+
+    // A stale earlier week left open (week 5 here) is skipped, not landed on.
+    same(6, CurrentWeek::pick($board([5, true, $old], [6, true, $weekSix('finished')], [7, true, $weekSeven]), $at('2026-10-04 16:00:00')), 'an old open week was chosen');
+};
+
+$tests['the rule falls back sensibly at the edges'] = function () use ($board, $weekSix, $at) {
+    // Every open week complete and past its grace: the latest open week.
+    same(7, CurrentWeek::pick($board([6, true, $weekSix('finished')], [7, true, [['2026-10-10 16:00:00', 'finished']]], [8, false, [['2026-10-17 16:00:00', 'scheduled']]]), $at('2026-10-14 12:00:00')), 'all-complete did not fall back to the latest open week');
+
+    // Nothing open at all: the week being played, from every week.
+    same(7, CurrentWeek::pick($board([6, false, $weekSix('finished')], [7, false, [['2026-10-10 16:00:00', 'scheduled']]], [8, false, [['2026-10-17 16:00:00', 'scheduled']]]), $at('2026-10-08 12:00:00')), 'with no week open it did not find the week being played');
+
+    // A game the feed never finished (cancelled) must not pin the board for ever.
+    $stuck = $weekSix('finished');
+    $stuck[0][1] = 'scheduled';
+    same(7, CurrentWeek::pick($board([6, true, $stuck], [7, true, [['2026-10-10 16:00:00', 'scheduled']]]), $at('2026-10-08 12:00:00')), 'a never-reported game held the board on a finished week');
+
+    // ...but a game under way late into the night keeps its week current.
+    same(6, CurrentWeek::pick($board([6, true, [['2026-10-04 03:30:00', 'in_progress']]], [7, true, []]), $at('2026-10-04 06:00:00')), 'an in-progress game lost its week');
+
+    same(null, CurrentWeek::pick([], $at('2026-10-04 16:00:00')), 'no weeks should give no week');
 };
 
 /* ------------------------------------------------------------------ the runner */

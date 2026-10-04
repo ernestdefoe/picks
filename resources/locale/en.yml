@@ -181,6 +181,7 @@ ernestdefoe-picks:
       my_picks: My Picks
       leaderboard: Leaderboard
       history: History
+      this_week: This week
 
     common:
       home: Home

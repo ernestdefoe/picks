@@ -6,6 +6,7 @@ use Flarum\Api\Endpoint;
 use Flarum\Api\Resource\AbstractDatabaseResource;
 use Flarum\Api\Schema;
 use Illuminate\Database\Eloquent\Builder;
+use Resofire\Picks\Service\CurrentSeasonService;
 use Resofire\Picks\Week;
 use Tobyz\JsonApiServer\Context;
 
@@ -81,6 +82,15 @@ class WeekResource extends AbstractDatabaseResource
 
             Schema\Boolean::make('isOpen')
                 ->get(fn (Week $w) => (bool) $w->is_open),
+
+            /*
+             * 🚨 The week the board opens on and the "this week" button
+             * returns to. Worked out here, once, so the page never guesses
+             * it from `isOpen` — the last open week is next week whenever a
+             * board opens two at a time.
+             */
+            Schema\Boolean::make('isCurrent')
+                ->get(fn (Week $w) => (int) $w->id === resolve(CurrentSeasonService::class)->getBoardWeekId()),
 
             Schema\Relationship\ToOne::make('season')
                 ->includable()
