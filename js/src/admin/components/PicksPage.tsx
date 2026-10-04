@@ -9,6 +9,7 @@ import SyncSettingsTab from './SyncSettingsTab';
 import PicksSettingsTab from './PicksSettingsTab';
 import LeaderboardTab from './LeaderboardTab';
 import StatsTab from './StatsTab';
+import ConfidenceTab from './ConfidenceTab';
 
 export default class PicksPage extends ExtensionPage {
   private activeTab: string = 'teams';
@@ -17,7 +18,7 @@ export default class PicksPage extends ExtensionPage {
     super.oninit(vnode);
 
     const param = m.route.param('tab');
-    const validTabs = ['teams', 'sync', 'seasons', 'games', 'scores', 'settings'];
+    const validTabs = ['teams', 'sync', 'seasons', 'games', 'confidence', 'scores', 'settings'];
     if (param && validTabs.includes(param)) {
       this.activeTab = param;
     }
@@ -33,6 +34,7 @@ export default class PicksPage extends ExtensionPage {
               {this.renderTab('sync',     'fas fa-sync',         'ernestdefoe-picks.admin.nav.sync')}
               {this.renderTab('seasons',  'fas fa-calendar-alt', 'ernestdefoe-picks.admin.nav.seasons')}
               {this.renderTab('games',    'fas fa-football',     'ernestdefoe-picks.admin.nav.games')}
+              {this.renderTab('confidence', 'fas fa-sort-amount-down', 'ernestdefoe-picks.admin.nav.confidence')}
               {this.renderTab('scores',   'fas fa-trophy',       'ernestdefoe-picks.admin.nav.scores')}
               {this.renderTab('stats',    'fas fa-chart-bar',    'ernestdefoe-picks.admin.nav.stats')}
               {this.renderTab('settings', 'fas fa-cog',          'ernestdefoe-picks.admin.nav.settings')}
@@ -77,6 +79,8 @@ export default class PicksPage extends ExtensionPage {
         return <SyncSettingsTab />;
       case 'stats':
         return <StatsTab />;
+      case 'confidence':
+        return <ConfidenceTab />;
       case 'settings':
         return <PicksSettingsTab />;
       case 'scores':

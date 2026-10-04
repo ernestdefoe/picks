@@ -29,6 +29,15 @@ class WeekOpenController implements RequestHandlerInterface
         $week->is_open = $isOpen;
         $week->save();
 
+        // The week's Confidence games are chosen as it opens.
+        if ($week->is_open) {
+            try {
+                resolve(\Resofire\Picks\Confidence\ConfidenceContest::class)->ensureSelected($week);
+            } catch (\Throwable $e) {
+                resolve(\Psr\Log\LoggerInterface::class)->warning('[picks] confidence selection on open failed: ' . $e->getMessage());
+            }
+        }
+
         return new JsonResponse([
             'status'  => 'success',
             'week_id' => $week->id,

@@ -3,6 +3,7 @@ import Component, { ComponentAttrs } from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import type Mithril from 'mithril';
 import type PicksState from './PicksState';
+import ContestSwitch from './ContestSwitch';
 
 interface TabAttrs extends ComponentAttrs {
   state: PicksState;
@@ -11,20 +12,32 @@ interface TabAttrs extends ComponentAttrs {
 export default class HistoryTab extends Component<TabAttrs> {
   view(): Mithril.Children {
     const state = this.attrs.state;
+    const c10 = state.historyContest === 'c10';
+    const loading = c10 ? state.c10.historyLoading : state.lbHistoryLoading;
+    const seasons = c10 ? state.c10.history : state.lbHistory;
 
     return (
       <div className="PicksTab">
-        {state.lbHistoryLoading && <LoadingIndicator />}
+        {ContestSwitch(state.historyContest, (contest) => {
+          state.historyContest = contest;
+          if (contest === 'c10') state.c10.loadHistory();
+          else state.loadLeaderboardHistory();
+          m.redraw();
+        })}
 
-        {!state.lbHistoryLoading && state.lbHistory.length === 0 && (
+        {loading && <LoadingIndicator />}
+
+        {!loading && seasons.length === 0 && (
           <div className="PicksEmpty">
-            No completed seasons yet. History will appear here after the first season ends.
+            {c10
+              ? app.translator.trans('ernestdefoe-picks.forum.confidence.no_history')
+              : 'No completed seasons yet. History will appear here after the first season ends.'}
           </div>
         )}
 
-        {!state.lbHistoryLoading && state.lbHistory.length > 0 && (
+        {!loading && seasons.length > 0 && (
           <div className="PicksHistory-stack">
-            {state.lbHistory.map((season) => {
+            {seasons.map((season) => {
               const isExpanded = state.lbHistoryExpandedSeasons.has(season.season_id);
 
               return (

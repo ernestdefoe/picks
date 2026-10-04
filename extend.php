@@ -28,6 +28,7 @@ use Resofire\Picks\Api\Controller\UserHistoryController;
 use Resofire\Picks\Api\Controller\LeaderboardContextController;
 use Resofire\Picks\Api\Controller\LeaderboardHistoryController;
 use Resofire\Picks\Api\Controller\SeedTestDataController;
+use Resofire\Picks\Api\Controller\Confidence;
 use Resofire\Picks\Api\ForumPicksAttributes;
 use Resofire\Picks\Api\Resource\EventResource;
 use Resofire\Picks\Api\Resource\SeasonResource;
@@ -100,6 +101,10 @@ $extenders = [
         ->default('ernestdefoe-picks.picks_lock_offset_minutes', 0)
         ->default('ernestdefoe-picks.confidence_mode', false)
         ->default('ernestdefoe-picks.confidence_penalty', 'none')
+        // The Confidence contest: off until an admin turns it on.
+        ->default('ernestdefoe-picks.confidence10_enabled', false)
+        ->default('ernestdefoe-picks.confidence10_games', 10)
+        ->default('ernestdefoe-picks.confidence10_penalty', 'none')
         ->default('ernestdefoe-picks.auto_unlock_weeks', false)
         ->default('ernestdefoe-picks.default_week_view', 'current')
         ->default('ernestdefoe-picks.last_teams_sync', null)
@@ -159,7 +164,16 @@ $extenders = [
 
         // Admin "Testing" tab: seed/clean test data (seed2026, seedFake2025,
         // cleanFake, wipeAll). The controller existed but was never routed.
-        ->post('/picks/seed-test-data',     'picks.seed-test-data',      SeedTestDataController::class),
+        ->post('/picks/seed-test-data',     'picks.seed-test-data',      SeedTestDataController::class)
+
+        // ── Confidence contest (Confidence\ConfidenceContest) ─────────────────
+        ->get('/picks/confidence',                    'picks.confidence',             Confidence\BoardController::class)
+        ->post('/picks/confidence',                   'picks.confidence.save',        Confidence\SaveController::class)
+        ->get('/picks/confidence/leaderboard',        'picks.confidence.leaderboard', Confidence\LeaderboardController::class)
+        ->get('/picks/confidence/history',            'picks.confidence.history',     Confidence\HistoryController::class)
+        ->get('/picks/confidence/weeks/{id}',         'picks.confidence.week',        Confidence\SelectionController::class)
+        ->post('/picks/confidence/weeks/{id}',        'picks.confidence.week.save',   Confidence\SelectionController::class)
+        ->post('/picks/confidence/weeks/{id}/auto',   'picks.confidence.week.auto',   Confidence\SelectionController::class),
 
     // -------------------------------------------------------------------------
     // Console commands

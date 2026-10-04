@@ -1,0 +1,34 @@
+<?php
+
+namespace Resofire\Picks\Confidence;
+
+use Flarum\Database\AbstractModel;
+use Flarum\User\User;
+use Resofire\Picks\PickEvent;
+use Resofire\Picks\Week;
+
+class ConfidenceGame extends AbstractModel
+{
+    public $timestamps = true;
+
+    protected $table = 'picks_confidence_games';
+
+    protected $fillable = ['week_id', 'event_id', 'position'];
+
+    protected $casts = ['week_id' => 'integer', 'event_id' => 'integer', 'position' => 'integer'];
+
+    public function week()
+    {
+        return $this->belongsTo(Week::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function event()
+    {
+        return $this->belongsTo(PickEvent::class, 'event_id');
+    }
+}

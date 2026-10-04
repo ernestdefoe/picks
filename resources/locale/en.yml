@@ -8,6 +8,7 @@ ernestdefoe-picks:
       sync: Sync & Settings
       seasons: Seasons & Weeks
       games: Games
+      confidence: Confidence Games
       scores: Leaderboard & Scores
       stats: Stats
       settings: Picks Settings
@@ -146,6 +147,14 @@ ernestdefoe-picks:
       penalty_half_help: "Incorrect picks deduct half their confidence value (rounded down). Example: confidence 8 wrong = −4 pts. Balanced risk/reward."
       penalty_full_help: "Incorrect picks deduct their full confidence value. Example: confidence 8 wrong = −8 pts. High risk, high reward — rewards accuracy."
 
+      c10_title: Confidence Contest
+      c10_enabled: Run a Confidence contest beside the full board
+      c10_help: "A second, harder game on the same weeks. Each week the biggest matchups are chosen automatically (you can change them under Confidence Games), and members pick a winner in each and rank them from the top value down to 1. A correct pick scores its value. Separate standings; the full board is not affected."
+      c10_games: Games per week
+      c10_games_unit: games (3 to 20)
+      c10_games_help: "The contest is named after this number: 10 makes it Confidence 10. Change it between weeks, not during one."
+      c10_penalty: Penalty for a wrong pick
+
       polling_title: Live Score Polling
       espn_polling_enabled: Enable ESPN live score polling
       espn_polling_help: When enabled, the server will poll ESPN every 5 minutes on game days to update live scores automatically.
@@ -169,6 +178,42 @@ ernestdefoe-picks:
       col_date: Date
       col_status: Status
       col_score: Score
+
+    confidence:
+      title: "Confidence {count}"
+      intro: "The games this week's Confidence contest is played on. They are chosen when the week opens: games between two ranked teams first, then games with one, then the best records. Change them freely until the first chosen game locks."
+      week_label: Week
+      disabled: The Confidence contest is turned off. Turn it on under Picks Settings; nothing here is shown to members until you do.
+      open_badge: Open to changes
+      frozen_badge: Frozen
+      frozen_help: The first chosen game has locked, so the games are fixed for this week.
+      count: "{chosen} of {count} chosen"
+      week_not_open: This week is not open for picks yet. Games are chosen automatically when it opens, or you can choose them now.
+      auto: Choose automatically
+      auto_again: Choose again automatically
+      auto_confirm: Replace the chosen games with the automatic choice? Members' picks on games that drop out are cleared.
+      auto_done: Chosen automatically.
+      chosen_heading: Chosen games
+      chosen_help: "Drag to reorder, or focus a handle and press Alt+Up or Alt+Down. The first game is the tiebreaker: members guess its total points. Taking a game out clears members' picks on it; changing the first game clears their tiebreaker guesses."
+      none_chosen: No games chosen yet.
+      tiebreaker: Tiebreaker
+      handle_label: "Move {game}"
+      remove: Remove
+      remove_label: "Remove {game}"
+      add_heading: Other games this week
+      add_help: Biggest matchups first. Games that have already started can't be added.
+      full_help: "All {count} places are taken. Remove a game to add another."
+      add: Add
+      add_label: "Add {game}"
+      started: Started
+      filter_placeholder: Filter by team
+      errors:
+        frozen: The first chosen game has locked, so the games can no longer change.
+        too_many: "The contest holds {count} games. Remove one first."
+        started: That game has already started or locked.
+        no_games: There are no games left to choose this week.
+        not_in_week: That game is not in this week.
+        generic: That did not save. Reload and try again.
 
     placeholder:
       coming_soon: This section will be available in a future update.
@@ -215,6 +260,52 @@ ernestdefoe-picks:
       login_required: Please log in to participate.
 
   forum:
+    week_nav:
+      previous: Previous week
+      next: Next week
+    confidence:
+      tab: "Confidence {count}"
+      full_board: Full board
+      intro: "Pick a winner in each game and rank them: {count} for the one you are surest of, down to 1. A correct pick scores its number."
+      penalty_half: A wrong pick costs half its number.
+      penalty_full: A wrong pick costs its whole number.
+      not_chosen: This week's Confidence games have not been chosen yet.
+      chosen_when_open: Confidence games are chosen when the week opens for picks.
+      week_closed: This week is not open for picks yet.
+      log_in: Log in to play.
+      no_permission: You don't have permission to make picks.
+      your_ranking: Your ranking
+      drag_hint: Drag, or Alt+Up / Alt+Down, to rank
+      locked_heading: Locked in
+      handle_label: "{game}, worth {value}. Press Alt+Up or Alt+Down to move it."
+      handle_title: Drag to rank
+      value_label: "Value for {game}"
+      tiebreaker_tag: Tiebreaker
+      tiebreaker_label: "Tiebreaker: total points in {game}"
+      tiebreaker_placeholder: e.g. 52
+      tiebreaker_help: Closest guess wins a tie on points.
+      tiebreaker_actual: "Actual total: {total}"
+      no_pick: No pick
+      correct: "Correct · +{points}"
+      incorrect: Incorrect
+      incorrect_penalty: "Incorrect · −{points}"
+      saving: Saving…
+      saved: Saved
+      no_standings: No Confidence picks have been scored yet.
+      no_history: No completed Confidence seasons yet.
+      col_points: Pts
+      col_record: W–L
+      col_accuracy: Acc
+      col_tiebreaker: TB
+      col_tiebreaker_title: How far the tiebreaker guess was from the real total
+      errors:
+        locked: That game has locked. Your board has been reloaded.
+        duplicate_value: Two games had the same number. Your board has been reloaded.
+        out_of_range: A number was out of range. Your board has been reloaded.
+        not_in_contest: That game is no longer in this week's contest. Your board has been reloaded.
+        bad_tiebreaker: The tiebreaker must be a whole number of points.
+        disabled: The Confidence contest has been turned off.
+        generic: That did not save. Your board has been reloaded.
     game:
       time_tba: time TBA
       locks_at: "picks lock {time}"

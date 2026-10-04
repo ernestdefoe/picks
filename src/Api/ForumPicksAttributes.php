@@ -46,6 +46,22 @@ class ForumPicksAttributes
                     $this->settings->get('ernestdefoe-picks.confidence_penalty', 'none')
                 ),
 
+            // The Confidence contest, beside the full board.
+            Schema\Boolean::make('picksC10Enabled')
+                ->get(fn (object $model, Context $context) =>
+                    (bool) $this->settings->get('ernestdefoe-picks.confidence10_enabled', false)
+                ),
+
+            Schema\Integer::make('picksC10Games')
+                ->get(fn (object $model, Context $context) =>
+                    resolve(\Resofire\Picks\Confidence\ConfidenceContest::class)->size()
+                ),
+
+            Schema\Str::make('picksC10Penalty')
+                ->get(fn (object $model, Context $context) =>
+                    resolve(\Resofire\Picks\Confidence\ConfidenceContest::class)->penalty()
+                ),
+
             // ── New: whether the current actor can view other members' pick history ──
             Schema\Boolean::make('picksCanViewHistory')
                 ->get(fn (object $model, Context $context) =>

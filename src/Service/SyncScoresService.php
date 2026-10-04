@@ -7,6 +7,9 @@ use Flarum\Settings\SettingsRepositoryInterface;
 use GuzzleHttp\Client as HttpClient;
 use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Support\Arr;
+use Resofire\Picks\Confidence\ConfidenceContest;
+use Resofire\Picks\Confidence\ConfidenceGame;
+use Resofire\Picks\Confidence\ConfidencePick;
 use Resofire\Picks\Jobs\ScorePicksJob;
 use Resofire\Picks\Pick;
 use Resofire\Picks\PickEvent;
@@ -61,9 +64,14 @@ class SyncScoresService
             ->get()
             ->keyBy('cfbd_id');
 
+        // A game in a Confidence contest is scored too, picked or not: its
+        // final can settle the week's tiebreaker.
         $eventIdsWithPicks = Pick::query()
             ->distinct()
             ->pluck('event_id')
+            ->merge(ConfidenceGame::query()->pluck('event_id'))
+            ->merge(ConfidencePick::query()->distinct()->pluck('event_id'))
+            ->unique()
             ->flip();
 
         foreach ($seasonTypes as $seasonType) {
@@ -198,6 +206,9 @@ class SyncScoresService
             ->whereIn('event_id', $eventsByCfbdId->pluck('id'))
             ->distinct()
             ->pluck('event_id')
+            ->merge(ConfidenceGame::query()->whereIn('event_id', $eventsByCfbdId->pluck('id'))->pluck('event_id'))
+            ->merge(ConfidencePick::query()->whereIn('event_id', $eventsByCfbdId->pluck('id'))->distinct()->pluck('event_id'))
+            ->unique()
             ->flip();
 
         foreach ($events as $espnEvent) {
@@ -484,6 +495,15 @@ class SyncScoresService
 
         if ($id !== null) {
             Week::query()->whereKey($id)->update(['is_open' => true]);
+
+            // The week's Confidence games are chosen as it opens.
+            try {
+                if ($week = Week::find($id)) {
+                    resolve(ConfidenceContest::class)->ensureSelected($week);
+                }
+            } catch (\Throwable $e) {
+                resolve(\Psr\Log\LoggerInterface::class)->warning('[picks] confidence selection on unlock failed: ' . $e->getMessage());
+            }
         }
 
         return $id;

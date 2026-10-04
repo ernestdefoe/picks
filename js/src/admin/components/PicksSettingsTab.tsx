@@ -15,6 +15,9 @@ export default class PicksSettingsTab extends Component {
   private confidencePenalty: string = 'none';
   private navLabel: string = 'Picks';
   private autoUnlockWeeks: boolean = false;
+  private c10Enabled: boolean = false;
+  private c10Games: string = '10';
+  private c10Penalty: string = 'none';
 
   private _orig: Record<string, any> = {};
 
@@ -28,6 +31,9 @@ export default class PicksSettingsTab extends Component {
     this.confidencePenalty       = s['ernestdefoe-picks.confidence_penalty']         || 'none';
     this.navLabel                = s['ernestdefoe-picks.nav_label']                  || 'Picks';
     this.autoUnlockWeeks         = s['ernestdefoe-picks.auto_unlock_weeks'] === '1';
+    this.c10Enabled              = s['ernestdefoe-picks.confidence10_enabled'] === '1';
+    this.c10Games                = s['ernestdefoe-picks.confidence10_games']         || '10';
+    this.c10Penalty              = s['ernestdefoe-picks.confidence10_penalty']       || 'none';
     this._orig = {
       picksLockOffsetMinutes: this.picksLockOffsetMinutes,
       espnPollingEnabled:     this.espnPollingEnabled,
@@ -36,6 +42,9 @@ export default class PicksSettingsTab extends Component {
       confidencePenalty:      this.confidencePenalty,
       navLabel:               this.navLabel,
       autoUnlockWeeks:        this.autoUnlockWeeks,
+      c10Enabled:             this.c10Enabled,
+      c10Games:               this.c10Games,
+      c10Penalty:             this.c10Penalty,
     };
     this.dirty = false;
   }
@@ -48,7 +57,16 @@ export default class PicksSettingsTab extends Component {
       this.confidenceMode         !== this._orig.confidenceMode          ||
       this.confidencePenalty      !== this._orig.confidencePenalty       ||
       this.navLabel               !== this._orig.navLabel                ||
-      this.autoUnlockWeeks        !== this._orig.autoUnlockWeeks;
+      this.autoUnlockWeeks        !== this._orig.autoUnlockWeeks         ||
+      this.c10Enabled             !== this._orig.c10Enabled              ||
+      this.c10Games               !== this._orig.c10Games                ||
+      this.c10Penalty             !== this._orig.c10Penalty;
+  }
+
+  /** 3 to 20; anything else is what the server would clamp it to anyway. */
+  private c10GamesClamped(): string {
+    const n = parseInt(this.c10Games, 10);
+    return String(Math.max(3, Math.min(20, isNaN(n) ? 10 : n)));
   }
 
   private save() {
@@ -68,6 +86,9 @@ export default class PicksSettingsTab extends Component {
         'ernestdefoe-picks.confidence_penalty':         this.confidencePenalty,
         'ernestdefoe-picks.nav_label':                  this.navLabel,
         'ernestdefoe-picks.auto_unlock_weeks':          this.autoUnlockWeeks ? '1' : '0',
+        'ernestdefoe-picks.confidence10_enabled':       this.c10Enabled ? '1' : '0',
+        'ernestdefoe-picks.confidence10_games':         this.c10GamesClamped(),
+        'ernestdefoe-picks.confidence10_penalty':       this.c10Penalty,
       },
     }).then(() => {
       app.data.settings['ernestdefoe-picks.picks_lock_offset_minutes'] = this.picksLockOffsetMinutes;
@@ -77,6 +98,10 @@ export default class PicksSettingsTab extends Component {
       app.data.settings['ernestdefoe-picks.confidence_penalty']        = this.confidencePenalty;
       app.data.settings['ernestdefoe-picks.nav_label']                 = this.navLabel;
       app.data.settings['ernestdefoe-picks.auto_unlock_weeks']         = this.autoUnlockWeeks ? '1' : '0';
+      app.data.settings['ernestdefoe-picks.confidence10_enabled']      = this.c10Enabled ? '1' : '0';
+      this.c10Games = this.c10GamesClamped();
+      app.data.settings['ernestdefoe-picks.confidence10_games']        = this.c10Games;
+      app.data.settings['ernestdefoe-picks.confidence10_penalty']      = this.c10Penalty;
       this.saving = false;
       this.dirty = false;
       this._orig = {
@@ -87,6 +112,9 @@ export default class PicksSettingsTab extends Component {
         confidencePenalty:      this.confidencePenalty,
         navLabel:               this.navLabel,
         autoUnlockWeeks:        this.autoUnlockWeeks,
+        c10Enabled:             this.c10Enabled,
+        c10Games:               this.c10Games,
+        c10Penalty:             this.c10Penalty,
       };
       this.saveResult = '✅ Settings saved.';
       m.redraw();
@@ -228,6 +256,71 @@ export default class PicksSettingsTab extends Component {
                 {this.confidencePenalty === 'none' && app.translator.trans('ernestdefoe-picks.admin.settings.penalty_none_help')}
                 {this.confidencePenalty === 'half' && app.translator.trans('ernestdefoe-picks.admin.settings.penalty_half_help')}
                 {this.confidencePenalty === 'full' && app.translator.trans('ernestdefoe-picks.admin.settings.penalty_full_help')}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Confidence contest — its own game, beside the full board */}
+        <div className="PicksSettingsSection">
+          <h4 className="PicksSettingsSection-title">
+            {app.translator.trans('ernestdefoe-picks.admin.settings.c10_title')}
+          </h4>
+
+          <div className="Form-group">
+            <label className="checkbox">
+              <input
+                type="checkbox"
+                checked={this.c10Enabled}
+                onchange={(e: Event) => { this.c10Enabled = (e.target as HTMLInputElement).checked; this.checkDirty(); }}
+              />
+              {' '}{app.translator.trans('ernestdefoe-picks.admin.settings.c10_enabled')}
+            </label>
+            <p className="helpText">
+              {app.translator.trans('ernestdefoe-picks.admin.settings.c10_help')}
+            </p>
+          </div>
+
+          {this.c10Enabled && (
+            <div className="Form-group">
+              <label for="picks-c10-games">{app.translator.trans('ernestdefoe-picks.admin.settings.c10_games')}</label>
+              <div className="PicksInputRow">
+                <input
+                  id="picks-c10-games"
+                  className="FormControl PicksInputRow-input"
+                  type="number"
+                  min="3"
+                  max="20"
+                  value={this.c10Games}
+                  oninput={(e: InputEvent) => { this.c10Games = (e.target as HTMLInputElement).value; this.checkDirty(); }}
+                />
+                <span className="PicksInputRow-label">
+                  {app.translator.trans('ernestdefoe-picks.admin.settings.c10_games_unit')}
+                </span>
+              </div>
+              <p className="helpText">
+                {app.translator.trans('ernestdefoe-picks.admin.settings.c10_games_help')}
+              </p>
+            </div>
+          )}
+
+          {this.c10Enabled && (
+            <div className="Form-group">
+              <label for="picks-c10-penalty">{app.translator.trans('ernestdefoe-picks.admin.settings.c10_penalty')}</label>
+              <select
+                id="picks-c10-penalty"
+                className="FormControl"
+                value={this.c10Penalty}
+                onchange={(e: Event) => { this.c10Penalty = (e.target as HTMLSelectElement).value; this.checkDirty(); }}
+              >
+                <option value="none">{app.translator.trans('ernestdefoe-picks.admin.settings.penalty_none')}</option>
+                <option value="half">{app.translator.trans('ernestdefoe-picks.admin.settings.penalty_half')}</option>
+                <option value="full">{app.translator.trans('ernestdefoe-picks.admin.settings.penalty_full')}</option>
+              </select>
+              <p className="helpText">
+                {this.c10Penalty === 'none' && app.translator.trans('ernestdefoe-picks.admin.settings.penalty_none_help')}
+                {this.c10Penalty === 'half' && app.translator.trans('ernestdefoe-picks.admin.settings.penalty_half_help')}
+                {this.c10Penalty === 'full' && app.translator.trans('ernestdefoe-picks.admin.settings.penalty_full_help')}
               </p>
             </div>
           )}

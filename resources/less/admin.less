@@ -808,3 +808,160 @@
   .PicksTeamLogo--light { display: none; }
   .PicksTeamLogo--dark  { display: block; }
 }
+
+// ============================================================
+// Confidence Games
+// ============================================================
+
+.PicksC10Admin {
+  &-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 0.75rem;
+
+    .Button { margin-inline-start: auto; }
+  }
+
+  &-count {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &-note {
+    font-size: 12px;
+    color: var(--muted-color);
+  }
+
+  // 🚨 Not --alert-error-color: that is #fff on most themes.
+  &-error { color: #A32D2D; }
+
+  &-heading {
+    margin: 1.25rem 0 0.25rem;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  &-list {
+    list-style: none;
+    margin: 0.5rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    &.is-sorting .PicksC10Admin-row:not(.is-dragging) { transition: transform 0.15s ease; }
+  }
+
+  &-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--control-bg);
+    border-radius: 8px;
+    background: var(--body-bg);
+
+    &.is-dragging {
+      position: relative;
+      z-index: 2;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    }
+
+    &--started { opacity: 0.55; }
+  }
+
+  &-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 36px;
+    flex-shrink: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--muted-color);
+    cursor: grab;
+    touch-action: none;
+
+    &:hover { background: var(--control-bg); color: var(--text-color); }
+    &:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 1px; }
+
+    &--static { cursor: default; &:hover { background: none; } }
+  }
+
+  &-pos {
+    flex-shrink: 0;
+    min-width: 26px;
+    height: 26px;
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--control-bg);
+    font-weight: 700;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &-game {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &-teams {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    font-size: 13px;
+  }
+
+  &-team {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+
+    .PicksTeamLogo { width: 22px; height: 22px; object-fit: contain; }
+  }
+
+  &-rank { color: var(--muted-color); }
+
+  &-record,
+  &-vs,
+  &-when {
+    font-size: 12px;
+    color: var(--muted-color);
+  }
+
+  &-tb {
+    flex-shrink: 0;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--control-bg);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  &-remove { flex-shrink: 0; }
+
+  &-filter {
+    max-width: 280px;
+    margin-top: 0.5rem;
+  }
+
+  &-list--candidates {
+    max-height: 520px;
+    overflow-y: auto;
+    padding-inline-end: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .PicksC10Admin-list.is-sorting .PicksC10Admin-row { transition: none; }
+}

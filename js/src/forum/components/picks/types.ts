@@ -73,6 +73,8 @@ export interface LeaderboardEntry {
   correct_picks: number;
   accuracy: number;
   is_me: boolean;
+  /** Confidence contest only: how far the tiebreaker guess was. */
+  tiebreak_diff?: number | null;
 }
 
 export interface LeaderboardHistoryEntry {
@@ -102,4 +104,29 @@ export interface LeaderboardContext {
   last_week_id: number | null;
   last_season_id: number | null;
   last_season_name: string | null;
+}
+
+/** A game in the Confidence contest. */
+export interface C10Game extends Omit<Game, 'my_pick'> {
+  position: number;
+  is_tiebreaker: boolean;
+  /** Not started and not locked by time, whether or not the week is open. */
+  pickable: boolean;
+  home_record: string | null;
+  away_record: string | null;
+  broadcast: string | null;
+  my_pick: { selected_outcome: 'home' | 'away'; confidence: number; is_correct: boolean | null } | null;
+}
+
+export interface C10Board {
+  week_id: number;
+  week_open: boolean;
+  enabled: boolean;
+  size: number;
+  penalty: 'none' | 'half' | 'full';
+  frozen: boolean;
+  games: C10Game[];
+  tiebreaker: { event_id: number; can_change: boolean; guess: number | null; actual_total: number | null } | null;
+  my_score: { total_points: number; total_picks: number; correct_picks: number; tiebreak_diff: number | null } | null;
+  picked: number;
 }

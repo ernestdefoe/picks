@@ -23,7 +23,13 @@ require __DIR__ . '/../src/Service/Leagues/Leagues.php';
 require __DIR__ . '/../src/Service/Providers/Provider.php';
 require __DIR__ . '/../src/Service/Providers/EspnProvider.php';
 require __DIR__ . '/../src/Service/CurrentWeek.php';
+require __DIR__ . '/../src/Confidence/Selector.php';
+require __DIR__ . '/../src/Confidence/Rules.php';
+require __DIR__ . '/../src/Confidence/Scoring.php';
 
+use Resofire\Picks\Confidence\Rules;
+use Resofire\Picks\Confidence\Scoring;
+use Resofire\Picks\Confidence\Selector;
 use Resofire\Picks\Service\CurrentWeek;
 use Resofire\Picks\Service\Leagues\League;
 use Resofire\Picks\Service\Leagues\Leagues;
@@ -612,6 +618,152 @@ $tests['auto-unlock and the board agree'] = function () use ($board, $at) {
     $stuck = [['2026-10-03 16:00:00', 'scheduled']];
     same(5, CurrentWeek::pick($board([5, true, $stuck], [6, true, $six]), $at('2026-10-05 03:00:00')), 'the board left a week still inside 36h');
     same(6, CurrentWeek::pick($board([5, true, $stuck], [6, true, $six]), $at('2026-10-05 05:00:00')), 'the board held a week past 36h');
+};
+
+
+/* ------------------------------------------------------- the Confidence contest */
+
+/*
+ * A game for the selector, defaulting to a plain unranked Saturday kickoff that
+ * is still open on the Sunday the tests run at.
+ */
+$cgame = static function (int $id, array $over = []): array {
+    return $over + [
+        'id' => $id, 'status' => 'scheduled', 'cutoff' => '2026-10-10 16:00:00', 'match_date' => '2026-10-10 16:00:00',
+        'home_rank' => 0, 'away_rank' => 0, 'home_record' => '2-2', 'away_record' => '2-2', 'broadcast' => '', 'time_tbd' => false,
+    ];
+};
+
+$tests['confidence: two ranked sides, then one, then the best records'] = function () use ($cgame, $at) {
+    // Measured week 6 of 2026 on the demo, cut down to the cases that matter.
+    $games = [
+        $cgame(1, ['home_record' => '5-0', 'away_record' => '4-0', 'broadcast' => 'FOX']),           // unranked, unbeaten
+        $cgame(2, ['home_rank' => 7, 'away_rank' => 2]),                                              // #7 v #2  = 9
+        $cgame(3, ['home_rank' => 24, 'away_rank' => 11]),                                            // #24 v #11 = 35
+        $cgame(4, ['away_rank' => 1]),                                                                // #1 alone
+        $cgame(5, ['home_rank' => 15, 'away_rank' => 23]),                                            // = 38
+        $cgame(6, ['home_rank' => 3]),                                                                // #3 alone
+        $cgame(7, ['home_record' => '1-4', 'away_record' => '0-5', 'broadcast' => 'ABC']),            // unranked, poor
+    ];
+
+    same([2, 3, 5, 4, 6, 1, 7], Selector::order($games, $at('2026-10-04 16:00:00')), 'the biggest games did not come first');
+    same([2, 3, 5], Selector::choose($games, 3, $at('2026-10-04 16:00:00')), 'choose() did not take the top of the order');
+};
+
+$tests['confidence: a rank of 0 is unranked, never #0'] = function () use ($cgame, $at) {
+    $games = [$cgame(1, ['home_rank' => 0, 'away_rank' => 0]), $cgame(2, ['home_rank' => 25])];
+    same([2, 1], Selector::order($games, $at('2026-10-04 16:00:00')), 'a 0 rank sorted as the best rank in the country');
+    same(null, Selector::rank(0), 'rank 0 read as a rank');
+    same(null, Selector::rank(null), 'a null rank read as a rank');
+};
+
+$tests['confidence: a started or locked game is never chosen'] = function () use ($cgame, $at) {
+    $games = [
+        $cgame(1, ['home_rank' => 1, 'away_rank' => 2, 'status' => 'in_progress']),
+        $cgame(2, ['home_rank' => 3, 'away_rank' => 4, 'cutoff' => '2026-10-04 12:00:00']),   // locked this morning
+        $cgame(3, ['home_rank' => 5, 'away_rank' => 6, 'status' => 'finished']),
+        $cgame(4),
+    ];
+    same([4], Selector::order($games, $at('2026-10-04 16:00:00')), 'a game that had started or locked was chosen');
+};
+
+$tests['confidence: inside a tier, the bigger broadcast then primetime break the tie'] = function () use ($cgame, $at) {
+    $games = [
+        $cgame(1, ['broadcast' => 'ESPN+']),
+        $cgame(2, ['broadcast' => 'CBS']),
+        $cgame(3, ['broadcast' => 'SEC Network']),
+        // Same network as 2, at 7:30pm Eastern.
+        $cgame(4, ['broadcast' => 'CBS', 'match_date' => '2026-10-10 23:30:00', 'cutoff' => '2026-10-10 23:30:00']),
+    ];
+    same([4, 2, 3, 1], Selector::order($games, $at('2026-10-04 16:00:00')), 'the tie-breaks inside a tier were wrong');
+
+    // 🚨 The 04:00Z placeholder of an unannounced kickoff is midnight Eastern —
+    // it must not count as primetime.
+    ok(!Selector::isPrimetime($cgame(9, ['match_date' => '2026-10-10 04:00:00', 'time_tbd' => true])), 'an unannounced kickoff counted as primetime');
+    same(0.5, Selector::winPct(null), 'a missing record was not neutral');
+    same(0.8, Selector::winPct('4-1'), 'a 4-1 record was misread');
+};
+
+$tests['confidence: saving checks values are unique and in range'] = function () {
+    $sel = [11, 12, 13];
+    $pick = fn (int $e, ?string $o, $c) => ['event_id' => $e, 'selected_outcome' => $o, 'confidence' => $c];
+
+    $r = Rules::validate(3, $sel, [], [], [$pick(11, 'home', 3), $pick(12, 'away', 1)]);
+    same(null, $r['error'], 'a good save was refused');
+    same([11 => ['outcome' => 'home', 'confidence' => 3], 12 => ['outcome' => 'away', 'confidence' => 1]], $r['write'], 'the wrong rows were written');
+
+    same(Rules::DUPLICATE_VALUE, Rules::validate(3, $sel, [], [], [$pick(11, 'home', 2), $pick(12, 'away', 2)])['error'], 'two games holding 2 were accepted');
+    same(Rules::OUT_OF_RANGE, Rules::validate(3, $sel, [], [], [$pick(11, 'home', 4)])['error'], 'a value above N was accepted');
+    same(Rules::OUT_OF_RANGE, Rules::validate(3, $sel, [], [], [$pick(11, 'home', 0)])['error'], 'a value of 0 was accepted');
+    same(Rules::OUT_OF_RANGE, Rules::validate(3, $sel, [], [], [$pick(11, 'home', 1.5)])['error'], 'a fractional value was accepted');
+    same(Rules::NOT_IN_CONTEST, Rules::validate(3, $sel, [], [], [$pick(99, 'home', 1)])['error'], 'a game outside the contest was accepted');
+    same(Rules::BAD_OUTCOME, Rules::validate(3, $sel, [], [], [$pick(11, 'draw', 1)])['error'], 'an outcome other than home/away was accepted');
+    same(Rules::DUPLICATE_GAME, Rules::validate(3, $sel, [], [], [$pick(11, 'home', 1), $pick(11, 'away', 2)])['error'], 'one game sent twice was accepted');
+
+    // No winner chosen = no pick on that game, and its value is not held.
+    $r = Rules::validate(3, $sel, [], [], [$pick(11, null, 3), $pick(12, 'home', 3)]);
+    same(null, $r['error'], 'an unpicked game held its value');
+    same([12], array_keys($r['write']), 'an unpicked game was written');
+};
+
+$tests['confidence: a locked pick keeps its value, the rest reshuffle around it'] = function () {
+    $sel = [11, 12, 13];
+    $pick = fn (int $e, ?string $o, $c) => ['event_id' => $e, 'selected_outcome' => $o, 'confidence' => $c];
+    $existing = [11 => ['outcome' => 'home', 'confidence' => 3], 12 => ['outcome' => 'away', 'confidence' => 2], 13 => ['outcome' => 'home', 'confidence' => 1]];
+
+    // 11 has kicked off. Swapping 12 and 13 is fine.
+    $r = Rules::validate(3, $sel, [11], $existing, [$pick(11, 'home', 3), $pick(12, 'away', 1), $pick(13, 'home', 2)]);
+    same(null, $r['error'], 'reshuffling unlocked games was refused');
+    same([12 => ['outcome' => 'away', 'confidence' => 1], 13 => ['outcome' => 'home', 'confidence' => 2]], $r['write'], 'the locked pick was rewritten, or the unlocked ones were not');
+
+    // Leaving the locked game out of the save is fine too: it is kept, not dropped.
+    same(null, Rules::validate(3, $sel, [11], $existing, [$pick(12, 'away', 2), $pick(13, 'home', 1)])['error'], 'a save without the locked game was refused');
+
+    // Taking the locked game's value is refused...
+    same(Rules::DUPLICATE_VALUE, Rules::validate(3, $sel, [11], $existing, [$pick(12, 'away', 3)])['error'], 'an unlocked game took a locked game\'s value');
+    // ...and so is changing the locked pick's winner or value.
+    same(Rules::LOCKED, Rules::validate(3, $sel, [11], $existing, [$pick(11, 'away', 3)])['error'], 'a locked winner was changed');
+    same(Rules::LOCKED, Rules::validate(3, $sel, [11], $existing, [$pick(11, 'home', 1)])['error'], 'a locked value was changed');
+    // A locked game nobody picked cannot be picked late.
+    same(Rules::LOCKED, Rules::validate(3, $sel, [11], [], [$pick(11, 'home', 3)])['error'], 'a pick was made on a locked game');
+
+    same(null, Rules::tiebreaker('51')['error'], 'a tiebreaker of 51 was refused');
+    same(51, Rules::tiebreaker('51')['value'], 'a tiebreaker of 51 was misread');
+    same(Rules::BAD_TIEBREAKER, Rules::tiebreaker(-3)['error'], 'a negative tiebreaker was accepted');
+    same(Rules::BAD_TIEBREAKER, Rules::tiebreaker('lots')['error'], 'a tiebreaker of text was accepted');
+    same(null, Rules::tiebreaker(null)['value'], 'clearing the tiebreaker did not clear it');
+};
+
+$tests['confidence: scoring with and without a penalty'] = function () {
+    $picks = [
+        ['is_correct' => true, 'confidence' => 10],
+        ['is_correct' => false, 'confidence' => 9],
+        ['is_correct' => true, 'confidence' => 4],
+        ['is_correct' => false, 'confidence' => 3],
+        ['is_correct' => null, 'confidence' => 1],      // not decided yet: counts for nothing
+    ];
+
+    same(['points' => 14, 'picks' => 4, 'correct' => 2, 'accuracy' => 50.0], Scoring::total($picks, 'none'), 'no-penalty scoring was wrong');
+    same(['points' => 9, 'picks' => 4, 'correct' => 2, 'accuracy' => 50.0], Scoring::total($picks, 'half'), 'half-penalty scoring was wrong (9/2=4, 3/2=1)');
+    same(['points' => 2, 'picks' => 4, 'correct' => 2, 'accuracy' => 50.0], Scoring::total($picks, 'full'), 'full-penalty scoring was wrong');
+
+    // 🚨 Not floored: a bad week with a full penalty is a negative week.
+    same(-7, Scoring::total([['is_correct' => false, 'confidence' => 7]], 'full')['points'], 'a negative week was floored');
+};
+
+$tests['confidence: the closest tiebreaker wins a tie on points'] = function () {
+    same(4, Scoring::tiebreakDiff(51, 24, 31), 'a guess of 51 for 24-31 is 4 out');
+    same(null, Scoring::tiebreakDiff(51, null, null), 'a guess was scored before the game finished');
+    same(null, Scoring::tiebreakDiff(null, 24, 31), 'no guess was scored as a guess');
+
+    $ranked = Scoring::rank([
+        ['user_id' => 1, 'points' => 40, 'correct' => 7, 'diff' => 12],
+        ['user_id' => 2, 'points' => 40, 'correct' => 6, 'diff' => 3],     // same points, closer guess: ahead
+        ['user_id' => 3, 'points' => 40, 'correct' => 8, 'diff' => null],  // no guess: behind any guess
+        ['user_id' => 4, 'points' => 41, 'correct' => 5, 'diff' => 30],    // more points beats any guess
+        ['user_id' => 5, 'points' => 40, 'correct' => 9, 'diff' => 3],     // same guess as 2: more correct picks
+    ]);
+    same([4, 5, 2, 1, 3], array_column($ranked, 'user_id'), 'the standings were not points, then guess, then correct picks');
 };
 
 /* ------------------------------------------------------------------ the runner */

@@ -1262,3 +1262,330 @@
   color: var(--muted-color);
   font-size: .88rem;
 }
+
+// ============================================================
+// Confidence contest
+// ============================================================
+
+// Full board | Confidence N, above the standings tabs.
+.PicksContestSwitch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  margin-bottom: 0.75rem;
+  border-radius: 8px;
+  background: var(--control-bg);
+
+  &-option {
+    padding: 5px 12px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    font-size: 13px;
+    color: var(--muted-color);
+    cursor: pointer;
+
+    &:hover { color: var(--text-color); }
+
+    &--active {
+      background: var(--body-bg);
+      color: var(--text-color);
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    }
+  }
+}
+
+.C10-intro {
+  font-size: 13px;
+  color: var(--muted-color);
+  margin: 0 0 0.75rem;
+}
+
+.C10-status {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.C10-saveState {
+  margin-inline-start: auto;
+  font-size: 12px;
+}
+
+// 🚨 Not --alert-error-color: that is #fff on most themes.
+.C10-error { color: #A32D2D; }
+
+.C10-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 1rem 0 0.5rem;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-color);
+}
+
+.C10-hint {
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.C10-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &.is-sorting .C10Row:not(.is-dragging) { transition: transform 0.15s ease; }
+}
+
+.C10Row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 10px 6px;
+  border: 1px solid var(--control-bg);
+  border-radius: 12px;
+  background: var(--body-bg);
+
+  &--picked { border-color: var(--primary-color); }
+
+  &--correct {
+    border-color: #3B6D11;
+    background: rgba(59, 109, 17, 0.06);
+  }
+
+  &--incorrect {
+    border-color: #A32D2D;
+    background: rgba(163, 45, 45, 0.06);
+  }
+
+  &--locked { grid-template-columns: auto auto minmax(0, 1fr); }
+
+  &.is-dragging {
+    position: relative;
+    z-index: 2;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    cursor: grabbing;
+  }
+
+  &-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 44px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--muted-color);
+    cursor: grab;
+    // 🚨 Without this a phone takes the drag for a scroll.
+    touch-action: none;
+
+    &:hover { background: var(--control-bg); color: var(--text-color); }
+    &:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 1px; }
+
+    &--static {
+      cursor: default;
+      opacity: 0.6;
+      &:hover { background: none; color: var(--muted-color); }
+    }
+  }
+
+  &-value {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 6px;
+    border-radius: 18px;
+    background: var(--primary-color);
+    color: var(--body-bg);
+    font-size: 15px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &--locked &-value {
+    background: var(--control-bg);
+    color: var(--text-color);
+  }
+
+  &-body {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+  }
+
+  &-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    font-size: 11px;
+    color: var(--muted-color);
+  }
+
+  &-tb {
+    padding: 0 6px;
+    border-radius: 4px;
+    background: var(--control-bg);
+    color: var(--text-color);
+    font-weight: 600;
+  }
+
+  &-teams {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    width: 100%;
+  }
+
+  &-vs {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--muted-color);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &-select {
+    width: auto;
+    min-width: 64px;
+  }
+}
+
+.C10Team {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 6px;
+  border: 1px solid var(--control-bg);
+  border-radius: 8px;
+  background: var(--control-bg);
+  color: var(--text-color);
+  text-align: start;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+
+  &:hover:not(:disabled) {
+    border-color: var(--primary-color);
+    background: var(--body-bg);
+  }
+
+  &:disabled { cursor: default; }
+
+  &--selected {
+    border-color: var(--primary-color);
+    background: var(--body-bg);
+    box-shadow: 0 0 0 1px var(--primary-color);
+
+    .C10Team-name { color: var(--primary-color); font-weight: 600; }
+  }
+
+  &--winner .C10Team-name { color: #3B6D11; font-weight: 600; }
+  &--loser { opacity: 0.45; }
+
+  &-logo {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    img { width: 100%; height: 100%; object-fit: contain; }
+
+    &--initial {
+      border-radius: 6px;
+      background: var(--body-bg);
+      font-weight: 600;
+      color: var(--muted-color);
+    }
+  }
+
+  &-name {
+    min-width: 0;
+    font-size: 13px;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.C10-tiebreaker {
+  margin-top: 1rem;
+  padding: 12px 14px;
+  border: 1px dashed var(--control-bg);
+  border-radius: 12px;
+
+  &-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-color);
+  }
+
+  &-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+
+  &-input { width: 96px; }
+
+  &-help {
+    font-size: 12px;
+    color: var(--muted-color);
+  }
+}
+
+@media (max-width: 767.98px) {
+  // Five tabs with the contest on: let them scroll rather than wrap.
+  .PicksPage-tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+    &::-webkit-scrollbar { display: none; }
+  }
+  .PicksPage-tab {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  // The number menu drops under the teams, beside the value it sets.
+  .C10Row {
+    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-areas:
+      "handle value body"
+      "handle select body";
+    padding-inline-end: 10px;
+
+    &-handle { grid-area: handle; align-self: stretch; height: auto; }
+    &-value { grid-area: value; align-self: end; }
+    &-body { grid-area: body; }
+    &-select { grid-area: select; align-self: start; min-width: 0; padding-inline: 6px; }
+  }
+
+  .C10Row-teams { flex-direction: column; }
+  .C10Row-vs:not(.C10Row-vs--score) { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .C10-list.is-sorting .C10Row { transition: none; }
+}

@@ -4,6 +4,7 @@ namespace Resofire\Picks\Jobs;
 
 use Flarum\Queue\AbstractJob;
 use Flarum\Settings\SettingsRepositoryInterface;
+use Resofire\Picks\Confidence\ConfidenceContest;
 use Resofire\Picks\Pick;
 use Resofire\Picks\PickEvent;
 use Resofire\Picks\Service\ScoreAggregator;
@@ -16,12 +17,26 @@ class ScorePicksJob extends AbstractJob
     ) {
     }
 
-    public function handle(SettingsRepositoryInterface $settings, ScoreAggregator $aggregator): void
+    public function handle(SettingsRepositoryInterface $settings, ScoreAggregator $aggregator, ConfidenceContest $confidence): void
     {
         $event = PickEvent::find($this->eventId);
 
         if (! $event || ! $event->isFinished() || ! $event->result) {
             return;
+        }
+
+        /*
+         * The Confidence contest scores the same game, on the same queue, but
+         * in its own tables — first, because the full board below returns early
+         * whenever nobody picked this game there.
+         *
+         * 🚨 Guarded: a fault in the side contest must never cost the full
+         * board its scores.
+         */
+        try {
+            $confidence->scoreEvent($event);
+        } catch (\Throwable $e) {
+            resolve(\Psr\Log\LoggerInterface::class)->error('[picks] confidence scoring failed for event ' . $event->id . ': ' . $e->getMessage());
         }
 
         /*

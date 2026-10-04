@@ -10,6 +10,7 @@ import MatchesTab from './picks/MatchesTab';
 import MyPicksTab from './picks/MyPicksTab';
 import LeaderboardTab from './picks/LeaderboardTab';
 import HistoryTab from './picks/HistoryTab';
+import ConfidenceTab from './picks/ConfidenceTab';
 import PicksSkeleton, { measure } from './PicksSkeleton';
 import { claimWaymarkRoutes, waymark } from '../waymark';
 
@@ -45,6 +46,19 @@ export default class PicksPage extends Page {
         label: app.translator.trans('ernestdefoe-picks.lib.nav.matches'),
         icon: 'fas fa-football',
       },
+      // The Confidence contest, when the forum runs one. Read here, in view(),
+      // because app.forum is not there yet when the page module loads.
+      ...(app.forum.attribute('picksC10Enabled')
+        ? [
+            {
+              key: 'confidence',
+              label: app.translator.trans('ernestdefoe-picks.forum.confidence.tab', {
+                count: app.forum.attribute('picksC10Games') || 10,
+              }),
+              icon: 'fas fa-sort-amount-down',
+            },
+          ]
+        : []),
       {
         key: 'mypicks',
         label: app.translator.trans('ernestdefoe-picks.lib.nav.my_picks'),
@@ -80,6 +94,9 @@ export default class PicksPage extends Page {
                   if (tab.key === 'history') {
                     state.loadLeaderboardHistory();
                   }
+                  if (tab.key === 'confidence' && state.c10.weekId !== state.currentWeekId) {
+                    state.c10.load(state.currentWeekId);
+                  }
                   m.redraw();
                 }}
               >
@@ -101,6 +118,7 @@ export default class PicksPage extends Page {
           ) : (
             <>
               {state.activeTab === 'matches' && MatchesTab.component({ state })}
+              {state.activeTab === 'confidence' && ConfidenceTab.component({ state })}
               {state.activeTab === 'mypicks' && MyPicksTab.component({ state })}
               {state.activeTab === 'leaderboard' && LeaderboardTab.component({ state })}
               {state.activeTab === 'history' && HistoryTab.component({ state })}

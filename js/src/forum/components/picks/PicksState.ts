@@ -7,6 +7,7 @@ import type {
   LeaderboardHistorySeason,
   LeaderboardContext,
 } from './types';
+import ConfidenceState from './ConfidenceState';
 
 /**
  * Shared state + data-loading/mutation for the picks page tabs.
@@ -37,6 +38,12 @@ export default class PicksState {
   lbHistory: LeaderboardHistorySeason[] = [];
   lbHistoryLoading: boolean = false;
   lbHistoryExpandedSeasons: Set<number> = new Set();
+
+  /** The Confidence contest, beside the full board. */
+  c10 = new ConfidenceState();
+  /** Which contest the Leaderboard and History tabs are showing. */
+  lbContest: 'main' | 'c10' = 'main';
+  historyContest: 'main' | 'c10' = 'main';
 
   lbContext: LeaderboardContext | null = null;
   lbContextLoading: boolean = false;
@@ -125,6 +132,11 @@ export default class PicksState {
   loadGames(): void {
     if (!this.currentWeekId) return;
 
+    // The week arrows move both contests together.
+    if (this.activeTab === 'confidence' || this.c10.board) {
+      this.c10.load(this.currentWeekId);
+    }
+
     this.gamesLoading = true;
     m.redraw();
 
@@ -149,6 +161,13 @@ export default class PicksState {
   }
 
   loadLeaderboard(): void {
+    if (this.lbContest === 'c10') {
+      const scope = this.lbScope === 'season' ? 'season' : 'week';
+      this.lbScope = scope;
+      this.c10.loadLeaderboard(scope, this.currentWeekId, this.seasonId ?? this.currentWeek()?.season_id ?? null);
+      return;
+    }
+
     const isActive = !!this.currentWeekId || !!this.seasonId;
 
     // If no active week/season, fetch context first to check off-season retention

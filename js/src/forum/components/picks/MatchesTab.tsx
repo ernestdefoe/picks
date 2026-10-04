@@ -5,6 +5,7 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import type Mithril from 'mithril';
 import type PicksState from './PicksState';
 import type { Game } from './types';
+import WeekNav from './WeekNav';
 
 interface TabAttrs extends ComponentAttrs {
   state: PicksState;
@@ -13,42 +14,12 @@ interface TabAttrs extends ComponentAttrs {
 export default class MatchesTab extends Component<TabAttrs> {
   view(): Mithril.Children {
     const state = this.attrs.state;
-    const week = state.currentWeek();
-    const idx = state.weeks.findIndex((w) => w.id === state.currentWeekId);
     const picked = state.weeksMeta.picked || 0;
     const total = state.weeksMeta.total || 0;
 
     return (
       <div className="PicksTab">
-        <div className="PicksWeekNav">
-          <div>
-            <div className="PicksWeekNav-title">{week?.name || '—'}</div>
-            {week?.start_date && (
-              <div className="PicksWeekNav-dates">
-                {week.start_date} – {week.end_date}
-              </div>
-            )}
-          </div>
-          <div className="PicksWeekNav-arrows">
-            {state.thisWeekId && state.thisWeekId !== state.currentWeekId && (
-              <Button className="Button PicksWeekNav-thisWeek" icon="fas fa-calendar-day" onclick={() => state.goToThisWeek()}>
-                {app.translator.trans('ernestdefoe-picks.lib.nav.this_week')}
-              </Button>
-            )}
-            <Button
-              className="Button Button--icon"
-              icon="fas fa-chevron-left"
-              disabled={idx <= 0}
-              onclick={() => state.prevWeek()}
-            />
-            <Button
-              className="Button Button--icon"
-              icon="fas fa-chevron-right"
-              disabled={idx >= state.weeks.length - 1}
-              onclick={() => state.nextWeek()}
-            />
-          </div>
-        </div>
+        {WeekNav(state)}
 
         {app.session.user && total > 0 && (
           <div className="PicksStatusBar">
