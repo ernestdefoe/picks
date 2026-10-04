@@ -496,7 +496,7 @@ $board = static function (array ...$weeks): array {
     foreach ($weeks as [$id, $open, $games]) {
         $row = ['id' => $id, 'is_open' => $open, 'unfinished' => [], 'last_kickoff' => null];
         foreach ($games as [$kickoff, $status]) {
-            if (in_array($status, ['scheduled', 'in_progress'], true)) {
+            if ($status !== 'finished') {
                 $row['unfinished'][] = $kickoff;
             }
             if ($row['last_kickoff'] === null || $kickoff > $row['last_kickoff']) {
@@ -544,6 +544,74 @@ $tests['the rule falls back sensibly at the edges'] = function () use ($board, $
     same(6, CurrentWeek::pick($board([6, true, [['2026-10-04 03:30:00', 'in_progress']]], [7, true, []]), $at('2026-10-04 06:00:00')), 'an in-progress game lost its week');
 
     same(null, CurrentWeek::pick([], $at('2026-10-04 16:00:00')), 'no weeks should give no week');
+};
+
+/*
+ * Auto-unlock (CurrentWeek::weekToUnlock). Week 5 played Saturday 3 October
+ * 2026; week 6 the Saturday after. Each game is [kickoff UTC, finished].
+ */
+$season = static function (array $five, bool $sixOpen = false): array {
+    return [
+        ['id' => 4, 'is_open' => false, 'games' => [['2026-09-26 16:00:00', true]]],
+        ['id' => 5, 'is_open' => true, 'games' => $five],
+        ['id' => 6, 'is_open' => $sixOpen, 'games' => [['2026-10-10 16:00:00', false], ['2026-10-11 04:00:00', false]]],
+        ['id' => 7, 'is_open' => false, 'games' => [['2026-10-17 16:00:00', false]]],
+    ];
+};
+
+$tests['auto-unlock: a complete week opens the next, an unfinished one does not'] = function () use ($season, $at) {
+    $sunday = $at('2026-10-04 16:00:00');
+
+    // Week 5 all final: week 6 opens.
+    same(6, CurrentWeek::weekToUnlock($season([['2026-10-03 16:00:00', true], ['2026-10-04 02:30:00', true]]), $sunday), 'an all-final week 5 did not open week 6');
+
+    // One game postponed two days ago, never finalised: week 6 still opens.
+    same(6, CurrentWeek::weekToUnlock($season([['2026-10-02 12:00:00', false], ['2026-10-04 02:30:00', true]]), $sunday), 'a postponed game kept week 6 shut');
+
+    // A game still to play (Sunday evening): nothing opens.
+    same(null, CurrentWeek::weekToUnlock($season([['2026-10-03 16:00:00', true], ['2026-10-04 23:00:00', false]]), $sunday), 'week 6 opened with a week 5 game still to play');
+
+    // A game kicked off last night and not yet final (inside 36h): nothing opens.
+    same(null, CurrentWeek::weekToUnlock($season([['2026-10-04 02:30:00', false]]), $sunday), 'a game still being reported was written off too soon');
+
+    // The next week already open (a board that opens two at a time): it is the
+    // latest open week, so nothing more opens until IT is complete.
+    same(null, CurrentWeek::weekToUnlock($season([['2026-10-03 16:00:00', true]], true), $sunday), 'it opened past a week already open');
+
+    // An unannounced kickoff far ahead (the 04:00Z placeholder) is never "over".
+    ok(!CurrentWeek::gameIsDone('2026-10-11 04:00:00', false, $sunday), 'a future placeholder kickoff counted as done');
+};
+
+$tests['auto-unlock: switched on mid-season, it opens the week being played'] = function () use ($at) {
+    $weeks = [
+        ['id' => 1, 'is_open' => true, 'games' => [['2026-09-05 16:00:00', true]]],
+        ['id' => 2, 'is_open' => false, 'games' => [['2026-09-12 16:00:00', true]]],
+        ['id' => 3, 'is_open' => false, 'games' => []],
+        ['id' => 4, 'is_open' => false, 'games' => [['2026-09-26 16:00:00', false]]],   // stuck, long over
+        ['id' => 6, 'is_open' => false, 'games' => [['2026-10-10 16:00:00', false]]],
+    ];
+    same(6, CurrentWeek::weekToUnlock($weeks, $at('2026-10-04 16:00:00')), 'it did not step over finished and empty weeks to the week being played');
+
+    // No open week at all: the first week is always opened by hand.
+    $weeks[0]['is_open'] = false;
+    same(null, CurrentWeek::weekToUnlock($weeks, $at('2026-10-04 16:00:00')), 'it opened a week with none open');
+
+    // An empty open week is not "complete" — an unsynced schedule must not cascade.
+    same(null, CurrentWeek::weekToUnlock([['id' => 1, 'is_open' => true, 'games' => []], ['id' => 2, 'is_open' => false, 'games' => [['2026-10-10 16:00:00', false]]]], $at('2026-10-04 16:00:00')), 'an empty open week opened the next');
+};
+
+$tests['auto-unlock and the board agree'] = function () use ($board, $at) {
+    // Week 5 final at ~2am Sunday; auto-unlock opens week 6 at once, but the
+    // board stays on week 5 for the day of results, then moves.
+    $games = [['2026-10-04 02:30:00', 'finished']];
+    $six = [['2026-10-10 16:00:00', 'scheduled']];
+    same(5, CurrentWeek::pick($board([5, true, $games], [6, true, $six]), $at('2026-10-04 16:00:00')), 'the board jumped to the newly opened week');
+    same(6, CurrentWeek::pick($board([5, true, $games], [6, true, $six]), $at('2026-10-05 12:00:00')), 'the board did not move on the next day');
+
+    // A postponed game: unlock and board both let go at kickoff + 36h.
+    $stuck = [['2026-10-03 16:00:00', 'scheduled']];
+    same(5, CurrentWeek::pick($board([5, true, $stuck], [6, true, $six]), $at('2026-10-05 03:00:00')), 'the board left a week still inside 36h');
+    same(6, CurrentWeek::pick($board([5, true, $stuck], [6, true, $six]), $at('2026-10-05 05:00:00')), 'the board held a week past 36h');
 };
 
 /* ------------------------------------------------------------------ the runner */

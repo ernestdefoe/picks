@@ -38,6 +38,7 @@ use Resofire\Picks\Console\PollLiveScoresCommand;
 use Resofire\Picks\Console\SyncBoxScoresCommand;
 use Resofire\Picks\Console\SyncEspnCommand;
 use Resofire\Picks\Console\PostStandingsCommand;
+use Resofire\Picks\Console\UnlockWeeksCommand;
 use Resofire\Picks\Console\SyncTeamsCommand;
 use Resofire\Picks\Frontend\PicksPageContent;
 use Resofire\Picks\PicksServiceProvider;
@@ -163,6 +164,23 @@ $extenders = [
     // -------------------------------------------------------------------------
     // Console commands
     // -------------------------------------------------------------------------
+    /*
+     * Turning auto-unlock ON opens whatever is already due, there and then,
+     * rather than waiting for the next scheduled run.
+     */
+    (new Extend\Event())
+        ->listen(\Flarum\Settings\Event\Saved::class, function (\Flarum\Settings\Event\Saved $event) {
+            if (empty($event->settings['ernestdefoe-picks.auto_unlock_weeks'])) {
+                return;
+            }
+
+            try {
+                resolve(\Resofire\Picks\Service\SyncScoresService::class)->unlockDueWeeks();
+            } catch (\Throwable $e) {
+                resolve(\Psr\Log\LoggerInterface::class)->warning('[picks] auto-unlock on save failed: ' . $e->getMessage());
+            }
+        }),
+
     (new Extend\Console())
         ->command(SyncTeamsCommand::class)
         ->command(PollLiveScoresCommand::class)
@@ -170,6 +188,7 @@ $extenders = [
         ->command(SyncEspnCommand::class)
         ->command(BackfillLeadInCommand::class)
         ->command(PostStandingsCommand::class)
+        ->command(UnlockWeeksCommand::class)
         /*
          * Every minute, not every five.
          *
@@ -238,6 +257,15 @@ $extenders = [
          * before they are scored puts a table on the board that changes
          * underneath the people replying to it.
          */
+        /*
+         * 🚨 Its own command, not a line in the score poll: the poll returns
+         * early when ESPN polling is off or nothing is on today, and a board
+         * that scores by hand or from CFBD still wants its weeks to open.
+         * Plain, with no options — see the 🚨 at the end of this list.
+         */
+        ->schedule(UnlockWeeksCommand::class, function ($event) {
+            $event->everyFifteenMinutes()->withoutOverlapping();
+        })
         ->schedule(PostStandingsCommand::class, function ($event) {
             $event->weeklyOn(2, '09:00')->withoutOverlapping();
         })

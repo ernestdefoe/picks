@@ -40,11 +40,12 @@ final class CurrentWeek
     public const GRACE_HOURS = 24;
 
     /**
-     * A game still "scheduled" this long after kickoff was never reported —
-     * cancelled, or a feed that missed it — and must not pin the board to a
-     * week that is over.
+     * A game not final this long after kickoff is treated as DONE: postponed,
+     * cancelled, or a feed that never reported it. Without this one game
+     * pinned the board to a week that was over, and kept the next week shut
+     * for good. Shared with auto-unlock, so the two always agree.
      */
-    public const STALE_HOURS = 72;
+    public const DONE_AFTER_HOURS = 36;
 
     /**
      * @param array<int, array{id:int, is_open:bool, unfinished:array<int,string|null>, last_kickoff:?string}> $weeks
@@ -73,10 +74,8 @@ final class CurrentWeek
         $nowTs = $now->getTimestamp();
 
         foreach ($week['unfinished'] as $kickoff) {
-            $ts = self::ts($kickoff);
-
             // An unannounced or future game, or one under way: still to play.
-            if ($ts === null || $ts + self::STALE_HOURS * 3600 > $nowTs) {
+            if (! self::gameIsDone($kickoff, false, $now)) {
                 return true;
             }
         }
@@ -85,6 +84,81 @@ final class CurrentWeek
 
         return $last !== null
             && $last + (self::GAME_LENGTH_HOURS + self::GRACE_HOURS) * 3600 > $nowTs;
+    }
+
+    /**
+     * Whether a game is over as far as weeks are concerned: final, or kicked
+     * off more than DONE_AFTER_HOURS ago. A future kickoff — the 04:00Z
+     * placeholder of an unannounced time included — is never done.
+     */
+    public static function gameIsDone(?string $kickoff, bool $finished, DateTimeInterface $now): bool
+    {
+        if ($finished) {
+            return true;
+        }
+
+        $ts = self::ts($kickoff);
+
+        return $ts !== null && $ts + self::DONE_AFTER_HOURS * 3600 <= $now->getTimestamp();
+    }
+
+    /**
+     * Every game in the week done. A week with no games is NOT complete — an
+     * unsynced schedule must not cascade open the whole season.
+     *
+     * @param array<int, array{0:?string, 1:bool}> $games [kickoff UTC, finished]
+     */
+    public static function weekIsComplete(array $games, DateTimeInterface $now): bool
+    {
+        if ($games === []) {
+            return false;
+        }
+
+        foreach ($games as [$kickoff, $finished]) {
+            if (! self::gameIsDone($kickoff, (bool) $finished, $now)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Auto-unlock: which week to open, for ONE season's weeks in schedule
+     * order, or null.
+     *
+     * Once the LATEST open week is complete, open the first later week that
+     * still has a game to play. Weeks with no games are stepped over, and so
+     * are weeks already over — a board that switched this on mid-season gets
+     * the week being played, not week 2 of a season half gone. No open week
+     * at all: nothing, because the first week is always opened by hand.
+     *
+     * 🚨 A week opened here does not move the board. The board stays on the
+     * earliest LIVE open week (pick()), so the just-finished week keeps its
+     * day of results first.
+     *
+     * @param array<int, array{id:int, is_open:bool, games:array<int, array{0:?string, 1:bool}>}> $weeks
+     */
+    public static function weekToUnlock(array $weeks, DateTimeInterface $now): ?int
+    {
+        $latest = null;
+        foreach ($weeks as $i => $week) {
+            if ($week['is_open']) {
+                $latest = $i;
+            }
+        }
+
+        if ($latest === null || ! self::weekIsComplete($weeks[$latest]['games'], $now)) {
+            return null;
+        }
+
+        foreach (array_slice($weeks, $latest + 1) as $week) {
+            if ($week['games'] !== [] && ! self::weekIsComplete($week['games'], $now)) {
+                return (int) $week['id'];
+            }
+        }
+
+        return null;
     }
 
     private static function ts(?string $utc): ?int

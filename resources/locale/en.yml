@@ -128,8 +128,8 @@ ernestdefoe-picks:
       minutes_before_kickoff: minutes before kickoff
       minutes: minutes
       auto_unlock_weeks: Automatically unlock the next week when the previous week is complete
-      auto_unlock_weeks_help: When enabled, the next week will automatically open for picks once all games in the current week have a result entered.
-      auto_unlock_weeks_note: "Week 1 must always be opened manually. Subsequent weeks unlock automatically when all games in the previous week are finished."
+      auto_unlock_weeks_help: Once every game in the latest open week is over, the next week with games still to play opens for picks. A game counts as over when it is final, or 36 hours after its kickoff if it never gets a result (postponed, cancelled or never reported). Checked every 15 minutes, and straight away when you turn this on.
+      auto_unlock_weeks_note: "Open the first week by hand. Weeks already open stay open, and the Picks page keeps showing the finished week for a day after its last game before moving on."
       display_title: Display
       default_week_view: Default week on Picks page
       week_view_current: Current week (auto-detect)

@@ -411,8 +411,14 @@ class SyncScoresService
     }
 
     /**
-     * If auto-unlock is enabled and all games in the given week are finished,
-     * open the next sequential week for picking.
+     * Auto-unlock, after a game in this week has been finalised.
+     *
+     * 🚨 Not "every game in THIS week has status finished" any more. That rule
+     * was kept shut for good by one postponed or cancelled game, and it only
+     * ran at the instant a game flipped to finished — so a week completed
+     * before the setting was switched on never opened the next. The rule now
+     * lives in CurrentWeek::weekToUnlock() and is also run by
+     * `picks:unlock-weeks` on the schedule and when the setting is turned on.
      */
     public function maybeUnlockNextWeek(int $weekId): bool
     {
@@ -420,43 +426,67 @@ class SyncScoresService
             return false;
         }
 
-        // Check if any games in this week are still unfinished
-        $unfinished = PickEvent::where('week_id', $weekId)
-            ->where('status', '!=', PickEvent::STATUS_FINISHED)
-            ->exists();
+        $week = Week::find($weekId);
 
-        if ($unfinished) {
-            return false;
+        return $week !== null && $this->unlockSeason((int) $week->season_id) !== null;
+    }
+
+    /**
+     * Open whatever week is due in every season that has an open week.
+     *
+     * @return array<int, int> the ids of the weeks opened
+     */
+    public function unlockDueWeeks(?\DateTimeInterface $now = null): array
+    {
+        if (! $this->settings->get('ernestdefoe-picks.auto_unlock_weeks', false)) {
+            return [];
         }
 
-        $currentWeek = Week::find($weekId);
-        if (! $currentWeek) {
-            return false;
+        $opened = [];
+
+        foreach (Week::query()->where('is_open', true)->distinct()->pluck('season_id') as $seasonId) {
+            $id = $this->unlockSeason((int) $seasonId, $now);
+            if ($id !== null) {
+                $opened[] = $id;
+            }
         }
 
-        // Find the next week in the same season by week_number
-        $nextWeek = Week::where('season_id', $currentWeek->season_id)
-            ->where('week_number', '>', $currentWeek->week_number)
-            ->where('season_type', $currentWeek->season_type)
+        return $opened;
+    }
+
+    private function unlockSeason(int $seasonId, ?\DateTimeInterface $now = null): ?int
+    {
+        $weeks = Week::query()
+            ->where('season_id', $seasonId)
+            ->orderByRaw("CASE season_type WHEN 'regular' THEN 0 ELSE 1 END")
             ->orderBy('week_number')
-            ->first();
+            ->orderBy('id')
+            ->get(['id', 'is_open']);
 
-        // If no next regular week, check postseason
-        if (! $nextWeek && $currentWeek->season_type === 'regular') {
-            $nextWeek = Week::where('season_id', $currentWeek->season_id)
-                ->where('season_type', 'postseason')
-                ->orderBy('week_number')
-                ->first();
+        $rows = [];
+        foreach ($weeks as $week) {
+            $rows[(int) $week->id] = ['id' => (int) $week->id, 'is_open' => (bool) $week->is_open, 'games' => []];
         }
 
-        if (! $nextWeek || $nextWeek->is_open) {
-            return false;
+        if ($rows === []) {
+            return null;
         }
 
-        $nextWeek->is_open = true;
-        $nextWeek->save();
+        foreach (PickEvent::query()->whereIn('week_id', array_keys($rows))->get(['week_id', 'match_date', 'status']) as $event) {
+            $raw = $event->getRawOriginal('match_date');
+            $rows[(int) $event->week_id]['games'][] = [
+                $raw ? Carbon::parse((string) $raw, 'UTC')->utc()->format('Y-m-d H:i:s') : null,
+                $event->status === PickEvent::STATUS_FINISHED,
+            ];
+        }
 
-        return true;
+        $id = CurrentWeek::weekToUnlock(array_values($rows), $now ?? Carbon::now('UTC'));
+
+        if ($id !== null) {
+            Week::query()->whereKey($id)->update(['is_open' => true]);
+        }
+
+        return $id;
     }
 
     /**

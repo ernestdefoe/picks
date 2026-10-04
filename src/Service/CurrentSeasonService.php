@@ -77,7 +77,9 @@ class CurrentSeasonService
                 $id = (int) $event->week_id;
                 $kickoff = self::utc($event->getRawOriginal('match_date'));
 
-                if (in_array($event->status, self::UNFINISHED, true)) {
+                // 🚨 Anything not final — `closed` included, which is a game
+                // whose picks have locked and which may well be under way.
+                if ($event->status !== PickEvent::STATUS_FINISHED) {
                     $rows[$id]['unfinished'][] = $kickoff;
                 }
 
