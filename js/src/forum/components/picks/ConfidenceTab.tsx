@@ -199,18 +199,23 @@ export default class ConfidenceTab extends Component<TabAttrs> {
         </div>
 
         {playing && (
-          <select
-            className="FormControl C10Row-select"
-            aria-label={ts('value_label', { game: label })}
-            value={String(value)}
-            onchange={(e: Event) => c10.setValue(game.id, parseInt((e.target as HTMLSelectElement).value, 10))}
-          >
-            {c10.freeValues().map((v) => (
-              <option value={String(v)} selected={v === value}>
-                {v}
-              </option>
-            ))}
-          </select>
+          // Core's Select markup, so the menu carries the theme's caret and
+          // reads as a menu rather than a grey box with a number in it.
+          <span className="Select C10Row-select">
+            <select
+              className="Select-input FormControl C10Row-selectInput"
+              aria-label={ts('value_label', { game: label })}
+              value={String(value)}
+              onchange={(e: Event) => c10.setValue(game.id, parseInt((e.target as HTMLSelectElement).value, 10))}
+            >
+              {c10.freeValues().map((v) => (
+                <option value={String(v)} selected={v === value}>
+                  {v}
+                </option>
+              ))}
+            </select>
+            <i className="icon fas fa-sort Select-caret" aria-hidden="true" />
+          </span>
         )}
       </li>
     );

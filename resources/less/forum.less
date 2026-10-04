@@ -8,15 +8,23 @@
 }
 
 // Main tab bar
+// 🚨 Five tabs with the contest on. Beside the forum sidebar they no longer
+// fit at 16px padding, and each label broke onto two lines ("My / Picks").
+// They keep to one line and the strip scrolls when it truly runs out.
 .PicksPage-tabs {
   display: flex;
   gap: 4px;
   border-bottom: 1px solid var(--control-bg);
   margin-bottom: 1.25rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
 }
 
 .PicksPage-tab {
-  padding: 8px 16px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 8px 14px;
   font-size: 14px;
   cursor: pointer;
   border: none;
@@ -1460,9 +1468,20 @@
     font-variant-numeric: tabular-nums;
   }
 
+  // The caret sits over the menu rather than pulling it in with a negative
+  // margin, so the grid measures the menu's real width.
   &-select {
-    width: auto;
-    min-width: 64px;
+    position: relative;
+
+    select { min-width: 64px; }
+
+    .Select-caret {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      margin: 0;
+    }
   }
 }
 
@@ -1557,17 +1576,6 @@
 }
 
 @media (max-width: 767.98px) {
-  // Five tabs with the contest on: let them scroll rather than wrap.
-  .PicksPage-tabs {
-    overflow-x: auto;
-    scrollbar-width: none;
-    &::-webkit-scrollbar { display: none; }
-  }
-  .PicksPage-tab {
-    flex-shrink: 0;
-    white-space: nowrap;
-  }
-
   // The number menu drops under the teams, beside the value it sets.
   .C10Row {
     grid-template-columns: auto auto minmax(0, 1fr);
@@ -1577,18 +1585,21 @@
     padding-inline-end: 10px;
 
     &-handle { grid-area: handle; align-self: stretch; height: auto; }
-    &-value { grid-area: value; align-self: end; }
+    &-value { grid-area: value; align-self: end; justify-self: center; }
     &-body { grid-area: body; }
     &-select {
       grid-area: select;
       align-self: start;
-      width: 40px;
-      min-width: 0;
-      height: 34px;
-      padding: 0 2px;
-      line-height: 34px;
-      text-align: center;
-      text-align-last: center;
+
+      select {
+        width: 54px;
+        min-width: 0;
+        height: 34px;
+        padding: 0 22px 0 10px;
+        line-height: 34px;
+      }
+
+      .Select-caret { right: 7px; }
     }
   }
 
