@@ -5,6 +5,7 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import type Mithril from 'mithril';
 import Week from '../../common/models/Week';
 import ResultModal from './ResultModal';
+import crestUrl from '../../common/crest';
 
 const t = (key: string, params?: Record<string, unknown>) =>
   app.translator.trans('ernestdefoe-picks.admin.games.' + key, params as any);
@@ -149,11 +150,19 @@ export default class GamesTab extends Component {
       return (
         <>
           <img
-            src={team.logo_url}
+            src={crestUrl(team.logo_url, 24)}
             alt={team.name}
             className="PicksTeamLogo PicksTeamLogo--small PicksTeamLogo--light"
+            loading="lazy"
+            decoding="async"
           />
-          <img src={darkUrl} alt={team.name} className="PicksTeamLogo PicksTeamLogo--small PicksTeamLogo--dark" />
+          <img
+            src={crestUrl(darkUrl, 24)}
+            alt={team.name}
+            className="PicksTeamLogo PicksTeamLogo--small PicksTeamLogo--dark"
+            loading="lazy"
+            decoding="async"
+          />
         </>
       );
     }

@@ -6,6 +6,7 @@ import extractText from 'flarum/common/utils/extractText';
 import type Mithril from 'mithril';
 import Week from '../../common/models/Week';
 import { startDrag, moveItem } from '../../common/sortable';
+import crestUrl from '../../common/crest';
 
 interface Team {
   name: string;
@@ -304,7 +305,7 @@ export default class ConfidenceTab extends Component {
   private game(g: Game): Mithril.Children {
     const side = (team: Team | null, rank: number | null, record: string | null) => (
       <span className="PicksC10Admin-team">
-        {team?.logo_url ? <img src={team.logo_url} alt="" className="PicksTeamLogo PicksTeamLogo--small" /> : null}
+        {team?.logo_url ? <img src={crestUrl(team.logo_url, 24)} alt="" className="PicksTeamLogo PicksTeamLogo--small" loading="lazy" decoding="async" /> : null}
         {rank ? <strong className="PicksC10Admin-rank">#{rank}</strong> : null}
         <span>{team?.name ?? '—'}</span>
         {record ? <span className="PicksC10Admin-record">({record})</span> : null}

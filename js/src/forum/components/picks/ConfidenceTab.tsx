@@ -7,6 +7,7 @@ import WeekNav from './WeekNav';
 import PicksSkeleton from '../PicksSkeleton';
 import { startDrag } from '../../../common/sortable';
 import extractText from 'flarum/common/utils/extractText';
+import crestUrl from '../../../common/crest';
 
 interface TabAttrs extends ComponentAttrs {
   state: PicksState;
@@ -242,8 +243,8 @@ export default class ConfidenceTab extends Component<TabAttrs> {
       >
         {team?.logo_url ? (
           <span className="C10Team-logo">
-            <img src={team.logo_url} alt="" className="PicksTeamBtn-logo-light" loading="lazy" />
-            <img src={team.logo_dark_url || team.logo_url} alt="" className="PicksTeamBtn-logo-dark" loading="lazy" />
+            <img src={crestUrl(team.logo_url, 32)} alt="" className="PicksTeamBtn-logo-light" loading="lazy" decoding="async" />
+            <img src={crestUrl(team.logo_dark_url || team.logo_url, 32)} alt="" className="PicksTeamBtn-logo-dark" loading="lazy" decoding="async" />
           </span>
         ) : (
           <span className="C10Team-logo C10Team-logo--initial">{(team?.abbreviation || team?.name || '?').charAt(0)}</span>

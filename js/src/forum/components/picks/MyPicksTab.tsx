@@ -5,6 +5,7 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import type Mithril from 'mithril';
 import type PicksState from './PicksState';
 import PicksSkeleton, { measure } from '../PicksSkeleton';
+import crestUrl from '../../../common/crest';
 
 interface TabAttrs extends ComponentAttrs {
   state: PicksState;
@@ -86,14 +87,18 @@ export default class MyPicksTab extends Component<TabAttrs> {
                   {team?.logo_url && (
                     <>
                       <img
-                        src={team.logo_url}
+                        src={crestUrl(team.logo_url, 36)}
                         alt={team.name}
                         className="PicksMyPickRow-logo PicksMyPickRow-logo--light"
+                        loading="lazy"
+                        decoding="async"
                       />
                       <img
-                        src={team.logo_dark_url || team.logo_url}
+                        src={crestUrl(team.logo_dark_url || team.logo_url, 36)}
                         alt={team.name}
                         className="PicksMyPickRow-logo PicksMyPickRow-logo--dark"
+                        loading="lazy"
+                        decoding="async"
                       />
                     </>
                   )}
@@ -101,14 +106,18 @@ export default class MyPicksTab extends Component<TabAttrs> {
                   {oppTeam?.logo_url && (
                     <>
                       <img
-                        src={oppTeam.logo_url}
+                        src={crestUrl(oppTeam.logo_url, 36)}
                         alt={oppTeam.name}
                         className="PicksMyPickRow-logo PicksMyPickRow-logo--light"
+                        loading="lazy"
+                        decoding="async"
                       />
                       <img
-                        src={oppTeam.logo_dark_url || oppTeam.logo_url}
+                        src={crestUrl(oppTeam.logo_dark_url || oppTeam.logo_url, 36)}
                         alt={oppTeam.name}
                         className="PicksMyPickRow-logo PicksMyPickRow-logo--dark"
+                        loading="lazy"
+                        decoding="async"
                       />
                     </>
                   )}

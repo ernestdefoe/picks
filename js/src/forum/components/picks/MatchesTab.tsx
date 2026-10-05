@@ -6,6 +6,7 @@ import type Mithril from 'mithril';
 import type PicksState from './PicksState';
 import type { Game } from './types';
 import WeekNav from './WeekNav';
+import crestUrl from '../../../common/crest';
 
 const t = (key: string, params?: Record<string, unknown>) =>
   app.translator.trans('ernestdefoe-picks.forum.games.' + key, params as any);
@@ -146,8 +147,9 @@ export default class MatchesTab extends Component<TabAttrs> {
         <div className="PicksTeamBtn-logo">
           {logoUrl ? (
             <>
-              <img src={logoUrl} alt={team?.name || ''} className="PicksTeamBtn-logo-light" />
-              <img src={logoDarkUrl} alt={team?.name || ''} className="PicksTeamBtn-logo-dark" />
+              {/* Lazy, so the variant CSS hides is never fetched at all. */}
+              <img src={crestUrl(logoUrl, 96)} alt={team?.name || ''} className="PicksTeamBtn-logo-light" loading="lazy" decoding="async" />
+              <img src={crestUrl(logoDarkUrl!, 96)} alt={team?.name || ''} className="PicksTeamBtn-logo-dark" loading="lazy" decoding="async" />
             </>
           ) : (
             <span>{(team?.abbreviation || team?.name || '?').charAt(0)}</span>

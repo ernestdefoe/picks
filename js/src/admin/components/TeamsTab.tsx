@@ -5,6 +5,7 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import type Mithril from 'mithril';
 import Team from '../../common/models/Team';
 import TeamEditModal from './TeamEditModal';
+import crestUrl from '../../common/crest';
 
 type LogoStatus = 'both' | 'standard' | 'custom' | 'missing';
 
@@ -272,8 +273,8 @@ export default class TeamsTab extends Component {
                     <div className="PicksCardList-cell">
                       {logoUrl ? (
                         <>
-                          <img src={logoUrl}     alt={team.name() || ''} className="PicksTeamLogo PicksTeamLogo--light" />
-                          <img src={logoDarkUrl} alt={team.name() || ''} className="PicksTeamLogo PicksTeamLogo--dark" />
+                          <img src={crestUrl(logoUrl, 36)} alt={team.name() || ''} className="PicksTeamLogo PicksTeamLogo--light" loading="lazy" decoding="async" />
+                          <img src={crestUrl(logoDarkUrl!, 36)} alt={team.name() || ''} className="PicksTeamLogo PicksTeamLogo--dark" loading="lazy" decoding="async" />
                         </>
                       ) : (
                         <div className="PicksTeamLogo PicksTeamLogo--placeholder">
