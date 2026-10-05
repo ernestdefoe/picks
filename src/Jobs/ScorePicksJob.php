@@ -80,13 +80,17 @@ class ScorePicksJob extends AbstractJob
             ->where('selected_outcome', '!=', $event->result)
             ->update(['is_correct' => false]);
 
+        // The game's season, looked up once — it was re-read with a query for
+        // every member who picked the game.
+        $seasonId = $this->getSeasonId($event->week_id);
+
         // Recalculate scores for each user (shared ScoreAggregator)
         foreach ($userIds as $userId) {
-            $aggregator->recalculateUserScore($userId, $event->week_id, $this->getSeasonId($event->week_id), $confidenceMode, $confidencePenalty);
+            $aggregator->recalculateUserScore($userId, $event->week_id, $seasonId, $confidenceMode, $confidencePenalty);
         }
 
         // Update rank movement for all users in each affected scope
-        $this->updateRankMovements($event->week_id, $this->getSeasonId($event->week_id));
+        $this->updateRankMovements($event->week_id, $seasonId);
     }
 
     private function getSeasonId(?int $weekId): ?int
