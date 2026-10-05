@@ -62,20 +62,6 @@ class UserScore extends AbstractModel
         return $this->belongsTo(Week::class);
     }
 
-    public function getAccuracyPercentage(): float
-    {
-        if ($this->total_picks > 0) {
-            return round(($this->correct_picks / $this->total_picks) * 100, 2);
-        }
-
-        return 0.0;
-    }
-
-    public function getIncorrectPicks(): int
-    {
-        return $this->total_picks - $this->correct_picks;
-    }
-
     /**
      * The 1-based rank of $points within a pre-loaded collection of score rows
      * (each having a `total_points`), computed in PHP so callers avoid a COUNT

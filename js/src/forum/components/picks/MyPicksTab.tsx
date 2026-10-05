@@ -1,10 +1,9 @@
 import app from 'flarum/forum/app';
 import Component, { ComponentAttrs } from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
-import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import type Mithril from 'mithril';
 import type PicksState from './PicksState';
-import PicksSkeleton, { measure } from '../PicksSkeleton';
+import PicksSkeleton from '../PicksSkeleton';
 import crestUrl from '../../../common/crest';
 
 interface TabAttrs extends ComponentAttrs {

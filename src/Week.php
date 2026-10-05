@@ -52,14 +52,4 @@ class Week extends AbstractModel
     {
         return $this->hasMany(UserScore::class);
     }
-
-    public function isRegularSeason(): bool
-    {
-        return $this->season_type === 'regular';
-    }
-
-    public function isPostseason(): bool
-    {
-        return $this->season_type === 'postseason';
-    }
 }

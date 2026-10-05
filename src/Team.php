@@ -44,16 +44,6 @@ class Team extends AbstractModel
         'espn_id'     => 'integer',
     ];
 
-    public function homeEvents()
-    {
-        return $this->hasMany(PickEvent::class, 'home_team_id');
-    }
-
-    public function awayEvents()
-    {
-        return $this->hasMany(PickEvent::class, 'away_team_id');
-    }
-
     /**
      * Returns the full public URL for the standard logo, or null if none set.
      */

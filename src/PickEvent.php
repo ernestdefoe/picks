@@ -235,16 +235,6 @@ class PickEvent extends AbstractModel
         return true;
     }
 
-    public function isScheduled(): bool
-    {
-        return $this->status === self::STATUS_SCHEDULED;
-    }
-
-    public function isClosed(): bool
-    {
-        return $this->status === self::STATUS_CLOSED;
-    }
-
     public function isFinished(): bool
     {
         return $this->status === self::STATUS_FINISHED;
@@ -272,10 +262,5 @@ class PickEvent extends AbstractModel
         // College football does not end in draws; if scores are somehow equal
         // at the point of data entry we leave result null until corrected.
         return null;
-    }
-
-    public function getPickForUser(int $userId): ?Pick
-    {
-        return $this->picks()->where('user_id', $userId)->first();
     }
 }

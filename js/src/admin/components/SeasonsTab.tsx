@@ -53,12 +53,6 @@ export default class SeasonsTab extends Component {
       });
   }
 
-  private loadWeeks(_seasonId: string) {
-    // Weeks are already loaded in loadSeasons(). Just re-filter.
-    this.filterAndSortWeeks();
-    m.redraw();
-  }
-
   private filterAndSortWeeks() {
     const allWeeks = app.store.all<Week>('picks-weeks');
     this.weeks = allWeeks
@@ -145,8 +139,6 @@ export default class SeasonsTab extends Component {
   }
 
   view() {
-    const selectedSeason = this.seasons.find(s => String(s.id()) === this.selectedSeasonId);
-
     return (
       <div className="PicksSeasonsTab">
         {/*

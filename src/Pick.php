@@ -43,24 +43,4 @@ class Pick extends AbstractModel
     {
         return $this->belongsTo(PickEvent::class, 'event_id');
     }
-
-    public function isCorrect(): bool
-    {
-        return $this->is_correct === true;
-    }
-
-    public function isIncorrect(): bool
-    {
-        return $this->is_correct === false;
-    }
-
-    public function isPending(): bool
-    {
-        return $this->is_correct === null;
-    }
-
-    public function canBeChanged(): bool
-    {
-        return $this->event && $this->event->canPick();
-    }
 }

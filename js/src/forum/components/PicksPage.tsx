@@ -2,7 +2,6 @@ import app from 'flarum/forum/app';
 import Page from 'flarum/common/components/Page';
 import PageStructure from 'flarum/forum/components/PageStructure';
 import IndexSidebar from 'flarum/forum/components/IndexSidebar';
-import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import type Mithril from 'mithril';
 
 import PicksState from './picks/PicksState';
@@ -11,7 +10,7 @@ import MyPicksTab from './picks/MyPicksTab';
 import LeaderboardTab from './picks/LeaderboardTab';
 import HistoryTab from './picks/HistoryTab';
 import ConfidenceTab from './picks/ConfidenceTab';
-import PicksSkeleton, { measure } from './PicksSkeleton';
+import PicksSkeleton from './PicksSkeleton';
 import { claimWaymarkRoutes, waymark } from '../waymark';
 
 /**

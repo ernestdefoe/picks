@@ -1,8 +1,7 @@
 import app from 'flarum/forum/app';
 import UserPage from 'flarum/forum/components/UserPage';
-import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import type Mithril from 'mithril';
-import PicksSkeleton, { measure } from './PicksSkeleton';
+import PicksSkeleton from './PicksSkeleton';
 import extractText from 'flarum/common/utils/extractText';
 
 // ── Interfaces ────────────────────────────────────────────────────────────────

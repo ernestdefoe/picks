@@ -56,6 +56,8 @@ $extenders = [
     // -------------------------------------------------------------------------
     (new Extend\Frontend('forum'))
         ->js(__DIR__.'/js/dist/forum.js')
+        // The pick'em pages are their own chunks, loaded only when opened.
+        ->jsDirectory(__DIR__.'/js/dist/forum')
         ->css(__DIR__.'/resources/less/forum.less')
         ->route('/picks', 'picks', PicksPageContent::class)
         ->route('/picks/week/{weekId}', 'picks.week', PicksPageContent::class)

@@ -1,6 +1,4 @@
 import Extend from 'flarum/common/extenders';
-import PicksPage from './components/PicksPage';
-import UserPicksPage from './components/UserPicksPage';
 import Week from '../common/models/Week';
 import Season from '../common/models/Season';
 
@@ -10,7 +8,9 @@ export default [
     .add('picks-seasons', Season),
 
   new Extend.Routes()
-    .add('picks', '/picks', PicksPage)
-    .add('picks.week', '/picks/week/:weekId', PicksPage)
-    .add('user.picks-history', '/u/:username/picks-history', UserPicksPage),
+    // Code-split: the pick'em pages load when someone opens them, not with
+    // every page of the forum.
+    .add('picks', '/picks', () => import('./components/PicksPage'))
+    .add('picks.week', '/picks/week/:weekId', () => import('./components/PicksPage'))
+    .add('user.picks-history', '/u/:username/picks-history', () => import('./components/UserPicksPage')),
 ];

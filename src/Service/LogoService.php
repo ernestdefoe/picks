@@ -10,8 +10,6 @@ use Psr\Log\LoggerInterface;
 
 class LogoService
 {
-    protected const ESPN_LOGO_URL  = 'https://a.espncdn.com/i/teamlogos/ncaa/500/%d.png';
-    protected const ESPN_DARK_URL  = 'https://a.espncdn.com/i/teamlogos/ncaa/500-dark/%d.png';
     protected const LOGO_DIRECTORY = 'picks/logos';
     protected const WEBP_QUALITY   = 85;
     protected const TIMEOUT        = 15;
@@ -38,26 +36,6 @@ class LogoService
             'logo_dark_path' => $logoDarkUrl
                 ? $this->processLogo($logoDarkUrl, $slug, '-dark')
                 : null,
-        ];
-    }
-
-    /**
-     * Download both standard and dark logos for a team from ESPN CDN by ID.
-     * Used for individual team logo refresh when only espn_id is available.
-     */
-    public function downloadAndStore(int $espnId, string $slug): array
-    {
-        return [
-            'logo_path'      => $this->processLogo(
-                sprintf(self::ESPN_LOGO_URL, $espnId),
-                $slug,
-                ''
-            ),
-            'logo_dark_path' => $this->processLogo(
-                sprintf(self::ESPN_DARK_URL, $espnId),
-                $slug,
-                '-dark'
-            ),
         ];
     }
 
