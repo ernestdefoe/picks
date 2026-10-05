@@ -1,0 +1,295 @@
+{
+ "_note": "videos[] from ESPN summary for Vanderbilt at Georgia, college football 2026-10-03, trimmed to the fields read",
+ "videos": [
+  {
+   "id": 50092569,
+   "headline": "Vanderbilt Commodores vs. Georgia Bulldogs: Full Highlights",
+   "duration": 71,
+   "thumbnail": "https://espnmedia-cdn.akamaized.net/espn/media/common/2026/1003/f5a666b48e27400e80e2178b8ba30c28963/f5a666b48e27400e80e2178b8ba30c28963.jpg",
+   "originalPublishDate": "2026-10-03T19:58:16Z",
+   "timeRestrictions": {
+    "embargoDate": "2026-10-03T19:58:14Z",
+    "expirationDate": "2038-01-01T04:59:59Z"
+   },
+   "deviceRestrictions": {
+    "devices": [
+     "settop",
+     "tablet",
+     "handset",
+     "ipad",
+     "desktop"
+    ],
+    "type": "whitelist"
+   },
+   "tracking": {
+    "coverageType": "Final Game Highlight",
+    "leagueName": "NCAA Football",
+    "program": "SEC NETWORK",
+    "sportName": "football",
+    "trackingId": "dm_20261003_NCF_vanderbilt_commodores_vs_georgia_bulldogs_full_highlights",
+    "trackingName": "NCF_One-Play (Vanderbilt Commodores vs. Georgia Bulldogs: Full Highlights) 2026/10/03 ESHEET"
+   }
+  },
+  {
+   "id": 50091219,
+   "headline": "Gunner Stockton throws 2-yard touchdown",
+   "duration": 22,
+   "thumbnail": "https://espnmedia-cdn.akamaized.net/espn/media/common/wsc/2026/1003/ef172c72-5550-4159-8185-70cb2927a42a/ef172c72-5550-4159-8185-70cb2927a42a.jpg",
+   "originalPublishDate": "2026-10-03T17:11:17Z",
+   "timeRestrictions": {
+    "embargoDate": "2026-10-03T17:11:15Z",
+    "expirationDate": "2038-01-01T04:59:00Z"
+   },
+   "deviceRestrictions": {
+    "devices": [
+     "settop",
+     "tablet",
+     "handset",
+     "ipad",
+     "desktop"
+    ],
+    "type": "whitelist"
+   },
+   "tracking": {
+    "coverageType": "OnePlay",
+    "leagueName": "NCAA Football",
+    "program": "SEC NETWORK",
+    "sportName": "football",
+    "trackingId": "dm_20261003_NCF_gunner_stockton_throws_0yard_touchdown",
+    "trackingName": "NCF_One-Play (Gunner Stockton throws 0-yard touchdown) 2026/10/03 ESHEET"
+   }
+  },
+  {
+   "id": 50091347,
+   "headline": "Blaze Berlowitz tosses 60-yard touchdown",
+   "duration": 42,
+   "thumbnail": "https://espnmedia-cdn.akamaized.net/espn/media/common/wsc/2026/1003/c68cd487-7ed2-406f-9c0a-1f8ffa36d9cd/c68cd487-7ed2-406f-9c0a-1f8ffa36d9cd.jpg",
+   "originalPublishDate": "2026-10-03T17:27:35Z",
+   "timeRestrictions": {
+    "embargoDate": "2026-10-03T17:27:33Z",
+    "expirationDate": "2038-01-01T04:59:59Z"
+   },
+   "deviceRestrictions": {
+    "devices": [
+     "settop",
+     "tablet",
+     "handset",
+     "ipad",
+     "desktop"
+    ],
+    "type": "whitelist"
+   },
+   "tracking": {
+    "coverageType": "OnePlay",
+    "leagueName": "NCAA Football",
+    "program": "SEC NETWORK",
+    "sportName": "football",
+    "trackingId": "dm_20261003_NCF_blaze_berlowitz_tosses_60yard_touchdown",
+    "trackingName": "NCF_One-Play (Blaze Berlowitz tosses 60-yard touchdown) 2026/10/03 ESHEET"
+   }
+  },
+  {
+   "id": 50091392,
+   "headline": "Chauncey Bowens runs for 1-yard TD",
+   "duration": 25,
+   "thumbnail": "https://espnmedia-cdn.akamaized.net/espn/media/common/wsc/2026/1003/04cbd508-ba42-4673-92ef-8ecb9a65d433/04cbd508-ba42-4673-92ef-8ecb9a65d433.jpg",
+   "originalPublishDate": "2026-10-03T17:37:04Z",
+   "timeRestrictions": {
+    "embargoDate": "2026-10-03T17:37:03Z",
+    "expirationDate": "2038-01-01T04:59:59Z"
+   },
+   "deviceRestrictions": {
+    "devices": [
+     "settop",
+     "tablet",
+     "handset",
+     "ipad",
+     "desktop"
+    ],
+    "type": "whitelist"
+   },
+   "tracking": {
+    "coverageType": "OnePlay",
+    "leagueName": "NCAA Football",
+    "program": "SEC NETWORK",
+    "sportName": "football",
+    "trackingId": "dm_20261003_NCF_chauncey_bowens_runs_for_1yard_td",
+    "trackingName": "NCF_One-Play (Chauncey Bowens runs for 1-yard TD) 2026/10/03 ESHEET"
+   }
+  },
+  {
+   "id": 50091642,
+   "headline": "Jordan Hall blocks kick vs. Vanderbilt",
+   "duration": 30,
+   "thumbnail": "https://espnmedia-cdn.akamaized.net/espn/media/common/wsc/2026/1003/27c5669e-ffc7-4778-b1de-315f1b7c23ed/27c5669e-ffc7-4778-b1de-315f1b7c23ed.jpg",
+   "originalPublishDate": "2026-10-03T18:04:02Z",
+   "timeRestrictions": {
+    "embargoDate": "2026-10-03T18:03:59Z",
+    "expirationDate": "2038-01-01T04:59:59Z"
+   },
+   "deviceRestrictions": {
+    "devices": [
+     "settop",
+     "tablet",
+     "handset",
+     "ipad",
+     "desktop"
+    ],
+    "type": "whitelist"
+   },
+   "tracking": {
+    "coverageType": "OnePlay",
+    "leagueName": "NCAA Football",
+    "program": "SEC NETWORK",
+    "sportName": "football",
+    "trackingId": "dm_20261003_NCF_jordan_hall_blocks_kick_vs_vanderbilt",
+    "trackingName": "NCF_One-Play (Jordan Hall blocks kick vs. Vanderbilt) 2026/10/03 ESHEET"
+   }
+  },
+  {
+   "id": 50091700,
+   "headline": "Jaden Reddell rushes in for 1-yard TD",
+   "duration": 24,
+   "thumbnail": "https://espnmedia-cdn.akamaized.net/espn/media/common/wsc/2026/1003/143ce28e-4ebf-4214-ba40-05e0d79c29f6/143ce28e-4ebf-4214-ba40-05e0d79c29f6.jpg",
+   "originalPublishDate": "2026-10-03T18:09:36Z",
+   "timeRestrictions": {
+    "embargoDate": "2026-10-03T18:09:33Z",
+    "expirationDate": "2038-01-01T04:59:59Z"
+   },
+   "deviceRestrictions": {
+    "devices": [
+     "settop",
+     "tablet",
+     "handset",
+     "ipad",
+     "desktop"
+    ],
+    "type": "whitelist"
+   },
+   "tracking": {
+    "coverageType": "OnePlay",
+    "leagueName": "NCAA Football",
+    "program": "SEC NETWORK",
+    "sportName": "football",
+    "trackingId": "dm_20261003_NCF_jaden_reddell_rushes_in_for_1yard_td",
+    "trackingName": "NCF_One-Play (Jaden Reddell rushes in for 1-yard TD) 2026/10/03 ESHEET"
+   }
+  },
+  {
+   "id": 50091865,
+   "headline": "Sedrick Alexander runs for 2-yard TD",
+   "duration": 39,
+   "thumbnail": "https://espnmedia-cdn.akamaized.net/espn/media/common/wsc/2026/1003/efc8af4d-41ab-4101-bf00-71e289a93962/efc8af4d-41ab-4101-bf00-71e289a93962.jpg",
+   "originalPublishDate": "2026-10-03T18:25:38Z",
+   "timeRestrictions": {
+    "embargoDate": "2026-10-03T18:25:36Z",
+    "expirationDate": "2038-01-01T04:59:59Z"
+   },
+   "deviceRestrictions": {
+    "devices": [
+     "settop",
+     "tablet",
+     "handset",
+     "ipad",
+     "desktop"
+    ],
+    "type": "whitelist"
+   },
+   "tracking": {
+    "coverageType": "OnePlay",
+    "leagueName": "NCAA Football",
+    "program": "SEC NETWORK",
+    "sportName": "football",
+    "trackingId": "dm_20261003_NCF_sedrick_alexander_runs_for_2yard_td",
+    "trackingName": "NCF_One-Play (Sedrick Alexander runs for 2-yard TD) 2026/10/03 ESHEET"
+   }
+  },
+  {
+   "id": 50092052,
+   "headline": "Gunner Stockton throws 1-yard TD pass to Elyiss Williams",
+   "duration": 19,
+   "thumbnail": "https://espnmedia-cdn.akamaized.net/espn/media/common/wsc/2026/1003/f05e85bc-847f-4dfa-abcc-2938aae1c398/f05e85bc-847f-4dfa-abcc-2938aae1c398.jpg",
+   "originalPublishDate": "2026-10-03T19:00:40Z",
+   "timeRestrictions": {
+    "embargoDate": "2026-10-03T19:00:39Z",
+    "expirationDate": "2038-01-01T04:59:59Z"
+   },
+   "deviceRestrictions": {
+    "devices": [
+     "settop",
+     "tablet",
+     "handset",
+     "ipad",
+     "desktop"
+    ],
+    "type": "whitelist"
+   },
+   "tracking": {
+    "coverageType": "OnePlay",
+    "leagueName": "NCAA Football",
+    "program": "SEC NETWORK",
+    "sportName": "football",
+    "trackingId": "dm_20261003_NCF_gunner_stockton_throws_1yard_td_pass_to_elyiss_williams",
+    "trackingName": "NCF_One-Play (Gunner Stockton throws 1-yard TD pass to Elyiss Williams) 2026/10/03 ESHEET"
+   }
+  },
+  {
+   "id": 50092395,
+   "headline": "Ellis Robinson IV grabs interception vs. Vanderbilt Commodores",
+   "duration": 28,
+   "thumbnail": "https://espnmedia-cdn.akamaized.net/espn/media/common/wsc/2026/1003/ae73c9fd-ea78-447c-b27b-de6a1b3bfa05/ae73c9fd-ea78-447c-b27b-de6a1b3bfa05.jpg",
+   "originalPublishDate": "2026-10-03T19:37:12Z",
+   "timeRestrictions": {
+    "embargoDate": "2026-10-03T19:37:10Z",
+    "expirationDate": "2038-01-01T04:59:59Z"
+   },
+   "deviceRestrictions": {
+    "devices": [
+     "settop",
+     "tablet",
+     "handset",
+     "ipad",
+     "desktop"
+    ],
+    "type": "whitelist"
+   },
+   "tracking": {
+    "coverageType": "OnePlay",
+    "leagueName": "NCAA Football",
+    "program": "SEC NETWORK",
+    "sportName": "football",
+    "trackingId": "dm_20261003_NCF_ellis_robinson_iv_grabs_interception_vs_vanderbilt_commodores",
+    "trackingName": "NCF_One-Play (Ellis Robinson IV grabs interception vs. Vanderbilt Commodores) 2026/10/03 ESHEET"
+   }
+  },
+  {
+   "id": 50092441,
+   "headline": "Gunner Stockton throws 12-yard TD pass to Dwight Phillips Jr",
+   "duration": 27,
+   "thumbnail": "https://espnmedia-cdn.akamaized.net/espn/media/common/wsc/2026/1003/80e31884-f792-4096-8bb2-5de49f816d1c/80e31884-f792-4096-8bb2-5de49f816d1c.jpg",
+   "originalPublishDate": "2026-10-03T19:44:13Z",
+   "timeRestrictions": {
+    "embargoDate": "2026-10-03T19:44:12Z",
+    "expirationDate": "2038-01-01T04:59:59Z"
+   },
+   "deviceRestrictions": {
+    "devices": [
+     "settop",
+     "tablet",
+     "handset",
+     "ipad",
+     "desktop"
+    ],
+    "type": "whitelist"
+   },
+   "tracking": {
+    "coverageType": "OnePlay",
+    "leagueName": "NCAA Football",
+    "program": "SEC NETWORK",
+    "sportName": "football",
+    "trackingId": "dm_20261003_NCF_gunner_stockton_throws_12yard_td_pass_to_dwight_phillips_jr",
+    "trackingName": "NCF_One-Play (Gunner Stockton throws 12-yard TD pass to Dwight Phillips Jr) 2026/10/03 ESHEET"
+   }
+  }
+ ]
+}

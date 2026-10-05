@@ -926,6 +926,39 @@ $tests['where to watch: a watch link only from ESPN, only over https'] = functio
     same('', EspnProvider::broadcasts($event(['rel' => ['summary'], 'href' => 'https://www.espn.com/watch/x']))['watch'], 'only a live/watch rel counts');
 };
 
+/*
+ * 🚨 A REAL summary's videos[]: Vanderbilt at Georgia, 2026-10-03, ten clips
+ * with the full-game package published last.
+ */
+$tests['highlights: full package first, then plays in order, capped'] = function () {
+    $summary = json_decode((string) file_get_contents(__DIR__ . '/fixtures/espn-summary-cfb-videos.json'), true);
+    $now = strtotime('2026-10-05T00:00:00Z');
+
+    $clips = EspnProvider::parseHighlights($summary, 6, $now);
+
+    same(6, count($clips), 'capped at six');
+    same('50092569', $clips[0]['id'], 'the full-game package leads');
+    same('Vanderbilt Commodores vs. Georgia Bulldogs: Full Highlights', $clips[0]['title'], 'with its headline');
+    same('50091219', $clips[1]['id'], 'then the first play of the game');
+    same(true, str_starts_with($clips[0]['image'], 'https://'), 'an https thumbnail');
+
+    foreach ($clips as $clip) {
+        ok(ctype_digit($clip['id']), 'every id is digits', $clip['id']);
+    }
+
+    same(10, count(EspnProvider::parseHighlights($summary, 20, $now)), 'all ten when the cap allows');
+    same([], EspnProvider::parseHighlights(['videos' => []], 6, $now), 'none published yet is an empty list');
+
+    // The guards: a non-numeric id, an embargo still ahead, a phone-only clip, an http thumbnail.
+    $odd = EspnProvider::parseHighlights(['videos' => [
+        ['id' => '123"><script>', 'headline' => 'x'],
+        ['id' => 55, 'headline' => 'later', 'timeRestrictions' => ['embargoDate' => '2026-10-06T00:00:00Z']],
+        ['id' => 56, 'headline' => 'phone', 'deviceRestrictions' => ['type' => 'whitelist', 'devices' => ['handset']]],
+        ['id' => 57, 'headline' => 'ok', 'thumbnail' => 'http://example.test/a.jpg'],
+    ]], 6, $now);
+    same([['id' => '57', 'title' => 'ok', 'duration' => 0, 'image' => '', 'published' => '']], $odd, 'only the clip that can be played, without its http image');
+};
+
 /* ------------------------------------------------------------------ the runner */
 
 foreach ($tests as $name => $test) {

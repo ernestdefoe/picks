@@ -719,6 +719,99 @@ class EspnProvider implements Provider
         return ['listings' => array_values($listings), 'watch' => $watch, 'premium' => $premium];
     }
 
+    /**
+     * A finished game's highlight clips, straight from its summary.
+     *
+     * One request, made only when asked — see Service\GameHighlights for who
+     * asks and how often. Null when the summary could not be fetched, which is
+     * different from an empty list: an empty list is "nothing published yet".
+     *
+     * @return list<array{id: string, title: string, duration: int, image: string, published: string}>|null
+     */
+    public function highlights(League $league, string $eventId, int $max = 6): ?array
+    {
+        if (! $this->supports($league) || ! ctype_digit($eventId)) {
+            return null;
+        }
+
+        $summary = $this->summary($league, $eventId);
+
+        return $summary === null ? null : self::parseHighlights($summary, $max);
+    }
+
+    /**
+     * The clips worth showing, best first.
+     *
+     * 🚨 The id must be DIGITS and nothing else. It is the only part of a clip
+     * the page builds a player from — `espn.com/core/video/iframe/_/id/{id}/`
+     * — so a value that is anything other than a number never leaves here.
+     *
+     * 🚨 The full-game package first, then the plays in the order they
+     * happened. ESPN lists the package first on a final today, but a list
+     * scraped in the hours after a game is in publication order, and a
+     * one-yard touchdown leading the strip over "Full Highlights" reads as a
+     * strip that picked at random.
+     *
+     * A clip still under embargo, or whitelisted away from desktop players, is
+     * left out: the syndicated player would only show an error for it.
+     *
+     * @param  array<string, mixed> $summary
+     * @return list<array{id: string, title: string, duration: int, image: string, published: string}>
+     */
+    public static function parseHighlights(array $summary, int $max = 6, ?int $now = null): array
+    {
+        $now ??= time();
+        $full = [];
+        $plays = [];
+
+        foreach ((array) ($summary['videos'] ?? []) as $video) {
+            if (! is_array($video)) {
+                continue;
+            }
+
+            $id = (string) ($video['id'] ?? '');
+
+            if ($id === '' || ! ctype_digit($id)) {
+                continue;
+            }
+
+            $embargo = strtotime((string) (((array) ($video['timeRestrictions'] ?? []))['embargoDate'] ?? '')) ?: 0;
+
+            if ($embargo > $now) {
+                continue;
+            }
+
+            $devices = (array) ($video['deviceRestrictions'] ?? []);
+
+            if (($devices['type'] ?? '') === 'whitelist' && ! in_array('desktop', (array) ($devices['devices'] ?? []), true)) {
+                continue;
+            }
+
+            $image = trim((string) ($video['thumbnail'] ?? ''));
+
+            $clip = [
+                'id' => $id,
+                'title' => trim((string) ($video['headline'] ?? '')),
+                'duration' => max(0, (int) ($video['duration'] ?? 0)),
+                // Only an https image; anything else is no image, not a broken one.
+                'image' => str_starts_with($image, 'https://') ? $image : '',
+                'published' => (string) ($video['originalPublishDate'] ?? ''),
+            ];
+
+            $coverage = strtolower((string) (((array) ($video['tracking'] ?? []))['coverageType'] ?? ''));
+
+            if (str_contains($coverage, 'final game highlight') || preg_match('/\bfull highlights\b/i', $clip['title'])) {
+                $full[] = $clip;
+            } else {
+                $plays[] = $clip;
+            }
+        }
+
+        usort($plays, fn (array $a, array $b): int => strcmp($a['published'], $b['published']));
+
+        return array_slice(array_merge($full, $plays), 0, max(0, $max));
+    }
+
     /** An https link on espn.com (or a subdomain of it) with /watch in its path. */
     public static function isEspnWatchUrl(string $href): bool
     {

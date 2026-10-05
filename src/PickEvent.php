@@ -28,6 +28,8 @@ use Flarum\Database\AbstractModel;
  * @property bool        $time_tbd
  * @property string      $broadcast
  * @property array|null  $broadcasts
+ * @property array|null  $highlights
+ * @property \Carbon\Carbon|null $highlights_checked_at
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
@@ -77,6 +79,9 @@ class PickEvent extends AbstractModel
         'broadcast',
         // Every listing + the watch link; see its migration.
         'broadcasts',
+        // Highlight clip ids + captions; see its migration.
+        'highlights',
+        'highlights_checked_at',
         // Kickoff date known, time not yet announced; see its migration.
         'time_tbd',
     ];
@@ -93,6 +98,8 @@ class PickEvent extends AbstractModel
         'home_rank'   => 'integer',
         'away_rank'   => 'integer',
         'time_tbd'    => 'boolean',
+        'highlights'  => 'array',
+        'highlights_checked_at' => 'datetime',
     ];
 
     /**
