@@ -766,6 +766,36 @@ $tests['confidence: the closest tiebreaker wins a tie on points'] = function () 
     same([4, 5, 2, 1, 3], array_column($ranked, 'user_id'), 'the standings were not points, then guess, then correct picks');
 };
 
+$tests['confidence: all time is the sum of the seasons'] = function () {
+    $lines = Scoring::combine([
+        // Member 1: two seasons, one of them negative under a full penalty.
+        ['user_id' => 1, 'points' => 60, 'picks' => 20, 'correct' => 15, 'diff' => 4],
+        ['user_id' => 1, 'points' => -5, 'picks' => 10, 'correct' => 3, 'diff' => null],
+        // Member 2: one big season.
+        ['user_id' => 2, 'points' => 55, 'picks' => 10, 'correct' => 9, 'diff' => 2],
+        // Member 3: the same 55, two seasons, both with a guess.
+        ['user_id' => 3, 'points' => 30, 'picks' => 10, 'correct' => 6, 'diff' => 1],
+        ['user_id' => 3, 'points' => 25, 'picks' => 10, 'correct' => 5, 'diff' => 5],
+        // Member 4: a row with nothing scored is not a line at all.
+        ['user_id' => 4, 'points' => 0, 'picks' => 0, 'correct' => 0, 'diff' => null],
+    ]);
+
+    // All three end on 55: the summed guess distance (2, 4, 6) decides it.
+    same([2, 1, 3], array_column($lines, 'user_id'), 'all time was not ranked on summed points, then summed guess distance');
+
+    $one = $lines[1];
+    same(55, $one['points'], 'a negative season was not subtracted from all time');
+    same(30, $one['picks'], 'all-time picks were not summed');
+    same(18, $one['correct'], 'all-time correct picks were not summed');
+    same(60.0, $one['accuracy'], 'all-time accuracy was not worked out from the summed counts');
+    same(4, $one['diff'], 'a season with no guess changed the all-time guess distance');
+
+    same(6, $lines[2]['diff'], 'guess distances were not summed across seasons');
+    same(55.0, $lines[2]['accuracy'], 'accuracy averaged percentages instead of counting picks');
+
+    same([], Scoring::combine([]), 'nobody played, yet all time had lines');
+};
+
 /* ------------------------------------------------------------------ the runner */
 
 foreach ($tests as $name => $test) {

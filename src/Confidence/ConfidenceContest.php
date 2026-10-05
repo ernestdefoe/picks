@@ -503,6 +503,67 @@ class ConfidenceContest
 
     /* ------------------------------------------------------------ standings */
 
+    /**
+     * All-time standings: every member's season rows summed (Scoring::combine).
+     *
+     * Worked out on read rather than stored. A season row is restated whenever
+     * one of its games is scored, so a stored all-time row would be one more
+     * thing to keep in step, for a table that is small — one row per member
+     * per season — and read rarely. No movement arrows: there is no previous
+     * pass to compare against.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function allTimeStandings(?User $actor = null, int $limit = 25): array
+    {
+        $lines = array_slice($this->allTimeLines(), 0, $limit);
+
+        $users = User::query()->whereIn('id', array_column($lines, 'user_id') ?: [0])->get()->keyBy('id');
+
+        return array_map(function (array $line, int $index) use ($actor, $users) {
+            $user = $users->get($line['user_id']);
+
+            return [
+                'rank'          => $index + 1,
+                'previous_rank' => null,
+                'movement'      => null,
+                'user_id'       => $line['user_id'],
+                'username'      => $user?->username,
+                'display_name'  => $user?->display_name ?? $user?->username,
+                'avatar_url'    => $user?->avatarUrl,
+                'total_points'  => $line['points'],
+                'total_picks'   => $line['picks'],
+                'correct_picks' => $line['correct'],
+                'accuracy'      => (float) $line['accuracy'],
+                'tiebreak_diff' => $line['diff'],
+                'is_me'         => $actor !== null && ! $actor->isGuest() && $line['user_id'] === (int) $actor->id,
+            ];
+        }, $lines, array_keys($lines));
+    }
+
+    /**
+     * Every member's all-time line, ranked.
+     *
+     * @return array<int, array{user_id:int, points:int, picks:int, correct:int, accuracy:float, diff:?int}>
+     */
+    public function allTimeLines(): array
+    {
+        $rows = ConfidenceScore::query()
+            ->whereNull('week_id')
+            ->where('total_picks', '>', 0)
+            ->get(['user_id', 'total_points', 'total_picks', 'correct_picks', 'tiebreak_diff'])
+            ->map(fn (ConfidenceScore $s) => [
+                'user_id' => (int) $s->user_id,
+                'points'  => (int) $s->total_points,
+                'picks'   => (int) $s->total_picks,
+                'correct' => (int) $s->correct_picks,
+                'diff'    => $s->tiebreak_diff,
+            ])
+            ->all();
+
+        return Scoring::combine($rows);
+    }
+
     public function standings(string $scope, ?User $actor = null, int $limit = 25): array
     {
         $rows = array_slice($this->rankedRows($scope), 0, $limit);

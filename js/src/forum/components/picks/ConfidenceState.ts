@@ -227,8 +227,9 @@ export default class ConfidenceState {
   }
 
   loadLeaderboard(scope: string, weekId: number | null, seasonId: number | null): void {
-    const id = scope === 'week' ? weekId : seasonId;
-    if (!id) {
+    // All time needs no id: it is every season there is.
+    const id = scope === 'alltime' ? 0 : scope === 'week' ? weekId : seasonId;
+    if (id === null || (scope !== 'alltime' && !id)) {
       this.leaderboard = [];
       return;
     }
@@ -242,7 +243,7 @@ export default class ConfidenceState {
       .request<{ data: LeaderboardEntry[] }>({
         method: 'GET',
         url: app.forum.attribute('apiUrl') + '/picks/confidence/leaderboard',
-        params: scope === 'week' ? { scope, week_id: id } : { scope, season_id: id },
+        params: scope === 'alltime' ? { scope } : scope === 'week' ? { scope, week_id: id } : { scope, season_id: id },
       })
       .then((r) => {
         if (this.lbLoadedFor !== key) return;

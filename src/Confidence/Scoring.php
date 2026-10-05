@@ -91,6 +91,54 @@ final class Scoring
         return $rows;
     }
 
+    /**
+     * Every season a member played, as one all-time line.
+     *
+     * 🚨 A sum of the season rows, not a fresh pass over every pick. A season
+     * row is already that season's verdict — scored under the penalty it was
+     * played with — so all-time is consistent with the season tables it is
+     * made of, the way the full board's all-time is the sum of its seasons.
+     * Accuracy is worked out again from the summed counts; an average of
+     * percentages would weigh a three-pick season like a full one.
+     *
+     * The tiebreaker distance is the sum of the seasons that have one, and
+     * null when none do, so a member who never guessed ranks behind any guess.
+     *
+     * @param array<int, array{user_id:int, points:int, picks:int, correct:int, diff:?int}> $seasonRows
+     * @return array<int, array{user_id:int, points:int, picks:int, correct:int, accuracy:float, diff:?int}> in standings order
+     */
+    public static function combine(array $seasonRows): array
+    {
+        $byUser = [];
+
+        foreach ($seasonRows as $row) {
+            $id = (int) $row['user_id'];
+            $line = $byUser[$id] ?? ['user_id' => $id, 'points' => 0, 'picks' => 0, 'correct' => 0, 'diff' => null];
+
+            $line['points']  += (int) $row['points'];
+            $line['picks']   += (int) $row['picks'];
+            $line['correct'] += (int) $row['correct'];
+
+            if ($row['diff'] !== null) {
+                $line['diff'] = ($line['diff'] ?? 0) + (int) $row['diff'];
+            }
+
+            $byUser[$id] = $line;
+        }
+
+        $lines = [];
+        foreach ($byUser as $line) {
+            if ($line['picks'] === 0) {
+                continue;
+            }
+
+            $line['accuracy'] = round($line['correct'] / $line['picks'] * 100, 2);
+            $lines[] = $line;
+        }
+
+        return self::rank($lines);
+    }
+
     private static function diffKey(?int $diff): int
     {
         return $diff ?? PHP_INT_MAX;

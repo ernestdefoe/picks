@@ -154,13 +154,15 @@ export default class LeaderboardTab extends Component<TabAttrs> {
   }
 
   /**
-   * The Confidence standings: the same table, week and season only, with the
-   * tiebreaker shown on the week, since that is what separates equal points.
+   * The Confidence standings: the same table — week, season and all time —
+   * with the tiebreaker shown on the week, since that is what separates equal
+   * points there.
    */
   private confidence(): Mithril.Children {
     const state = this.attrs.state;
     const c10 = state.c10;
-    const week = state.lbScope !== 'season';
+    const scope = state.lbScope === 'season' || state.lbScope === 'alltime' ? state.lbScope : 'week';
+    const week = scope === 'week';
     const t = (key: string) => app.translator.trans('ernestdefoe-picks.forum.confidence.' + key);
 
     return (
@@ -170,16 +172,16 @@ export default class LeaderboardTab extends Component<TabAttrs> {
           state.loadLeaderboard();
         })}
         <div className="PicksLbScopes">
-          {(['week', 'season'] as const).map((key) => (
+          {(['week', 'season', 'alltime'] as const).map((key) => (
             <button
               key={key}
-              className={`PicksLbScope ${(key === 'week') === week ? 'PicksLbScope--active' : ''}`}
+              className={`PicksLbScope ${key === scope ? 'PicksLbScope--active' : ''}`}
               onclick={() => {
                 state.lbScope = key;
                 state.loadLeaderboard();
               }}
             >
-              {app.translator.trans('ernestdefoe-picks.lib.common.' + key)}
+              {key === 'alltime' ? app.translator.trans('ernestdefoe-picks.forum.leaderboard.all_time') : app.translator.trans('ernestdefoe-picks.lib.common.' + key)}
             </button>
           ))}
         </div>

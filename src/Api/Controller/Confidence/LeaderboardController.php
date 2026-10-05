@@ -10,7 +10,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Resofire\Picks\Confidence\ConfidenceContest;
 
-/** GET /picks/confidence/leaderboard?scope=week&week_id= | scope=season&season_id= */
+/** GET /picks/confidence/leaderboard?scope=week&week_id= | scope=season&season_id= | scope=alltime */
 class LeaderboardController implements RequestHandlerInterface
 {
     public function __construct(protected ConfidenceContest $contest)
@@ -25,6 +25,13 @@ class LeaderboardController implements RequestHandlerInterface
         $params = $request->getQueryParams();
         $scope  = Arr::get($params, 'scope', 'week');
         $limit  = min(50, max(1, (int) Arr::get($params, 'limit', 25)));
+
+        if ($scope === 'alltime') {
+            return new JsonResponse([
+                'data' => $this->contest->allTimeStandings($actor, $limit),
+                'meta' => ['scope' => $scope],
+            ]);
+        }
 
         $key = match ($scope) {
             'week'   => ($id = (int) Arr::get($params, 'week_id')) ? 'w' . $id : null,

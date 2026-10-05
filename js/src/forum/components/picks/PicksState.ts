@@ -162,7 +162,7 @@ export default class PicksState {
 
   loadLeaderboard(): void {
     if (this.lbContest === 'c10') {
-      const scope = this.lbScope === 'season' ? 'season' : 'week';
+      const scope = this.lbScope === 'season' || this.lbScope === 'alltime' ? this.lbScope : 'week';
       this.lbScope = scope;
       this.c10.loadLeaderboard(scope, this.currentWeekId, this.seasonId ?? this.currentWeek()?.season_id ?? null);
       return;
