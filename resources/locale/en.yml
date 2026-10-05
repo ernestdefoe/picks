@@ -451,6 +451,7 @@ ernestdefoe-picks:
       loading: Loading…
       history_heading: Pick History
       load_failed: The pick history could not be loaded.
+      c10_empty: No Confidence picks have been scored yet.
       no_history: No season history yet.
       empty_week: No results recorded this week yet.
       empty_season: No results recorded this season yet.

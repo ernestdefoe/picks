@@ -838,6 +838,33 @@
   &:hover { background: rgba(0,0,0,0.02); }
 }
 
+// The Confidence cards' header is a real button (keyboard and screen reader
+// reach it); it should look exactly like the full board's.
+button.Picks-season-header {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+
+  &:focus-visible { outline: 2px solid var(--primary-color); outline-offset: -2px; }
+}
+
+.Picks-profile-c10 .Picks-history-stack { margin-top: 1rem; }
+
+// Four cards: two rows of two, rather than three and an orphan.
+.Picks-profile-c10 .Picks-profile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+// Seven columns do not fit a phone. The record is in the footer under the
+// table, so W and L are the two that can go.
+.Picks-week-table--c10 .Picks-week-name { white-space: nowrap; }
+
+@media (max-width: 480px) {
+  .Picks-week-table--c10 .Picks-week-col--wl { display: none; }
+}
+
 .Picks-season-left {
   display: flex;
   align-items: center;

@@ -171,6 +171,7 @@ $extenders = [
         ->post('/picks/confidence',                   'picks.confidence.save',        Confidence\SaveController::class)
         ->get('/picks/confidence/leaderboard',        'picks.confidence.leaderboard', Confidence\LeaderboardController::class)
         ->get('/picks/confidence/history',            'picks.confidence.history',     Confidence\HistoryController::class)
+        ->get('/picks/confidence/user-history',       'picks.confidence.user-history', Confidence\UserHistoryController::class)
         ->get('/picks/confidence/weeks/{id}',         'picks.confidence.week',        Confidence\SelectionController::class)
         ->post('/picks/confidence/weeks/{id}',        'picks.confidence.week.save',   Confidence\SelectionController::class)
         ->post('/picks/confidence/weeks/{id}/auto',   'picks.confidence.week.auto',   Confidence\SelectionController::class),

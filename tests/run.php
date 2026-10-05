@@ -26,7 +26,9 @@ require __DIR__ . '/../src/Service/CurrentWeek.php';
 require __DIR__ . '/../src/Confidence/Selector.php';
 require __DIR__ . '/../src/Confidence/Rules.php';
 require __DIR__ . '/../src/Confidence/Scoring.php';
+require __DIR__ . '/../src/Confidence/Profile.php';
 
+use Resofire\Picks\Confidence\Profile;
 use Resofire\Picks\Confidence\Rules;
 use Resofire\Picks\Confidence\Scoring;
 use Resofire\Picks\Confidence\Selector;
@@ -794,6 +796,57 @@ $tests['confidence: all time is the sum of the seasons'] = function () {
     same(55.0, $lines[2]['accuracy'], 'accuracy averaged percentages instead of counting picks');
 
     same([], Scoring::combine([]), 'nobody played, yet all time had lines');
+};
+
+$tests['confidence: a member\'s profile record'] = function () {
+    $row = fn (string $scope, int $season, ?int $week, int $points, int $picks, int $correct, ?int $diff, ?int $rank) => [
+        'scope' => $scope, 'season_id' => $season, 'week_id' => $week, 'points' => $points, 'picks' => $picks,
+        'correct' => $correct, 'accuracy' => round($correct / max(1, $picks) * 100, 2), 'diff' => $diff, 'rank' => $rank,
+    ];
+
+    $allTime = Scoring::combine([
+        ['user_id' => 9, 'points' => 90, 'picks' => 20, 'correct' => 16, 'diff' => 3],
+        ['user_id' => 7, 'points' => 50, 'picks' => 20, 'correct' => 12, 'diff' => 8],
+        ['user_id' => 7, 'points' => 30, 'picks' => 10, 'correct' => 6, 'diff' => null],
+    ]);
+
+    $record = Profile::build(
+        7,
+        $allTime,
+        [['id' => 2, 'name' => '2026 Season', 'year' => 2026], ['id' => 1, 'name' => '2025 Season', 'year' => 2025], ['id' => 3, 'name' => 'Unplayed', 'year' => 2024]],
+        [
+            21 => ['name' => 'Week 1', 'type' => 'regular', 'number' => 1],
+            22 => ['name' => 'Week 2', 'type' => 'regular', 'number' => 2],
+            23 => ['name' => 'Bowls', 'type' => 'postseason', 'number' => 1],
+            11 => ['name' => 'Week 1', 'type' => 'regular', 'number' => 1],
+        ],
+        [
+            $row('w21', 2, 21, 30, 10, 6, 8, 3),
+            $row('w23', 2, 23, 0, 0, 0, null, null),   // nothing scored: not a week of theirs
+            $row('w22', 2, 22, 20, 10, 6, null, 1),
+            $row('s2', 2, null, 50, 20, 12, 8, 2),
+            $row('w11', 1, 11, 30, 10, 6, null, 1),
+            $row('s1', 1, null, 30, 10, 6, null, 1),
+        ],
+        ['w21' => 4, 'w22' => 5, 's2' => 6, 'w11' => 2, 's1' => 2],
+        2,
+        22
+    );
+
+    same(['total_points' => 80, 'total_picks' => 30, 'correct_picks' => 18, 'accuracy' => 60.0, 'rank' => 2, 'total_players' => 2],
+        $record['alltime'], 'the all-time line was not the member\'s summed seasons, ranked against everyone');
+
+    same([2, 1], array_column($record['seasons'], 'season_id'), 'a season the member never played was listed, or the order was wrong');
+    same(true, $record['seasons'][0]['is_current'], 'the current season was not marked');
+    same(['rank' => 2, 'total_players' => 6], array_intersect_key($record['seasons'][0]['stats'], ['rank' => 0, 'total_players' => 0]), 'the season rank or player count was wrong');
+
+    $weeks = $record['seasons'][0]['weeks'];
+    same([22, 21], array_column($weeks, 'week_id'), 'weeks were not newest first, or an unscored week was listed');
+    same(true, $weeks[0]['is_current'], 'the current week was not marked');
+    same(8, $weeks[1]['tiebreak_diff'], 'a week lost its tiebreaker distance');
+    same(4, $weeks[1]['total_players'], 'a week lost its player count');
+
+    same(['alltime' => null, 'seasons' => []], Profile::build(5, $allTime, [], [], [], [], null, null), 'a member with no Confidence picks got a record');
 };
 
 /* ------------------------------------------------------------------ the runner */
