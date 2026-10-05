@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Service;
 
 use Carbon\Carbon;
+use Flarum\Locale\TranslatorInterface;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Illuminate\Support\Str;
 use Resofire\Picks\PickEvent;
@@ -30,7 +31,8 @@ class EspnSyncService
 {
     public function __construct(
         protected EspnProvider $espn,
-        protected SettingsRepositoryInterface $settings
+        protected SettingsRepositoryInterface $settings,
+        protected TranslatorInterface $translator
     ) {
     }
 
@@ -244,7 +246,9 @@ class EspnSyncService
         if ($league->hasWeeks && $game['week'] !== null) {
             $number = (int) $game['week'];
             $type = $game['season_type'];
-            $name = $type === 'postseason' ? 'Postseason' : 'Week ' . $number;
+            $name = $type === 'postseason'
+                ? $this->translator->trans('ernestdefoe-picks.api.weeks.postseason')
+                : $this->translator->trans('ernestdefoe-picks.api.weeks.week', ['number' => $number]);
         } else {
             /*
              * 🚨 ISO weeks, so a week begins on Monday and a Sunday game lands
@@ -254,7 +258,9 @@ class EspnSyncService
              */
             $number = (int) $start->isoWeek();
             $type = $game['season_type'];
-            $name = 'Week of ' . $start->copy()->startOfWeek()->format('j M');
+            $name = $this->translator->trans('ernestdefoe-picks.api.weeks.week_of', [
+                'date' => $start->copy()->startOfWeek()->locale($this->translator->getLocale())->isoFormat('D MMM'),
+            ]);
         }
 
         $key = $season->id . ':' . $type . ':' . $number;

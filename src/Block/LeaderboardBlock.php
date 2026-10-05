@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Resofire\Picks\Block;
 
 use Ernestdefoe\PageBuilder\Block\AbstractBlock;
+use Flarum\Locale\TranslatorInterface;
 use Flarum\User\User;
 use Illuminate\Database\ConnectionInterface;
 
@@ -18,8 +19,20 @@ use Illuminate\Database\ConnectionInterface;
  */
 class LeaderboardBlock extends AbstractBlock
 {
-    public function __construct(protected ConnectionInterface $db)
+    public function __construct(
+        protected ConnectionInterface $db,
+        protected TranslatorInterface $translator
+    ) {
+    }
+
+    /**
+     * 🚨 Translated here, on the server. Page Builder draws a block's name and
+     * settings labels exactly as the schema hands them over, so a string that is
+     * not translated before it leaves this class is English on every forum.
+     */
+    private function t(string $key): string
     {
+        return $this->translator->trans('ernestdefoe-picks.admin.block.' . $key);
     }
 
     public function type(): string
@@ -29,7 +42,7 @@ class LeaderboardBlock extends AbstractBlock
 
     public function name(): string
     {
-        return 'Pick\'em Standings';
+        return $this->t('name');
     }
 
     public function icon(): string
@@ -45,24 +58,24 @@ class LeaderboardBlock extends AbstractBlock
     public function settingsSchema(): array
     {
         return [
-            ['key' => 'title', 'type' => 'text', 'label' => 'Title', 'default' => 'Pick\'em Standings'],
+            ['key' => 'title', 'type' => 'text', 'label' => $this->t('title'), 'default' => $this->t('name')],
             [
                 'key' => 'scope',
                 'type' => 'select',
-                'label' => 'Standings',
+                'label' => $this->t('scope'),
                 'default' => 'alltime',
                 'options' => [
-                    ['value' => 'alltime', 'label' => 'All time'],
-                    ['value' => 'season', 'label' => 'This season'],
+                    ['value' => 'alltime', 'label' => $this->t('scope_alltime')],
+                    ['value' => 'season', 'label' => $this->t('scope_season')],
                 ],
             ],
-            ['key' => 'limit', 'type' => 'range', 'label' => 'How many', 'default' => 10, 'min' => 3, 'max' => 25],
+            ['key' => 'limit', 'type' => 'range', 'label' => $this->t('limit'), 'default' => 10, 'min' => 3, 'max' => 25],
             [
                 'key' => 'hideWhenEmpty',
                 'type' => 'toggle',
-                'label' => 'Hide when nobody has picked',
+                'label' => $this->t('hide_empty'),
                 'default' => true,
-                'help' => 'Before the first week of a season there is nothing to rank.',
+                'help' => $this->t('hide_empty_help'),
             ],
         ];
     }

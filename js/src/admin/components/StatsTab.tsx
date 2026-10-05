@@ -5,6 +5,9 @@ import Button from 'flarum/common/components/Button';
 import type Mithril from 'mithril';
 import Week from '../../common/models/Week';
 
+const t = (key: string, params?: Record<string, unknown>) =>
+  app.translator.trans('ernestdefoe-picks.admin.stats.' + key, params as any);
+
 interface MostPickedTeam {
   name: string;
   abbreviation: string;
@@ -47,7 +50,7 @@ interface StatsData {
 export default class StatsTab extends Component {
   private stats: StatsData | null = null;
   private loading: boolean = false;
-  private error: string | null = null;
+  private error: Mithril.Children = null;
   private selectedWeekId: string = '';
 
   oninit(vnode: Mithril.Vnode) {
@@ -96,7 +99,7 @@ export default class StatsTab extends Component {
       this.loading = false;
       m.redraw();
     }).catch(() => {
-      this.error = 'Failed to load stats.';
+      this.error = t('load_failed');
       this.loading = false;
       m.redraw();
     });
@@ -109,10 +112,11 @@ export default class StatsTab extends Component {
     });
   }
 
-  private statCard(icon: string, label: string, value: string | number | null, suffix: string = ''): Mithril.Children {
+  private statCard(icon: string, labelKey: string, value: string | number | null, suffix: string = ''): Mithril.Children {
     const display = value !== null ? String(value) + suffix : '—';
+    const label = t(labelKey);
     return (
-      <div className="AnalyticsCard" key={label}>
+      <div className="AnalyticsCard" key={labelKey}>
         <div className="AnalyticsCard-icon">
           <i className={icon} />
         </div>
@@ -134,9 +138,9 @@ export default class StatsTab extends Component {
           <div>
             <h3>
               <i className="fas fa-chart-bar" />
-              {' '}Stats
+              {' '}{t('title')}
             </h3>
-            <p className="PicksTab-meta">Pick'em analytics for admins</p>
+            <p className="PicksTab-meta">{t('intro')}</p>
           </div>
           <div className="PicksTab-actions">
             <select
@@ -157,7 +161,7 @@ export default class StatsTab extends Component {
               loading={this.loading}
               onclick={() => this.load()}
             >
-              Refresh
+              {t('refresh')}
             </Button>
           </div>
         </div>
@@ -168,38 +172,38 @@ export default class StatsTab extends Component {
           <LoadingIndicator />
         ) : !this.selectedWeekId ? (
           <div className="PicksEmptyState">
-            No schedule synced yet. Sync a schedule from Seasons &amp; Weeks to see stats.
+            {app.translator.trans('ernestdefoe-picks.admin.common.no_schedule')}
           </div>
         ) : !s ? null : (
           <>
             {/* Participation */}
             <div className="PicksStatsSection">
               <div className="PicksStatsSection-title">
-                <i className="fas fa-users" /> Participation
+                <i className="fas fa-users" /> {t('participation')}
               </div>
               <div className="PicksStats-cards">
-                {this.statCard('fas fa-users', 'Total Players', s.participation.total_players)}
-                {this.statCard('fas fa-check-circle', 'Picked This Week', s.participation.unique_pickers_this_week)}
-                {this.statCard('fas fa-percentage', 'Participation Rate', s.participation.participation_rate, '%')}
-                {this.statCard('fas fa-user-clock', 'Yet to Pick', s.participation.users_not_picked_this_week)}
+                {this.statCard('fas fa-users', 'total_players', s.participation.total_players)}
+                {this.statCard('fas fa-check-circle', 'picked_this_week', s.participation.unique_pickers_this_week)}
+                {this.statCard('fas fa-percentage', 'participation_rate', s.participation.participation_rate, '%')}
+                {this.statCard('fas fa-user-clock', 'yet_to_pick', s.participation.users_not_picked_this_week)}
               </div>
             </div>
 
             {/* Accuracy & Scoring */}
             <div className="PicksStatsSection">
               <div className="PicksStatsSection-title">
-                <i className="fas fa-bullseye" /> Accuracy & Scoring
+                <i className="fas fa-bullseye" /> {t('accuracy_title')}
               </div>
               <div className="PicksStats-cards">
-                {this.statCard('fas fa-chart-line', 'Avg Accuracy (Season)', s.accuracy.avg_accuracy_all_time, '%')}
-                {this.statCard('fas fa-calendar-week', 'Avg Accuracy (This Week)', s.accuracy.avg_accuracy_this_week, '%')}
-                {this.statCard('fas fa-bolt', 'Upset Rate', s.accuracy.upset_rate, '%')}
-                {this.statCard('fas fa-football', 'Most Picked Team', s.accuracy.most_picked_team?.abbreviation ?? null)}
+                {this.statCard('fas fa-chart-line', 'avg_accuracy_season', s.accuracy.avg_accuracy_all_time, '%')}
+                {this.statCard('fas fa-calendar-week', 'avg_accuracy_week', s.accuracy.avg_accuracy_this_week, '%')}
+                {this.statCard('fas fa-bolt', 'upset_rate', s.accuracy.upset_rate, '%')}
+                {this.statCard('fas fa-football', 'most_picked', s.accuracy.most_picked_team?.abbreviation ?? null)}
               </div>
               {s.accuracy.most_picked_team && (
                 <p className="PicksStats-footnote">
                   <i className="fas fa-football" />
-                  {' '}Most picked team: <strong>{s.accuracy.most_picked_team.name}</strong> — {s.accuracy.most_picked_team.picks.toLocaleString()} picks
+                  {' '}{t('most_picked_note', { team: s.accuracy.most_picked_team.name, count: s.accuracy.most_picked_team.picks })}
                 </p>
               )}
             </div>
@@ -207,22 +211,22 @@ export default class StatsTab extends Component {
             {/* Game Coverage */}
             <div className="PicksStatsSection">
               <div className="PicksStatsSection-title">
-                <i className="fas fa-clipboard-list" /> Game Coverage
+                <i className="fas fa-clipboard-list" /> {t('coverage')}
               </div>
               <div className="PicksStats-cards">
-                {this.statCard('fas fa-flag-checkered', 'Results Entered', s.coverage.total_finished)}
-                {this.statCard('fas fa-clock', 'Awaiting Results', s.coverage.total_scheduled)}
-                {this.statCard('fas fa-ghost', 'Games With No Picks', s.coverage.games_no_picks)}
-                {this.statCard('fas fa-handshake', 'Consensus Games', s.coverage.consensus_games)}
+                {this.statCard('fas fa-flag-checkered', 'results_entered', s.coverage.total_finished)}
+                {this.statCard('fas fa-clock', 'awaiting_results', s.coverage.total_scheduled)}
+                {this.statCard('fas fa-ghost', 'no_picks', s.coverage.games_no_picks)}
+                {this.statCard('fas fa-handshake', 'consensus', s.coverage.consensus_games)}
               </div>
 
               {s.coverage.most_contested.length > 0 && (
                 <div className="PicksStats-contestedList">
-                  <div className="PicksStats-contestedTitle">Most Contested Matchups</div>
+                  <div className="PicksStats-contestedTitle">{t('most_contested')}</div>
                   {s.coverage.most_contested.map((g) => (
                     <div className="PicksStats-contestedRow" key={String(g.event_id)}>
                       <span className="PicksStats-contestedMatchup">
-                        {g.home_team} vs {g.away_team}
+                        {g.home_team} {app.translator.trans('ernestdefoe-picks.lib.common.vs')} {g.away_team}
                       </span>
                       <div className="PicksStats-contestedBar">
                         <div
@@ -237,7 +241,7 @@ export default class StatsTab extends Component {
                       <span className="PicksStats-contestedSplit">
                         {g.home_pct}% / {g.away_pct}%
                       </span>
-                      <span className="PicksStats-contestedTotal">{g.total} picks</span>
+                      <span className="PicksStats-contestedTotal">{t('picks_count', { count: g.total })}</span>
                     </div>
                   ))}
                 </div>

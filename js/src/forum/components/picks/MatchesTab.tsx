@@ -7,6 +7,9 @@ import type PicksState from './PicksState';
 import type { Game } from './types';
 import WeekNav from './WeekNav';
 
+const t = (key: string, params?: Record<string, unknown>) =>
+  app.translator.trans('ernestdefoe-picks.forum.games.' + key, params as any);
+
 interface TabAttrs extends ComponentAttrs {
   state: PicksState;
 }
@@ -34,7 +37,7 @@ export default class MatchesTab extends Component<TabAttrs> {
 
         {!state.weekOpen && !state.gamesLoading && state.games.length > 0 && (
           <div className="PicksWeekLocked">
-            <i className="fas fa-lock" /> Picks for this week are not yet open. Check back soon!
+            <i className="fas fa-lock" /> {t('week_not_open')}
           </div>
         )}
 
@@ -179,7 +182,7 @@ export default class MatchesTab extends Component<TabAttrs> {
         <div className="PicksGameCard-meta">
           <span>{this.formatDate(game.match_date, game.time_tbd)}</span>
           {game.status === 'scheduled' && game.match_date && <span>· {this.formatKickoff(game)}</span>}
-          {game.neutral_site && <span>· Neutral site</span>}
+          {game.neutral_site && <span>· {t('neutral_site')}</span>}
           {game.can_pick && this.lockLabel(game)}
           {!game.can_pick && game.status === 'scheduled' && <span>· {app.translator.trans('ernestdefoe-picks.forum.game.locked')}</span>}
         </div>
@@ -193,7 +196,7 @@ export default class MatchesTab extends Component<TabAttrs> {
                 {game.home_score}–{game.away_score}
               </span>
             ) : (
-              <span>vs</span>
+              <span>{app.translator.trans('ernestdefoe-picks.lib.common.vs')}</span>
             )}
           </div>
 
@@ -204,16 +207,15 @@ export default class MatchesTab extends Component<TabAttrs> {
           <div className="PicksGameCard-result">
             {isCorrect && (
               <span className="PicksTag PicksTag--correct">
-                ✓ Correct · +{game.my_pick?.confidence ?? 1} pt
-                {(game.my_pick?.confidence ?? 1) !== 1 ? 's' : ''}
+                ✓ {t('correct', { count: game.my_pick?.confidence ?? 1 })}
               </span>
             )}
-            {isIncorrect && <span className="PicksTag PicksTag--incorrect">✗ Incorrect</span>}
+            {isIncorrect && <span className="PicksTag PicksTag--incorrect">✗ {t('incorrect')}</span>}
             {game.my_pick && !isFinished && (
-              <span className="PicksTag PicksTag--pending">Pick saved · awaiting result</span>
+              <span className="PicksTag PicksTag--pending">{t('pending')}</span>
             )}
             {!game.can_pick && game.status === 'scheduled' && !game.my_pick && (
-              <span className="PicksTag PicksTag--locked">Cutoff passed · no pick</span>
+              <span className="PicksTag PicksTag--locked">{t('no_pick')}</span>
             )}
           </div>
         )}
@@ -221,7 +223,7 @@ export default class MatchesTab extends Component<TabAttrs> {
         {/* Confidence selector — shown when mode is on, pick is made, game is open */}
         {app.forum.attribute('picksConfidenceMode') && game.my_pick && game.can_pick && !isFinished && (
           <div className="PicksConfidence">
-            <span className="PicksConfidence-label">Confidence:</span>
+            <span className="PicksConfidence-label">{t('confidence_label')}</span>
             <div className="PicksConfidence-buttons">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                 <button
@@ -235,7 +237,7 @@ export default class MatchesTab extends Component<TabAttrs> {
             </div>
             {app.forum.attribute('picksConfidencePenalty') !== 'none' && (
               <span className="PicksConfidence-hint">
-                {app.forum.attribute('picksConfidencePenalty') === 'full' ? '±pts' : '−½pts if wrong'}
+                {app.forum.attribute('picksConfidencePenalty') === 'full' ? t('confidence_hint_full') : t('confidence_hint_half')}
               </span>
             )}
           </div>

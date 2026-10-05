@@ -4,6 +4,9 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import type Mithril from 'mithril';
 import Week from '../../common/models/Week';
 
+const t = (key: string, params?: Record<string, unknown>) =>
+  app.translator.trans('ernestdefoe-picks.admin.' + key, params as any);
+
 interface LeaderboardEntry {
   rank: number;
   previous_rank: number | null;
@@ -25,7 +28,7 @@ export default class LeaderboardTab extends Component {
   private scope: string = 'week';
   private selectedWeekId: string = '';
   private seasonId: string = '';
-  private error: string | null = null;
+  private error: Mithril.Children = null;
 
   oninit(vnode: Mithril.Vnode) {
     super.oninit(vnode);
@@ -39,7 +42,7 @@ export default class LeaderboardTab extends Component {
         this.initFromWeeks();
         this.load();
       }).catch(() => {
-        this.error = 'Failed to load weeks.';
+        this.error = t('leaderboard.weeks_failed');
         m.redraw();
       });
     }
@@ -82,7 +85,7 @@ export default class LeaderboardTab extends Component {
       this.loading = false;
       m.redraw();
     }).catch(() => {
-      this.error = 'Failed to load leaderboard.';
+      this.error = t('leaderboard.load_failed');
       this.loading = false;
       m.redraw();
     });
@@ -135,9 +138,9 @@ export default class LeaderboardTab extends Component {
               this.load();
             }}
           >
-            <option value="week">Week</option>
-            <option value="season">Season</option>
-            <option value="alltime">All Time</option>
+            <option value="week">{t('leaderboard.scope_week')}</option>
+            <option value="season">{t('leaderboard.scope_season')}</option>
+            <option value="alltime">{t('leaderboard.scope_alltime')}</option>
           </select>
 
           {this.scope === 'week' && (
@@ -163,19 +166,19 @@ export default class LeaderboardTab extends Component {
         ) : this.entries.length === 0 ? (
           <div className="PicksEmptyState">
             {!this.selectedWeekId && this.scope === 'week'
-              ? 'No schedule synced yet. Sync a schedule from Seasons & Weeks to see the leaderboard.'
-              : 'No scores yet for this period.'}
+              ? t('common.no_schedule')
+              : t('leaderboard.empty')}
           </div>
         ) : (
           <div className="PicksAdminLeaderboard">
             <div className="PicksAdminLeaderboard-head">
               <div>#</div>
-              <div>Player</div>
-              <div className="PicksAdminLeaderboard-right">Pts</div>
-              <div className="PicksAdminLeaderboard-right">W</div>
-              <div className="PicksAdminLeaderboard-right">L</div>
-              <div className="PicksAdminLeaderboard-right">Picks</div>
-              <div className="PicksAdminLeaderboard-right">Acc</div>
+              <div>{t('common.col_player')}</div>
+              <div className="PicksAdminLeaderboard-right">{t('common.col_points')}</div>
+              <div className="PicksAdminLeaderboard-right">{t('common.col_won')}</div>
+              <div className="PicksAdminLeaderboard-right">{t('common.col_lost')}</div>
+              <div className="PicksAdminLeaderboard-right">{t('common.col_picks')}</div>
+              <div className="PicksAdminLeaderboard-right">{t('common.col_accuracy')}</div>
             </div>
 
             {this.entries.map((entry) => (

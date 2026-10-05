@@ -2,6 +2,10 @@ import app from 'flarum/admin/app';
 import Modal, { IInternalModalAttrs } from 'flarum/common/components/Modal';
 import Button from 'flarum/common/components/Button';
 import type Mithril from 'mithril';
+import extractText from 'flarum/common/utils/extractText';
+
+const t = (key: string, params?: Record<string, unknown>) =>
+  app.translator.trans('ernestdefoe-picks.admin.games.' + key, params as any);
 
 interface GameTeam {
   id: number;
@@ -45,21 +49,21 @@ export default class ResultModal extends Modal<ResultModalAttrs> {
   content() {
     const home = Number(this.homeScore);
     const away = Number(this.awayScore);
-    let resultPreview = '';
+    let resultPreview: Mithril.Children = null;
 
     if (this.homeScore !== '' && this.awayScore !== '') {
-      const homeName = this.game.home_team?.name || 'Home';
-      const awayName = this.game.away_team?.name || 'Away';
-      if (home > away) resultPreview = homeName + ' wins';
-      else if (away > home) resultPreview = awayName + ' wins';
-      else resultPreview = 'Tied — college football cannot end in a tie. Please check scores.';
+      const homeName = this.game.home_team?.name || extractText(t('home_team'));
+      const awayName = this.game.away_team?.name || extractText(t('away_team'));
+      if (home > away) resultPreview = t('wins', { team: homeName });
+      else if (away > home) resultPreview = t('wins', { team: awayName });
+      else resultPreview = t('tied');
     }
 
     return (
       <div className="Modal-body">
         <div className="Form">
           <div className="Form-group">
-            <label>{this.game.home_team?.name ?? 'Home Team'} (Home)</label>
+            <label>{t('home_label', { team: this.game.home_team?.name ?? extractText(t('home_team')) })}</label>
             <input
               className="FormControl"
               type="number"
@@ -71,7 +75,7 @@ export default class ResultModal extends Modal<ResultModalAttrs> {
           </div>
 
           <div className="Form-group">
-            <label>{this.game.away_team?.name ?? 'Away Team'} (Away)</label>
+            <label>{t('away_label', { team: this.game.away_team?.name ?? extractText(t('away_team')) })}</label>
             <input
               className="FormControl"
               type="number"

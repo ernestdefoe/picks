@@ -3,6 +3,7 @@ import Modal, { IInternalModalAttrs } from 'flarum/common/components/Modal';
 import Button from 'flarum/common/components/Button';
 import type Mithril from 'mithril';
 import Team from '../../common/models/Team';
+import extractText from 'flarum/common/utils/extractText';
 
 interface TeamEditModalAttrs extends IInternalModalAttrs {
   team: Team;
@@ -97,7 +98,7 @@ export default class TeamEditModal extends Modal<TeamEditModalAttrs> {
             <label>{app.translator.trans('ernestdefoe-picks.admin.teams.fields.logo_dark')}</label>
             {logoDarkUrl && (
               <div className="TeamEditModal-logoPreview TeamEditModal-logoPreview--dark">
-                <img src={logoDarkUrl} alt={this.name + ' dark'} />
+                <img src={logoDarkUrl} alt={extractText(app.translator.trans('ernestdefoe-picks.admin.teams.dark_logo_alt', { name: this.name }))} />
               </div>
             )}
             <input

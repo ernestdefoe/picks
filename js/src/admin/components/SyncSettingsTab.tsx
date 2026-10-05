@@ -2,12 +2,16 @@ import app from 'flarum/admin/app';
 import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import type Mithril from 'mithril';
+import extractText from 'flarum/common/utils/extractText';
+
+const t = (key: string, params?: Record<string, unknown>) =>
+  app.translator.trans('ernestdefoe-picks.admin.sync.' + key, params as any);
 
 export default class SyncSettingsTab extends Component {
   private saving: boolean = false;
-  private saveResult: string | null = null;
+  private saveResult: Mithril.Children = null;
   private resetting: string | null = null;
-  private resetResult: string | null = null;
+  private resetResult: Mithril.Children = null;
   private dirty: boolean = false;
 
   // Local copies of settings for editing
@@ -79,26 +83,21 @@ export default class SyncSettingsTab extends Component {
         syncRegularSeason: this.syncRegularSeason,
         syncPostseason: this.syncPostseason,
       };
-      this.saveResult = '✅ Settings saved.';
+      this.saveResult = app.translator.trans('ernestdefoe-picks.admin.common.saved');
       m.redraw();
     }).catch(() => {
       this.saving = false;
-      this.saveResult = '❌ Failed to save settings.';
+      this.saveResult = app.translator.trans('ernestdefoe-picks.admin.common.save_failed');
       m.redraw();
     });
   }
 
   private reset(scope: 'schedule' | 'all') {
-    const messages: Record<string, string> = {
-      schedule: 'This will permanently delete all seasons, weeks, games, picks, and scores. Teams and logos will be kept.\n\nThis cannot be undone. Are you sure?',
-      all:      'This will permanently delete ALL data — teams, logos, seasons, weeks, games, picks, and scores.\n\nThis cannot be undone. Are you absolutely sure?',
-    };
-
-    if (!window.confirm(messages[scope])) return;
+    if (!window.confirm(extractText(t(scope === 'all' ? 'reset_all_confirm' : 'reset_schedule_confirm')))) return;
 
     // Double-confirm for full reset
     if (scope === 'all') {
-      if (!window.confirm('Second confirmation required: Delete ALL Picks data including all teams and logos?')) return;
+      if (!window.confirm(extractText(t('reset_all_confirm_again')))) return;
     }
 
     this.resetting = scope;
@@ -111,29 +110,31 @@ export default class SyncSettingsTab extends Component {
       body: { scope },
     }).then((r) => {
       if (r.status === 'error') {
-        this.resetResult = '❌ ' + (r.message || 'Reset failed.');
+        this.resetResult = r.message || t('reset_failed');
       } else {
-        const c = r.counts;
-        const parts = [];
-        if (c.seasons)  parts.push(`${c.seasons} seasons`);
-        if (c.weeks)    parts.push(`${c.weeks} weeks`);
-        if (c.events)   parts.push(`${c.events} games`);
-        if (c.picks)    parts.push(`${c.picks} picks`);
-        if (c.scores)   parts.push(`${c.scores} scores`);
-        if (c.teams)    parts.push(`${c.teams} teams`);
-        this.resetResult = `✅ Reset complete. Deleted: ${parts.join(', ') || 'nothing'}.`;
+        const c = r.counts || {};
+        const parts: string[] = [];
+        // The response says "events"; members and admins call them games.
+        const kinds: Array<[string, string]> = [
+          ['seasons', 'seasons'], ['weeks', 'weeks'], ['events', 'games'],
+          ['picks', 'picks'], ['scores', 'scores'], ['teams', 'teams'],
+        ];
+        kinds.forEach(([field, word]) => {
+          if (c[field]) parts.push(extractText(t('count_' + word, { count: c[field] })));
+        });
+        this.resetResult = parts.length ? t('reset_done', { items: parts.join(', ') }) : t('reset_nothing');
       }
       this.resetting = null;
       m.redraw();
     }).catch(() => {
-      this.resetResult = '❌ Reset failed. Check server logs.';
+      this.resetResult = t('reset_failed');
       this.resetting = null;
       m.redraw();
     });
   }
 
   private formatDate(isoString: string | null): string {
-    if (!isoString) return 'Never';
+    if (!isoString) return extractText(app.translator.trans('ernestdefoe-picks.admin.common.never'));
     try {
       return new Date(isoString).toLocaleString();
     } catch {
@@ -194,7 +195,7 @@ export default class SyncSettingsTab extends Component {
               className="FormControl"
               type="password"
               value={this.cfbdApiKey}
-              placeholder="Your CFBD API key"
+              placeholder={extractText(t('cfbd_api_key_placeholder'))}
               oninput={(e: InputEvent) => { this.cfbdApiKey = (e.target as HTMLInputElement).value; this.checkDirty(); }}
             />
             <p className="helpText">
@@ -223,7 +224,7 @@ export default class SyncSettingsTab extends Component {
               className="FormControl"
               type="text"
               value={this.conferenceFilter}
-              placeholder="e.g. SEC (leave blank for all FBS)"
+              placeholder={extractText(t('conference_filter_placeholder'))}
               oninput={(e: InputEvent) => { this.conferenceFilter = (e.target as HTMLInputElement).value; this.checkDirty(); }}
             />
             <p className="helpText">

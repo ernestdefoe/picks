@@ -5,10 +5,14 @@ import type Mithril from 'mithril';
 import type PicksState from './PicksState';
 import PicksSkeleton, { measure } from '../PicksSkeleton';
 import ContestSwitch from './ContestSwitch';
+import extractText from 'flarum/common/utils/extractText';
 
 interface TabAttrs extends ComponentAttrs {
   state: PicksState;
 }
+
+const t = (key: string, params?: Record<string, unknown>) =>
+  app.translator.trans('ernestdefoe-picks.forum.leaderboard.' + key, params as any);
 
 export default class LeaderboardTab extends Component<TabAttrs> {
   view(): Mithril.Children {
@@ -31,32 +35,40 @@ export default class LeaderboardTab extends Component<TabAttrs> {
         key: 'season',
         label: app.translator.trans('ernestdefoe-picks.lib.common.season'),
       },
-      { key: 'alltime', label: 'All Time' },
+      { key: 'alltime', label: t('all_time') },
     ];
 
     // During off-season retention, label the scope buttons to clarify they show final standings
     const scopeLabel = (key: string) => {
       if (isOffSeason && !retentionExpired && key !== 'alltime') {
         return key === 'week'
-          ? 'Final Week'
+          ? t('final_week')
           : (lastSeasonName ?? app.translator.trans('ernestdefoe-picks.lib.common.season'));
       }
       return key === 'week'
         ? app.translator.trans('ernestdefoe-picks.lib.common.week')
         : key === 'season'
           ? app.translator.trans('ernestdefoe-picks.lib.common.season')
-          : 'All Time';
+          : t('all_time');
     };
 
-    const emptyMessage = () => {
-      if (noSchedule) return 'No schedule has been imported yet. Check back soon!';
+    const seasonName = lastSeasonName ?? extractText(app.translator.trans('ernestdefoe-picks.lib.common.season'));
+
+    const emptyMessage = (): Mithril.Children => {
+      if (noSchedule) {
+        return [
+          app.translator.trans('ernestdefoe-picks.lib.messages.no_schedule'),
+          ' ',
+          app.translator.trans('ernestdefoe-picks.lib.messages.check_back'),
+        ];
+      }
       if (isOffSeason && retentionExpired) {
-        return `The ${lastSeasonName ?? 'season'} has ended. Final standings are available in the History tab.`;
+        return t('season_ended', { season: seasonName });
       }
       if (isOffSeason && !retentionExpired && daysSinceEnded !== null) {
-        return `Final standings · ${lastSeasonName ?? 'Season'} ended ${daysSinceEnded} day${daysSinceEnded !== 1 ? 's' : ''} ago`;
+        return t('final_standings', { season: seasonName, days: daysSinceEnded });
       }
-      return app.translator.trans('ernestdefoe-picks.lib.messages.no_data') as string;
+      return app.translator.trans('ernestdefoe-picks.lib.messages.no_data');
     };
 
     return (
@@ -82,8 +94,8 @@ export default class LeaderboardTab extends Component<TabAttrs> {
 
         {isOffSeason && !retentionExpired && (
           <div className="PicksOffSeasonBanner">
-            <i className="fas fa-flag-checkered" /> Season complete · Final standings locked
-            {daysSinceEnded !== null && ` · ${daysSinceEnded}d ago`}
+            <i className="fas fa-flag-checkered" /> {t('season_complete')}
+            {daysSinceEnded !== null && [' · ', t('days_ago', { days: daysSinceEnded })]}
           </div>
         )}
 
@@ -96,9 +108,9 @@ export default class LeaderboardTab extends Component<TabAttrs> {
             <div className="PicksLeaderboard-head">
               <div>#</div>
               <div>{app.translator.trans('ernestdefoe-picks.lib.common.team')}</div>
-              <div className="PicksLeaderboard-right">Pts</div>
-              <div className="PicksLeaderboard-right">W–L</div>
-              <div className="PicksLeaderboard-right">Acc</div>
+              <div className="PicksLeaderboard-right">{t('col_points')}</div>
+              <div className="PicksLeaderboard-right">{t('col_record')}</div>
+              <div className="PicksLeaderboard-right">{t('col_accuracy')}</div>
             </div>
             {state.leaderboard.map((entry) => (
               <div

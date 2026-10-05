@@ -115,7 +115,7 @@ $extenders = [
         ->default('ernestdefoe-picks.scores_sync_started', null)
         ->default('ernestdefoe-picks.espn_polling_enabled', false)
         ->default('ernestdefoe-picks.espn_poll_interval_minutes', 5)
-        ->default('ernestdefoe-picks.nav_label', 'Picks')
+        ->default('ernestdefoe-picks.nav_label', '')
         ->serializeToForum('picksNavLabel', 'ernestdefoe-picks.nav_label')
         // 🚨 Saved in the admin since the fork and read by nothing: the board
         // ignored "Always show Week 1" and "Current week (auto-detect)" alike.

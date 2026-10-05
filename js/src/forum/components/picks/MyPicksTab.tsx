@@ -97,7 +97,7 @@ export default class MyPicksTab extends Component<TabAttrs> {
                       />
                     </>
                   )}
-                  <span className="PicksMyPickRow-sep">vs</span>
+                  <span className="PicksMyPickRow-sep">{app.translator.trans('ernestdefoe-picks.lib.common.vs')}</span>
                   {oppTeam?.logo_url && (
                     <>
                       <img
@@ -115,7 +115,7 @@ export default class MyPicksTab extends Component<TabAttrs> {
                 </div>
                 <div className="PicksMyPickRow-info">
                   <div className="PicksMyPickRow-matchup">
-                    {team?.name} vs {oppTeam?.name}
+                    {team?.name} {app.translator.trans('ernestdefoe-picks.lib.common.vs')} {oppTeam?.name}
                   </div>
                   <div className="PicksMyPickRow-pick">
                     {app.translator.trans('ernestdefoe-picks.lib.common.picked')}: <strong>{team?.name}</strong>
@@ -130,17 +130,15 @@ export default class MyPicksTab extends Component<TabAttrs> {
                 <div className="PicksMyPickRow-status">
                   {isCorrect && (
                     <span className="PicksTag PicksTag--correct">
-                      +{game.my_pick!.confidence ?? 1} pt
-                      {(game.my_pick!.confidence ?? 1) !== 1 ? 's' : ''}
+                      {app.translator.trans('ernestdefoe-picks.forum.my_picks.points', { count: game.my_pick!.confidence ?? 1 })}
                     </span>
                   )}
-                  {isIncorrect && <span className="PicksTag PicksTag--incorrect">+0 pts</span>}
+                  {isIncorrect && <span className="PicksTag PicksTag--incorrect">{app.translator.trans('ernestdefoe-picks.forum.my_picks.points', { count: 0 })}</span>}
                   {!isCorrect && !isIncorrect && (
                     <span className="PicksTag PicksTag--pending">
-                      Pending
                       {app.forum.attribute('picksConfidenceMode') && game.my_pick!.confidence
-                        ? ` · ${game.my_pick!.confidence}`
-                        : ''}
+                        ? app.translator.trans('ernestdefoe-picks.forum.my_picks.pending_value', { value: game.my_pick!.confidence })
+                        : app.translator.trans('ernestdefoe-picks.forum.my_picks.pending')}
                     </span>
                   )}
                 </div>

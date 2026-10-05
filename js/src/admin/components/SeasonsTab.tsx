@@ -6,6 +6,10 @@ import type Mithril from 'mithril';
 import Season from '../../common/models/Season';
 import Week from '../../common/models/Week';
 import LeaguesPanel from './LeaguesPanel';
+import extractText from 'flarum/common/utils/extractText';
+
+const t = (key: string, params?: Record<string, unknown>) =>
+  app.translator.trans('ernestdefoe-picks.admin.seasons.' + key, params as any);
 
 export default class SeasonsTab extends Component {
   private seasons: Season[] = [];
@@ -13,7 +17,7 @@ export default class SeasonsTab extends Component {
   private loading: boolean = false;
   private syncing: boolean = false;
   private selectedSeasonId: string | null = null;
-  private syncResult: string | null = null;
+  private syncResult: Mithril.Children = null;
   private lastSync: string | null = null;
   private editingWeekId: string | null = null;
   private editingWeekName: string = '';
@@ -87,11 +91,14 @@ export default class SeasonsTab extends Component {
       })
       .then((response) => {
         if (response.status === 'error') {
-          this.syncResult = '❌ ' + (response.message || 'Sync failed.');
+          this.syncResult = response.message || t('sync_failed');
         } else {
-          this.syncResult =
-            `✅ Sync complete. Weeks: +${response.weeksCreated} created, ${response.weeksUpdated} updated. ` +
-            `Games: +${response.gamesCreated} created, ${response.gamesUpdated} updated.`;
+          this.syncResult = t('sync_done', {
+            weeksCreated: response.weeksCreated,
+            weeksUpdated: response.weeksUpdated,
+            gamesCreated: response.gamesCreated,
+            gamesUpdated: response.gamesUpdated,
+          });
           this.lastSync = new Date().toISOString();
           // Clear store cache and reload
           app.store.models['picks-seasons'] = {};
@@ -102,7 +109,7 @@ export default class SeasonsTab extends Component {
         m.redraw();
       })
       .catch(() => {
-        this.syncResult = '❌ Sync failed. Check API key and server logs.';
+        this.syncResult = t('sync_failed');
         this.syncing = false;
         m.redraw();
       });
@@ -228,12 +235,12 @@ export default class SeasonsTab extends Component {
               return (
                 <div key={String(week.id())} className="PicksCardList-row PicksCardList-row--seasons">
                   <div className="PicksCardList-cell PicksCardList-cell--primary">
-                    {week.seasonType() === 'postseason' ? 'Post' : `Wk ${week.weekNumber()}`}
+                    {week.seasonType() === 'postseason' ? t('postseason_short') : t('week_short', { number: week.weekNumber() })}
                   </div>
 
                   <div className="PicksCardList-cell">
                     <span className={`PicksBadge PicksBadge--${week.seasonType()}`}>
-                      {week.seasonType() === 'postseason' ? 'Postseason' : 'Regular'}
+                      {week.seasonType() === 'postseason' ? t('type_postseason') : t('type_regular')}
                     </span>
                   </div>
 
@@ -267,7 +274,8 @@ export default class SeasonsTab extends Component {
                     <Button
                       className={`Button Button--icon ${week.isOpen() ? 'Button--primary' : ''}`}
                       icon={week.isOpen() ? 'fas fa-lock-open' : 'fas fa-lock'}
-                      title={week.isOpen() ? 'Close week (lock picks)' : 'Open week (allow picks)'}
+                      title={extractText(week.isOpen() ? t('close_week') : t('open_week'))}
+                      aria-label={extractText(week.isOpen() ? t('close_week') : t('open_week'))}
                       loading={this.togglingWeekId === String(week.id())}
                       onclick={() => this.toggleWeekOpen(week)}
                     />
@@ -277,11 +285,13 @@ export default class SeasonsTab extends Component {
                         <Button
                           className="Button Button--primary Button--icon"
                           icon="fas fa-check"
+                          aria-label={extractText(t('save_name'))}
                           onclick={() => this.saveWeekName(week)}
                         />
                         <Button
                           className="Button Button--icon"
                           icon="fas fa-times"
+                          aria-label={extractText(t('cancel_edit'))}
                           onclick={() => { this.editingWeekId = null; m.redraw(); }}
                         />
                       </>

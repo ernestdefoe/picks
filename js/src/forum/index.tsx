@@ -41,7 +41,7 @@ app.initializers.add('ernestdefoe/picks', () => {
         href={app.route('user.picks-history', { username: profileUser.username?.() })}
         icon="fas fa-football"
       >
-        Picks History
+        {app.translator.trans('ernestdefoe-picks.forum.nav.profile_history')}
       </LinkButton>,
       75
     );

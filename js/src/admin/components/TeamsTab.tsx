@@ -8,6 +8,9 @@ import TeamEditModal from './TeamEditModal';
 
 type LogoStatus = 'both' | 'standard' | 'custom' | 'missing';
 
+const t = (key: string, params?: Record<string, unknown>) =>
+  app.translator.trans('ernestdefoe-picks.admin.teams.' + key, params as any);
+
 export default class TeamsTab extends Component {
   private teams: Team[] = [];
   private loading: boolean = false;
@@ -17,8 +20,8 @@ export default class TeamsTab extends Component {
   private filterConference: string = 'all';
   private filterLogo: string = 'all';
   private search: string = '';
-  private syncResult: string | null = null;
-  private logoSyncResult: string | null = null;
+  private syncResult: Mithril.Children = null;
+  private logoSyncResult: Mithril.Children = null;
   private lastSync: string | null = null;
   private logoProgress: { saved: number; failed: number; remaining: number } | null = null;
 
@@ -57,9 +60,9 @@ export default class TeamsTab extends Component {
       })
       .then((response) => {
         if (response.status === 'error') {
-          this.syncResult = '❌ ' + (response.message || 'Sync failed.');
+          this.syncResult = response.message || t('sync_failed');
         } else {
-          this.syncResult = `✅ Sync complete. Created: ${response.created}, Updated: ${response.updated}.`;
+          this.syncResult = t('sync_done', { created: response.created, updated: response.updated });
           this.lastSync = new Date().toISOString();
           this.loadTeams();
         }
@@ -67,7 +70,7 @@ export default class TeamsTab extends Component {
         m.redraw();
       })
       .catch(() => {
-        this.syncResult = '❌ Sync request failed. Check API key configuration.';
+        this.syncResult = t('sync_failed');
         this.syncing = false;
         m.redraw();
       });
@@ -87,7 +90,7 @@ export default class TeamsTab extends Component {
         })
         .then((response) => {
           if (response.status === 'error') {
-            this.logoSyncResult = '❌ ' + (response.message || 'Logo sync failed.');
+            this.logoSyncResult = response.message || t('logos_failed');
             this.syncingLogos = false;
             m.redraw();
             return;
@@ -105,7 +108,7 @@ export default class TeamsTab extends Component {
             // Continue with next batch after a short pause
             setTimeout(runBatch, 500);
           } else {
-            this.logoSyncResult = `✅ Logo sync complete. Saved: ${this.logoProgress?.saved}, Failed: ${this.logoProgress?.failed}.`;
+            this.logoSyncResult = t('logos_done', { saved: this.logoProgress?.saved ?? 0, failed: this.logoProgress?.failed ?? 0 });
             this.logoProgress = null;
             this.syncingLogos = false;
             this.loadTeams();
@@ -113,7 +116,7 @@ export default class TeamsTab extends Component {
           }
         })
         .catch(() => {
-          this.logoSyncResult = '❌ Logo sync request failed.';
+          this.logoSyncResult = t('logos_failed');
           this.syncingLogos = false;
           m.redraw();
         });
@@ -142,13 +145,8 @@ export default class TeamsTab extends Component {
     return 'missing';
   }
 
-  private logoStatusLabel(status: LogoStatus): string {
-    switch (status) {
-      case 'both':     return '✅ Both';
-      case 'standard': return '🌓 Standard only';
-      case 'custom':   return '🖼 Custom';
-      case 'missing':  return '⚠️ Missing';
-    }
+  private logoStatusLabel(status: LogoStatus): Mithril.Children {
+    return t('logo_' + status);
   }
 
   private conferences(): string[] {
@@ -219,7 +217,7 @@ export default class TeamsTab extends Component {
             {this.syncingLogos && this.logoProgress !== null ? (
               <span>
                 <i className="fas fa-spinner fa-spin" />
-                {' '}Downloading logos... Saved: {this.logoProgress.saved}, Remaining: {this.logoProgress.remaining}
+                {' '}{t('logos_running', { saved: this.logoProgress.saved, remaining: this.logoProgress.remaining })}
               </span>
             ) : (
               this.logoSyncResult

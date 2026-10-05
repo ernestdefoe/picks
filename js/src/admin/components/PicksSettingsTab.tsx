@@ -2,10 +2,11 @@ import app from 'flarum/admin/app';
 import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import type Mithril from 'mithril';
+import extractText from 'flarum/common/utils/extractText';
 
 export default class PicksSettingsTab extends Component {
   private saving: boolean = false;
-  private saveResult: string | null = null;
+  private saveResult: Mithril.Children = null;
   private dirty: boolean = false;
 
   private picksLockOffsetMinutes: string = '0';
@@ -13,7 +14,7 @@ export default class PicksSettingsTab extends Component {
   private defaultWeekView: string = 'current';
   private confidenceMode: boolean = false;
   private confidencePenalty: string = 'none';
-  private navLabel: string = 'Picks';
+  private navLabel: string = '';
   private autoUnlockWeeks: boolean = false;
   private c10Enabled: boolean = false;
   private c10Games: string = '10';
@@ -29,7 +30,7 @@ export default class PicksSettingsTab extends Component {
     this.defaultWeekView         = s['ernestdefoe-picks.default_week_view']          || 'current';
     this.confidenceMode          = s['ernestdefoe-picks.confidence_mode'] === '1';
     this.confidencePenalty       = s['ernestdefoe-picks.confidence_penalty']         || 'none';
-    this.navLabel                = s['ernestdefoe-picks.nav_label']                  || 'Picks';
+    this.navLabel                = s['ernestdefoe-picks.nav_label']                  || '';
     this.autoUnlockWeeks         = s['ernestdefoe-picks.auto_unlock_weeks'] === '1';
     this.c10Enabled              = s['ernestdefoe-picks.confidence10_enabled'] === '1';
     this.c10Games                = s['ernestdefoe-picks.confidence10_games']         || '10';
@@ -116,11 +117,11 @@ export default class PicksSettingsTab extends Component {
         c10Games:               this.c10Games,
         c10Penalty:             this.c10Penalty,
       };
-      this.saveResult = '✅ Settings saved.';
+      this.saveResult = app.translator.trans('ernestdefoe-picks.admin.common.saved');
       m.redraw();
     }).catch(() => {
       this.saving = false;
-      this.saveResult = '❌ Failed to save settings.';
+      this.saveResult = app.translator.trans('ernestdefoe-picks.admin.common.save_failed');
       m.redraw();
     });
   }
@@ -196,7 +197,7 @@ export default class PicksSettingsTab extends Component {
               className="FormControl"
               type="text"
               value={this.navLabel}
-              placeholder="Picks"
+              placeholder={extractText(app.translator.trans('ernestdefoe-picks.lib.nav.picks'))}
               oninput={(e: InputEvent) => { this.navLabel = (e.target as HTMLInputElement).value; this.checkDirty(); }}
             />
             <p className="helpText">

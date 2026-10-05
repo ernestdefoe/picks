@@ -3,7 +3,7 @@
 namespace Resofire\Picks\Frontend;
 
 use Flarum\Frontend\Document;
-use Flarum\Settings\SettingsRepositoryInterface;
+use Flarum\Locale\TranslatorInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
@@ -21,7 +21,7 @@ use Psr\Http\Message\ServerRequestInterface;
  */
 class PicksPageContent
 {
-    public function __construct(protected SettingsRepositoryInterface $settings)
+    public function __construct(protected TranslatorInterface $translator)
     {
     }
 
@@ -41,9 +41,7 @@ class PicksPageContent
      */
     public function __invoke(Document $document, ServerRequestInterface $request): void
     {
-        $forum = (string) $this->settings->get('forum_title', '');
-
-        $document->title = 'College football pick\'em';
+        $document->title = $this->translator->trans('ernestdefoe-picks.api.page_title');
     }
 
     /**

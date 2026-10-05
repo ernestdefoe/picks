@@ -28,6 +28,19 @@ ernestdefoe-picks:
       delete: Delete
       cancel: Cancel
       last_sync: Last sync
+      never: Never
+      saved: Settings saved.
+      save_failed: The settings could not be saved.
+      prev: Previous
+      next: Next
+      page_of: "Page {page} of {pages}"
+      col_player: Player
+      col_points: Pts
+      col_won: W
+      col_lost: L
+      col_picks: Picks
+      col_accuracy: Acc
+      no_schedule: No schedule synced yet. Sync a schedule from Seasons & Weeks first.
       coming_soon: This section will be available in a future update.
 
     teams:
@@ -43,6 +56,16 @@ ernestdefoe-picks:
       total_label: teams
       no_teams: No teams found.
       refresh_logo: Re-download logos from ESPN
+      sync_done: "Sync complete. {created} created, {updated} updated."
+      sync_failed: The team sync failed. Check the API key and the server logs.
+      logos_running: "Downloading logos… {saved} saved, {remaining} to go."
+      logos_done: "Logo sync complete. {saved} saved, {failed} failed."
+      logos_failed: The logo sync failed. Check the server logs.
+      logo_both: Light and dark
+      logo_standard: Light only
+      logo_custom: Custom
+      logo_missing: Missing
+      dark_logo_alt: "{name}, dark logo"
       col_logo: Logo
       col_name: Team
       col_conference: Conference
@@ -94,6 +117,16 @@ ernestdefoe-picks:
       col_type: Type
       col_dates: Dates
       col_name: Name
+      sync_done: "Sync complete. Weeks: {weeksCreated} created, {weeksUpdated} updated. Games: {gamesCreated} created, {gamesUpdated} updated."
+      sync_failed: The schedule sync failed. Check the API key and the server logs.
+      week_short: "Wk {number}"
+      postseason_short: Post
+      type_regular: Regular
+      type_postseason: Postseason
+      close_week: Close the week (lock picks)
+      open_week: Open the week (allow picks)
+      save_name: Save the name
+      cancel_edit: Cancel
 
     sync:
       status_title: Last Sync Status
@@ -103,9 +136,11 @@ ernestdefoe-picks:
       api_title: API Configuration
       cfbd_api_key: CFBD API Key
       cfbd_api_key_help: Get your free API key at collegefootballdata.com
+      cfbd_api_key_placeholder: Your CFBD API key
       season_year: Season Year
       season_year_help: The year to sync teams, schedule, and scores for.
       conference_filter: Conference Filter
+      conference_filter_placeholder: e.g. SEC (leave blank for all FBS)
       conference_filter_help: Leave blank to sync all FBS teams. Enter a conference abbreviation (e.g. SEC) to limit syncs to one conference.
       options_title: Sync Options
       sync_regular_season: Sync regular season games
@@ -119,6 +154,18 @@ ernestdefoe-picks:
       reset_all_title: Reset All Data
       reset_all_description: Deletes everything — teams, logos, seasons, weeks, games, picks, and scores. Requires double confirmation.
       reset_all_button: Reset Everything
+      reset_schedule_confirm: "This permanently deletes every season, week, game, pick and score. Teams and logos are kept.\n\nThis cannot be undone. Continue?"
+      reset_all_confirm: "This permanently deletes ALL Picks data: teams, logos, seasons, weeks, games, picks and scores.\n\nThis cannot be undone. Continue?"
+      reset_all_confirm_again: "Second confirmation: delete ALL Picks data, teams and logos included?"
+      reset_done: "Reset complete. Deleted: {items}."
+      reset_nothing: "Reset complete. There was nothing to delete."
+      reset_failed: The reset failed. Check the server logs.
+      count_seasons: "{count, plural, one {# season} other {# seasons}}"
+      count_weeks: "{count, plural, one {# week} other {# weeks}}"
+      count_games: "{count, plural, one {# game} other {# games}}"
+      count_picks: "{count, plural, one {# pick} other {# picks}}"
+      count_scores: "{count, plural, one {# score} other {# scores}}"
+      count_teams: "{count, plural, one {# team} other {# teams}}"
 
     settings:
       locking_title: Pick Locking
@@ -178,6 +225,61 @@ ernestdefoe-picks:
       col_date: Date
       col_status: Status
       col_score: Score
+      status_live: Live
+      status_final: Final
+      sync_started_failed: The score sync did not start. Check the API key and the server logs.
+      sync_still_running: The sync is still running. Refresh in a moment to see the result.
+      sync_done: "Sync complete. {updated, plural, one {# game} other {# games}} updated, {scored} scoring batches run, {skipped} skipped."
+      sync_failed: The score sync failed.
+      sync_status_failed: The sync status could not be checked. Check the server logs.
+      home_label: "{team} (home)"
+      away_label: "{team} (away)"
+      home_team: Home team
+      away_team: Away team
+      wins: "{team} wins"
+      tied: A tie. Check the scores before saving.
+
+    leaderboard:
+      scope_week: Week
+      scope_season: Season
+      scope_alltime: All time
+      load_failed: The leaderboard could not be loaded.
+      weeks_failed: The weeks could not be loaded.
+      empty: No scores yet for this period.
+
+    stats:
+      title: Stats
+      intro: Pick'em analytics for admins
+      refresh: Refresh
+      load_failed: The stats could not be loaded.
+      participation: Participation
+      total_players: Total players
+      picked_this_week: Picked this week
+      participation_rate: Participation rate
+      yet_to_pick: Yet to pick
+      accuracy_title: Accuracy & scoring
+      avg_accuracy_season: Average accuracy (season)
+      avg_accuracy_week: Average accuracy (this week)
+      upset_rate: Upset rate
+      most_picked: Most picked team
+      most_picked_note: "Most picked team: <strong>{team}</strong>, {count, plural, one {# pick} other {# picks}}"
+      coverage: Game coverage
+      results_entered: Results entered
+      awaiting_results: Awaiting results
+      no_picks: Games with no picks
+      consensus: Consensus games
+      most_contested: Most contested matchups
+      picks_count: "{count, plural, one {# pick} other {# picks}}"
+
+    block:
+      name: Pick'em Standings
+      title: Title
+      scope: Standings
+      scope_alltime: All time
+      scope_season: This season
+      limit: How many
+      hide_empty: Hide when nobody has picked
+      hide_empty_help: Before the first week of a season there is nothing to rank.
 
     confidence:
       title: "Confidence {count}"
@@ -253,6 +355,8 @@ ernestdefoe-picks:
 
     messages:
       no_data: No data found.
+      no_schedule: No schedule has been imported yet.
+      check_back: Check back soon!
       no_matches: No games found.
       saved: Saved successfully.
       deleted: Deleted successfully.
@@ -260,9 +364,39 @@ ernestdefoe-picks:
       login_required: Please log in to participate.
 
   forum:
+    nav:
+      profile_history: Picks History
     week_nav:
       previous: Previous week
       next: Next week
+    games:
+      week_not_open: Picks for this week are not yet open. Check back soon!
+      neutral_site: Neutral site
+      correct: "{count, plural, one {Correct · +# pt} other {Correct · +# pts}}"
+      incorrect: Incorrect
+      pending: Pick saved · awaiting result
+      no_pick: Cutoff passed · no pick
+      confidence_label: Confidence
+      confidence_hint_full: Wrong costs the value
+      confidence_hint_half: Wrong costs half
+    my_picks:
+      points: "{count, plural, one {+# pt} other {+# pts}}"
+      pending: Pending
+      pending_value: "Pending · {value}"
+    leaderboard:
+      all_time: All time
+      final_week: Final week
+      col_points: Pts
+      col_record: W–L
+      col_accuracy: Acc
+      season_ended: "{season} has ended. The final standings are in the History tab."
+      final_standings: "{days, plural, one {Final standings · {season} ended # day ago} other {Final standings · {season} ended # days ago}}"
+      season_complete: Season complete · Final standings locked
+      days_ago: "{days, plural, one {# day ago} other {# days ago}}"
+    history:
+      empty: No completed seasons yet. History appears here once the first season ends.
+      players: "{count, plural, one {# player} other {# players}}"
+      no_standings: No standings recorded for this season.
     confidence:
       tab: "Confidence {count}"
       full_board: Full board
@@ -310,6 +444,36 @@ ernestdefoe-picks:
       time_tba: time TBA
       locks_at: "picks lock {time}"
       locked: Locked
+    profile:
+      tab_alltime: All time
+      tab_season: This season
+      tab_week: This week
+      loading: Loading…
+      history_heading: Pick History
+      load_failed: The pick history could not be loaded.
+      no_history: No season history yet.
+      empty_week: No results recorded this week yet.
+      empty_season: No results recorded this season yet.
+      empty_alltime: No results recorded yet.
+      in_progress: In progress
+      active: Active
+      season_meta: "{weeks, plural, one {# week} other {# weeks}} · {picks, plural, one {# pick submitted} other {# picks submitted}}"
+      points_value: "{count, plural, one {# pt} other {# pts}}"
+      points: Points
+      accuracy: Accuracy
+      rank: Rank
+      final_rank: Final rank
+      no_picks: No picks
+      col_week: Week
+      col_won: W
+      col_lost: L
+      col_accuracy: Acc
+      col_points: Pts
+      col_rank: Rank
+      col_tiebreaker: TB
+      footer_picks: "{count, plural, one {<strong>#</strong> pick} other {<strong>#</strong> picks}}"
+      footer_record: "<strong>{correct}</strong> correct · <strong>{wrong}</strong> wrong"
+      footer_points: "{count, plural, one {<strong>#</strong> pt} other {<strong>#</strong> pts}}"
     profile_stats:
       picks_total: Total picks
       picks_season: Picks this season
@@ -324,3 +488,18 @@ ernestdefoe-picks:
       streak_sub: consecutive correct picks
     leaderboard_block:
       empty: No picks have been scored yet this season.
+
+  api:
+    page_title: College football pick'em
+    weeks:
+      week: "Week {number}"
+      week_of: "Week of {date}"
+      postseason: Postseason
+      bowl_season: Bowl Season
+    standings_post:
+      title: "{week} pick'em standings"
+      intro: "Standings after {week}."
+      row_week: "this week {record}"
+      best: "Best of the week: {name}, {record}."
+      open: "Picks for the next round are open — {url}"
+      outro: Argue with the table below.

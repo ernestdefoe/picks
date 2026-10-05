@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Flarum\Console\AbstractCommand;
 use Flarum\Discussion\Discussion;
 use Flarum\Foundation\Config;
+use Flarum\Locale\TranslatorInterface;
 use Flarum\Post\CommentPost;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\User\User;
@@ -38,7 +39,8 @@ class PostStandingsCommand extends AbstractCommand
     public function __construct(
         protected SettingsRepositoryInterface $settings,
         protected ConnectionInterface $db,
-        protected Config $config
+        protected Config $config,
+        protected TranslatorInterface $translator
     ) {
         parent::__construct();
     }
@@ -76,7 +78,12 @@ class PostStandingsCommand extends AbstractCommand
             return 0;
         }
 
-        $title = trim($week->name) . ' pick\'em standings';
+        /*
+         * 🚨 Translated in the forum's default locale — the console has no
+         * visitor to take one from. The title is also how a rerun finds last
+         * week's thread to edit, so it must come out the same on every run.
+         */
+        $title = $this->trans('title', ['week' => trim($week->name)]);
         $body = $this->body($week, $rows);
 
         if ($this->input->getOption('dry-run')) {
@@ -231,7 +238,7 @@ class PostStandingsCommand extends AbstractCommand
                 $r['name'],
                 $r['record'],
                 round($r['accuracy']),
-                $r['week'] !== null ? '  ·  this week ' . $r['week'] : '',
+                $r['week'] !== null ? '  ·  ' . $this->trans('row_week', ['record' => $r['week']]) : '',
                 $move
             );
         }
@@ -239,16 +246,16 @@ class PostStandingsCommand extends AbstractCommand
         $best = $this->bestOfWeek($week);
 
         $blocks = [
-            'Standings after ' . trim($week->name) . '.',
+            $this->trans('intro', ['week' => trim($week->name)]),
             implode("\n", $lines),
         ];
 
         if ($best !== null) {
-            $blocks[] = 'Best of the week: ' . $best;
+            $blocks[] = $best;
         }
 
-        $blocks[] = 'Picks for the next round are open — ' . $this->url() . '/picks';
-        $blocks[] = 'Argue with the table below.';
+        $blocks[] = $this->trans('open', ['url' => $this->url() . '/picks']);
+        $blocks[] = $this->trans('outro');
 
         return implode("\n\n", $blocks);
     }
@@ -269,12 +276,16 @@ class PostStandingsCommand extends AbstractCommand
 
         $name = (string) ($top->user?->display_name ?? $top->user?->username ?? '');
 
-        return $name === '' ? null : sprintf(
-            '%s, %d-%d.',
-            $name,
-            $top->correct_picks,
-            max(0, $top->total_picks - $top->correct_picks)
-        );
+        return $name === '' ? null : $this->trans('best', [
+            'name'   => $name,
+            'record' => $top->correct_picks . '-' . max(0, $top->total_picks - $top->correct_picks),
+        ]);
+    }
+
+    /** @param array<string, string|int> $params */
+    protected function trans(string $key, array $params = []): string
+    {
+        return $this->translator->trans('ernestdefoe-picks.api.standings_post.' . $key, $params);
     }
 
     /**

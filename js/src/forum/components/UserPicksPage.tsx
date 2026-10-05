@@ -67,6 +67,10 @@ interface UserHistory {
 const t = (key: string, params: Record<string, unknown> = {}) =>
   app.translator.trans(`ernestdefoe-picks.forum.profile_stats.${key}`, params);
 
+/** The profile page's own words, beside the stat cards' above. */
+const tp = (key: string, params: Record<string, unknown> = {}) =>
+  app.translator.trans(`ernestdefoe-picks.forum.profile.${key}`, params);
+
 function fmt(n: number | null | undefined, suffix = ''): string {
   if (n == null) return '—';
   return `${n}${suffix}`;
@@ -164,7 +168,7 @@ export default class UserPicksPage extends UserPage {
       m.redraw();
     }).catch(() => {
       this.historyLoading = false;
-      this.historyError   = 'Could not load pick history.';
+      this.historyError   = 'load_failed';
       m.redraw();
     });
   }
@@ -185,7 +189,7 @@ export default class UserPicksPage extends UserPage {
               className={`Picks-profile-tab${this.activeTab === tab ? ' Picks-profile-tab--active' : ''}`}
               onclick={() => { this.activeTab = tab; m.redraw(); }}
             >
-              {tab === 'alltime' ? 'All time' : tab === 'season' ? 'This season' : 'This week'}
+              {tp('tab_' + tab)}
             </button>
           ))}
         </div>
@@ -195,17 +199,17 @@ export default class UserPicksPage extends UserPage {
         {this.activeTab === 'week'    && this.renderScope(this.scores?.week    ?? null, 'week')}
 
         {/* ── History stack ── */}
-        <div className="Picks-profile-sectionLabel">Pick History</div>
+        <div className="Picks-profile-sectionLabel">{tp('history_heading')}</div>
 
         {this.historyLoading && <PicksSkeleton surface="history" fallback={295} rows={5} variant="rows" />}
 
         {this.historyError && (
-          <div className="Picks-profile-empty">{this.historyError}</div>
+          <div className="Picks-profile-empty">{tp(this.historyError)}</div>
         )}
 
         {!this.historyLoading && !this.historyError && this.history && (
           this.history.seasons.length === 0
-            ? <div className="Picks-profile-empty">No season history yet.</div>
+            ? <div className="Picks-profile-empty">{tp('no_history')}</div>
             : <div className="Picks-history-stack">
                 {this.history.seasons.map(season => this.renderSeasonCard(season))}
               </div>
@@ -216,17 +220,11 @@ export default class UserPicksPage extends UserPage {
 
   private renderScope(s: ScopeStats | null, tab: 'alltime' | 'season' | 'week'): Mithril.Children {
     if (this.scoresLoading) {
-      return <div className="Picks-profile-loading">Loading…</div>;
+      return <div className="Picks-profile-loading">{tp('loading')}</div>;
     }
 
     if (!s || s.total_picks === 0) {
-      if (tab === 'week') {
-        return <div className="Picks-profile-empty">No results recorded this week yet.</div>;
-      }
-      if (tab === 'season') {
-        return <div className="Picks-profile-empty">No results recorded this season yet.</div>;
-      }
-      return <div className="Picks-profile-empty">No results recorded yet.</div>;
+      return <div className="Picks-profile-empty">{tp('empty_' + tab)}</div>;
     }
 
     const wrongPicks = s.total_picks - s.correct_picks;
@@ -310,11 +308,11 @@ export default class UserPicksPage extends UserPage {
               <div className="Picks-season-title">
                 {season.name}
                 {season.is_current && (
-                  <span className="Picks-season-openBadge">In progress</span>
+                  <span className="Picks-season-openBadge">{tp('in_progress')}</span>
                 )}
               </div>
               <div className="Picks-season-meta">
-                {season.weeks.length} week{season.weeks.length !== 1 ? 's' : ''} · {stats ? stats.total_picks : 0} picks submitted
+                {tp('season_meta', { weeks: season.weeks.length, picks: stats ? stats.total_picks : 0 })}
               </div>
             </div>
           </div>
@@ -323,23 +321,23 @@ export default class UserPicksPage extends UserPage {
             {stats && stats.total_picks > 0 ? (
               <>
                 <div className="Picks-season-stat">
-                  <div className="Picks-season-statVal">{stats.total_points} pts</div>
-                  <div className="Picks-season-statLbl">Points</div>
+                  <div className="Picks-season-statVal">{tp('points_value', { count: stats.total_points })}</div>
+                  <div className="Picks-season-statLbl">{tp('points')}</div>
                 </div>
                 <div className="Picks-season-stat">
                   <div className="Picks-season-statVal">{stats.accuracy.toFixed(0)}%</div>
-                  <div className="Picks-season-statLbl">Accuracy</div>
+                  <div className="Picks-season-statLbl">{tp('accuracy')}</div>
                 </div>
                 <div className="Picks-season-stat">
                   <div className="Picks-season-statVal">
                     {stats.rank != null ? `#${stats.rank}` : '—'}
                   </div>
-                  <div className="Picks-season-statLbl">{season.is_current ? 'Rank' : 'Final rank'}</div>
+                  <div className="Picks-season-statLbl">{tp(season.is_current ? 'rank' : 'final_rank')}</div>
                 </div>
               </>
             ) : (
               <div className="Picks-season-stat">
-                <div className="Picks-season-statLbl">No picks</div>
+                <div className="Picks-season-statLbl">{tp('no_picks')}</div>
               </div>
             )}
             <span className={`Picks-season-chevron ${isExpanded ? 'Picks-season-chevron--open' : ''}`}>
@@ -352,18 +350,18 @@ export default class UserPicksPage extends UserPage {
         {isExpanded && (
           <div className="Picks-season-body">
             {season.weeks.length === 0 ? (
-              <div className="Picks-profile-empty" style="padding: 1rem 1.1rem;">No results recorded this season yet.</div>
+              <div className="Picks-profile-empty" style="padding: 1rem 1.1rem;">{tp('empty_season')}</div>
             ) : (
               <>
                 <table className="Picks-week-table">
                   <thead>
                     <tr>
-                      <th>Week</th>
-                      <th className="Picks-week-table-r">W</th>
-                      <th className="Picks-week-table-r">L</th>
-                      <th className="Picks-week-table-r">Acc</th>
-                      <th className="Picks-week-table-r">Pts</th>
-                      <th className="Picks-week-table-r">Rank</th>
+                      <th>{tp('col_week')}</th>
+                      <th className="Picks-week-table-r">{tp('col_won')}</th>
+                      <th className="Picks-week-table-r">{tp('col_lost')}</th>
+                      <th className="Picks-week-table-r">{tp('col_accuracy')}</th>
+                      <th className="Picks-week-table-r">{tp('col_points')}</th>
+                      <th className="Picks-week-table-r">{tp('col_rank')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -371,7 +369,7 @@ export default class UserPicksPage extends UserPage {
                       <tr key={String(week.week_id)}>
                         <td>
                           <span className="Picks-week-name">{week.week_name}</span>
-                          {week.is_current && <span className="Picks-season-openBadge">Active</span>}
+                          {week.is_current && <span className="Picks-season-openBadge">{tp('active')}</span>}
                         </td>
                         <td className="Picks-week-table-r">{week.correct_picks}</td>
                         <td className="Picks-week-table-r">{week.total_picks - week.correct_picks}</td>
@@ -392,9 +390,9 @@ export default class UserPicksPage extends UserPage {
                 {/* Season summary footer */}
                 {stats && stats.total_picks > 0 && (
                   <div className="Picks-season-footer">
-                    <span><strong>{stats.total_picks}</strong> picks</span>
-                    <span><strong>{stats.correct_picks}</strong> correct · <strong>{stats.total_picks - stats.correct_picks}</strong> wrong</span>
-                    <span><strong>{stats.total_points}</strong> pts</span>
+                    <span>{tp('footer_picks', { count: stats.total_picks })}</span>
+                    <span>{tp('footer_record', { correct: stats.correct_picks, wrong: stats.total_picks - stats.correct_picks })}</span>
+                    <span>{tp('footer_points', { count: stats.total_points })}</span>
                   </div>
                 )}
               </>

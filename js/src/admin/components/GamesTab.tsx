@@ -6,6 +6,9 @@ import type Mithril from 'mithril';
 import Week from '../../common/models/Week';
 import ResultModal from './ResultModal';
 
+const t = (key: string, params?: Record<string, unknown>) =>
+  app.translator.trans('ernestdefoe-picks.admin.games.' + key, params as any);
+
 interface GameTeam {
   id: number;
   name: string;
@@ -50,7 +53,7 @@ export default class GamesTab extends Component {
   private sort: string = 'date_asc';
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
   private syncing: boolean = false;
-  private syncResult: string | null = null;
+  private syncResult: Mithril.Children = null;
 
   oninit(vnode: Mithril.Vnode) {
     super.oninit(vnode);
@@ -129,11 +132,11 @@ export default class GamesTab extends Component {
       closed: 'PicksBadge--closed',
       finished: 'PicksBadge--finished',
     };
-    const labels: Record<string, string> = {
-      scheduled: 'Scheduled',
-      in_progress: '● Live',
-      closed: 'Closed',
-      finished: 'Final',
+    const labels: Record<string, Mithril.Children> = {
+      scheduled: app.translator.trans('ernestdefoe-picks.lib.status.scheduled'),
+      in_progress: ['● ', t('status_live')],
+      closed: app.translator.trans('ernestdefoe-picks.lib.status.closed'),
+      finished: t('status_final'),
     };
     return <span className={`PicksBadge ${classes[status] || ''}`}>{labels[status] || status}</span>;
   }
@@ -191,7 +194,7 @@ export default class GamesTab extends Component {
         this.pollSyncStatus(0);
       })
       .catch(() => {
-        this.syncResult = '❌ Score sync failed to start. Check API key and server logs.';
+        this.syncResult = t('sync_started_failed');
         this.syncing = false;
         m.redraw();
       });
@@ -201,7 +204,7 @@ export default class GamesTab extends Component {
     // Cap polling so a stuck/crashed worker doesn't spin the UI forever
     // (~5 minutes at 2s intervals).
     if (attempt > 150) {
-      this.syncResult = '⏳ Sync is still running. Refresh in a moment to see the result.';
+      this.syncResult = t('sync_still_running');
       this.syncing = false;
       m.redraw();
       return;
@@ -218,12 +221,12 @@ export default class GamesTab extends Component {
       .then((r) => {
         if (r.status === 'done') {
           const res = r.result || {};
-          this.syncResult = `✅ Sync complete. Updated: ${res.updated ?? 0} games, Scored: ${res.scored ?? 0} picks batches, Skipped: ${res.skipped ?? 0}.`;
+          this.syncResult = t('sync_done', { updated: res.updated ?? 0, scored: res.scored ?? 0, skipped: res.skipped ?? 0 });
           this.syncing = false;
           this.load(this.page);
           m.redraw();
         } else if (r.status === 'failed') {
-          this.syncResult = '❌ ' + (r.result?.message || 'Sync failed.');
+          this.syncResult = r.result?.message || t('sync_failed');
           this.syncing = false;
           m.redraw();
         } else {
@@ -232,7 +235,7 @@ export default class GamesTab extends Component {
         }
       })
       .catch(() => {
-        this.syncResult = '❌ Failed to check sync status. Check server logs.';
+        this.syncResult = t('sync_status_failed');
         this.syncing = false;
         m.redraw();
       });
@@ -385,14 +388,14 @@ export default class GamesTab extends Component {
 
             {lastPage > 1 && (
               <div className="PicksPagination">
-                <Button className="Button" disabled={this.page <= 1} onclick={() => this.load(this.page - 1)}>
-                  ← Prev
+                <Button className="Button" icon="fas fa-chevron-left" disabled={this.page <= 1} onclick={() => this.load(this.page - 1)}>
+                  {app.translator.trans('ernestdefoe-picks.admin.common.prev')}
                 </Button>
                 <span className="PicksPagination-info">
-                  Page {this.page} of {lastPage}
+                  {app.translator.trans('ernestdefoe-picks.admin.common.page_of', { page: this.page, pages: lastPage })}
                 </span>
                 <Button className="Button" disabled={this.page >= lastPage} onclick={() => this.load(this.page + 1)}>
-                  Next →
+                  {app.translator.trans('ernestdefoe-picks.admin.common.next')} <i className="fas fa-chevron-right" aria-hidden="true" />
                 </Button>
               </div>
             )}

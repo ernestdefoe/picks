@@ -31,7 +31,7 @@ export default class HistoryTab extends Component<TabAttrs> {
           <div className="PicksEmpty">
             {c10
               ? app.translator.trans('ernestdefoe-picks.forum.confidence.no_history')
-              : 'No completed seasons yet. History will appear here after the first season ends.'}
+              : app.translator.trans('ernestdefoe-picks.forum.history.empty')}
           </div>
         )}
 
@@ -56,7 +56,9 @@ export default class HistoryTab extends Component<TabAttrs> {
                     <div className="PicksHistory-seasonLeft">
                       <span className="PicksHistory-yearBadge">{season.year}</span>
                       <div className="PicksHistory-seasonName">{season.name}</div>
-                      <div className="PicksHistory-seasonCount">{season.standings.length} players</div>
+                      <div className="PicksHistory-seasonCount">
+                        {app.translator.trans('ernestdefoe-picks.forum.history.players', { count: season.standings.length })}
+                      </div>
                     </div>
                     <div className="PicksHistory-seasonRight">
                       {season.standings.length > 0 && (
@@ -72,16 +74,16 @@ export default class HistoryTab extends Component<TabAttrs> {
                     <div className="PicksHistory-seasonBody">
                       {season.standings.length === 0 ? (
                         <div className="PicksEmpty" style="padding: 1rem;">
-                          No standings recorded for this season.
+                          {app.translator.trans('ernestdefoe-picks.forum.history.no_standings')}
                         </div>
                       ) : (
                         <div className="PicksLeaderboard">
                           <div className="PicksLeaderboard-head">
                             <div>#</div>
                             <div>{app.translator.trans('ernestdefoe-picks.lib.common.team')}</div>
-                            <div className="PicksLeaderboard-right">Pts</div>
-                            <div className="PicksLeaderboard-right">W–L</div>
-                            <div className="PicksLeaderboard-right">Acc</div>
+                            <div className="PicksLeaderboard-right">{app.translator.trans('ernestdefoe-picks.forum.leaderboard.col_points')}</div>
+                            <div className="PicksLeaderboard-right">{app.translator.trans('ernestdefoe-picks.forum.leaderboard.col_record')}</div>
+                            <div className="PicksLeaderboard-right">{app.translator.trans('ernestdefoe-picks.forum.leaderboard.col_accuracy')}</div>
                           </div>
                           {season.standings.map((entry) => (
                             <div

@@ -112,8 +112,8 @@ export default class PicksPage extends Page {
           ) : state.weeks.length === 0 && state.activeTab !== 'history' ? (
             <div className="PicksEmpty PicksEmpty--noSchedule">
               <i className="fas fa-football" />
-              <p>No schedule has been imported yet.</p>
-              <p>Check back soon!</p>
+              <p>{app.translator.trans('ernestdefoe-picks.lib.messages.no_schedule')}</p>
+              <p>{app.translator.trans('ernestdefoe-picks.lib.messages.check_back')}</p>
             </div>
           ) : (
             <>

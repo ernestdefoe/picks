@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Service;
 
 use Carbon\Carbon;
+use Flarum\Locale\TranslatorInterface;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -16,7 +17,8 @@ class ScheduleSyncService
 {
     public function __construct(
         protected CfbdService $cfbd,
-        protected SettingsRepositoryInterface $settings
+        protected SettingsRepositoryInterface $settings,
+        protected TranslatorInterface $translator
     ) {
     }
 
@@ -73,7 +75,7 @@ class ScheduleSyncService
                     season:     $season,
                     weekNumber: $weekNumber,
                     seasonType: 'regular',
-                    name:       'Week ' . $weekNumber,
+                    name:       $this->translator->trans('ernestdefoe-picks.api.weeks.week', ['number' => $weekNumber]),
                     startDate:  $startDate,
                     endDate:    $endDate
                 );
@@ -112,7 +114,7 @@ class ScheduleSyncService
                     season:     $season,
                     weekNumber: 1,
                     seasonType: 'postseason',
-                    name:       'Bowl Season',
+                    name:       $this->translator->trans('ernestdefoe-picks.api.weeks.bowl_season'),
                     startDate:  $startDate,
                     endDate:    $endDate
                 );
