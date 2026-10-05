@@ -165,7 +165,7 @@ class BackfillLeadInCommand extends AbstractCommand
                     continue;
                 }
 
-                $this->apply($row, (array) (($event['competitions'] ?? [[]])[0] ?? []));
+                $this->apply($row, (array) (($event['competitions'] ?? [[]])[0] ?? []), (array) $event);
 
                 if (! $row->isDirty()) {
                     $skipped++;
@@ -200,7 +200,7 @@ class BackfillLeadInCommand extends AbstractCommand
      *
      * @param array<string, mixed> $competition
      */
-    private function apply(PickEvent $row, array $competition): void
+    private function apply(PickEvent $row, array $competition, array $event = []): void
     {
         $home = $this->competitor($competition, 'home');
         $away = $this->competitor($competition, 'away');
@@ -210,6 +210,7 @@ class BackfillLeadInCommand extends AbstractCommand
         $row->venue = trim((string) (((array) ($competition['venue'] ?? []))['fullName'] ?? ''));
         $row->venue_city = EspnProvider::venueCity((array) ($competition['venue'] ?? []));
         $row->broadcast = EspnProvider::broadcast($competition);
+        $row->broadcasts = EspnProvider::broadcasts($event + ['competitions' => [$competition]]);
 
         $finished = $row->status === PickEvent::STATUS_FINISHED;
 

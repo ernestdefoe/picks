@@ -849,6 +849,83 @@ $tests['confidence: a member\'s profile record'] = function () {
     same(['alltime' => null, 'seasons' => []], Profile::build(5, $allTime, [], [], [], [], null, null), 'a member with no Confidence picks got a record');
 };
 
+/* ------------------------------------------------------- where to watch */
+
+/*
+ * 🚨 Real events, trimmed to their links and listings: a week-seven college
+ * football slate (ESPN+, BTN, CBS, ESPN), an NHL game with a home-market
+ * stream, an MLS match that spells its medium "STREAMING", and a Premier
+ * League fixture with no listing at all. Saved off ESPN on 2026-10-05.
+ */
+$tests['where to watch: every listing, typed and marketed'] = function () {
+    $events = [];
+
+    foreach (json_decode((string) file_get_contents(__DIR__ . '/fixtures/espn-broadcasts.json'), true) as $event) {
+        $events[$event['id']] = $event;
+    }
+
+    same(
+        ['listings' => [['name' => 'ESPN+', 'type' => 'streaming', 'market' => 'national']], 'watch' => '', 'premium' => false],
+        EspnProvider::broadcasts($events['401866436']),
+        'an ESPN+ game'
+    );
+    same([['name' => 'BTN', 'type' => 'tv', 'market' => 'national']], EspnProvider::broadcasts($events['401858482'])['listings'], 'a BTN game');
+    same([['name' => 'CBS', 'type' => 'tv', 'market' => 'national']], EspnProvider::broadcasts($events['401858484'])['listings'], 'a CBS game');
+
+    $nhl = null;
+    $mls = null;
+    $epl = null;
+
+    foreach ($events as $event) {
+        $nhl = str_starts_with($event['_league'], 'nhl') ? $event : $nhl;
+        $mls = str_starts_with($event['_league'], 'mls') ? $event : $mls;
+        $epl = str_starts_with($event['_league'], 'epl') ? $event : $epl;
+    }
+
+    same(
+        [
+            ['name' => 'NHL Net', 'type' => 'tv', 'market' => 'national'],
+            ['name' => 'DSN', 'type' => 'streaming', 'market' => 'home'],
+        ],
+        EspnProvider::broadcasts($nhl)['listings'],
+        'a national channel and a home-market stream'
+    );
+    same('streaming', EspnProvider::broadcasts($mls)['listings'][0]['type'] ?? null, 'MLS spells it STREAMING, in capitals');
+    same([], EspnProvider::broadcasts($epl)['listings'], 'a fixture with no listing has none');
+
+    // Only `broadcasts`, no geoBroadcasts: read as television, market kept.
+    same(
+        [['name' => 'FOX', 'type' => 'tv', 'market' => 'national'], ['name' => 'KCOP', 'type' => 'tv', 'market' => 'away']],
+        EspnProvider::broadcasts(['competitions' => [['broadcasts' => [
+            ['market' => 'national', 'names' => ['FOX']],
+            ['market' => 'away', 'names' => ['KCOP', '']],
+        ]]]])['listings'],
+        'the older broadcasts shape'
+    );
+};
+
+/*
+ * 🚨 The ONE synthetic shape here, and said so: ESPN only puts a watch link on
+ * an event while it is being played, and none was on when the fixtures above
+ * were saved. What is asserted is the guard — only an https espn.com /watch
+ * link is ever kept — not a guess at the feed.
+ */
+$tests['where to watch: a watch link only from ESPN, only over https'] = function () {
+    $event = fn (array $link) => ['links' => [
+        ['rel' => ['summary', 'desktop', 'event'], 'href' => 'https://www.espn.com/college-football/game/_/gameId/1'],
+        $link,
+    ]];
+
+    $kept = EspnProvider::broadcasts($event(['rel' => ['live', 'desktop', 'event'], 'href' => 'https://www.espn.com/watch/player/_/id/abc', 'isPremium' => true]));
+    same('https://www.espn.com/watch/player/_/id/abc', $kept['watch'], 'an ESPN watch link is kept');
+    same(true, $kept['premium'], 'and its premium flag');
+
+    same('', EspnProvider::broadcasts($event(['rel' => ['live'], 'href' => 'http://www.espn.com/watch/x']))['watch'], 'plain http is refused');
+    same('', EspnProvider::broadcasts($event(['rel' => ['live'], 'href' => 'https://espn.com.evil.test/watch/x']))['watch'], 'a lookalike host is refused');
+    same('', EspnProvider::broadcasts($event(['rel' => ['live'], 'href' => 'https://www.espn.com/nfl/game/_/gameId/1']))['watch'], 'a gamecast is not a watch link');
+    same('', EspnProvider::broadcasts($event(['rel' => ['summary'], 'href' => 'https://www.espn.com/watch/x']))['watch'], 'only a live/watch rel counts');
+};
+
 /* ------------------------------------------------------------------ the runner */
 
 foreach ($tests as $name => $test) {

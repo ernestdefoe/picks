@@ -27,6 +27,7 @@ use Flarum\Database\AbstractModel;
  * @property string      $venue_city
  * @property bool        $time_tbd
  * @property string      $broadcast
+ * @property array|null  $broadcasts
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
@@ -74,6 +75,8 @@ class PickEvent extends AbstractModel
         'venue',
         'venue_city',
         'broadcast',
+        // Every listing + the watch link; see its migration.
+        'broadcasts',
         // Kickoff date known, time not yet announced; see its migration.
         'time_tbd',
     ];
@@ -91,6 +94,50 @@ class PickEvent extends AbstractModel
         'away_rank'   => 'integer',
         'time_tbd'    => 'boolean',
     ];
+
+    /**
+     * The full listing, decoded. Null when the feed never sent one.
+     *
+     * @return array{listings: list<array{name: string, type: string, market: string}>, watch: string, premium: bool}|null
+     */
+    public function getBroadcastsAttribute($value): ?array
+    {
+        $decoded = is_string($value) && $value !== '' ? json_decode($value, true) : null;
+
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    /**
+     * 🚨 The watch link SURVIVES a payload that does not carry one.
+     *
+     * ESPN puts it on the event only while the game is being played, and drops
+     * it between polls as often as not. A writer that simply replaced the
+     * column would make the Watch button point somewhere different every
+     * minute, so the last link seen is kept until a new one arrives. Done here,
+     * once, because three different syncs write this column.
+     *
+     * An empty listing with no link stores NULL: nothing known is not a fact.
+     */
+    public function setBroadcastsAttribute($value): void
+    {
+        $new = is_string($value) ? json_decode($value, true) : $value;
+        $new = is_array($new) ? $new : [];
+
+        $old = $this->getBroadcastsAttribute($this->attributes['broadcasts'] ?? null) ?? [];
+
+        $listings = array_values((array) ($new['listings'] ?? []));
+        $watch = (string) ($new['watch'] ?? '');
+        $premium = (bool) ($new['premium'] ?? false);
+
+        if ($watch === '' && ($old['watch'] ?? '') !== '') {
+            $watch = (string) $old['watch'];
+            $premium = (bool) ($old['premium'] ?? false);
+        }
+
+        $this->attributes['broadcasts'] = $listings === [] && $watch === ''
+            ? null
+            : json_encode(['listings' => $listings, 'watch' => $watch, 'premium' => $premium], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
 
     protected static function booted(): void
     {

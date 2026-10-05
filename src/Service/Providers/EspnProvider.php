@@ -411,6 +411,7 @@ class EspnProvider implements Provider
             'venue' => trim((string) (((array) ($competition['venue'] ?? []))['fullName'] ?? '')),
             'venue_city' => self::venueCity((array) ($competition['venue'] ?? [])),
             'broadcast' => self::broadcast($competition),
+            'broadcasts' => self::broadcasts($event),
 
             /* ------------------------------------------------- live state */
             'period' => (int) ($clock['period'] ?? 0),
@@ -620,6 +621,117 @@ class EspnProvider implements Provider
         // No national listing: the first regional one is better than silence,
         // and on a board built around one team it is usually the right channel.
         return $names[0] ?? '';
+    }
+
+    /**
+     * Every listing for a game, and the feed's own watch link when there is one.
+     *
+     * 🚨 `geoBroadcasts` first, because it is the only shape that says WHAT a
+     * listing is: `type.shortName` is TV, Streaming or Radio and `market.type`
+     * is National, Home or Away. `broadcasts` carries the market and the names
+     * and nothing about the medium, so it is the fallback, read as television.
+     *
+     * 🚨 Case-folded on the way in. College football sends "Streaming", MLS
+     * sends "STREAMING" — matched as written, every MLS stream would arrive as
+     * an unknown medium.
+     *
+     * 🚨 The watch link is taken only from ESPN's own host, and only over
+     * HTTPS. It is the one value here that becomes something a reader clicks,
+     * and a feed is not a reason to send people anywhere it names. It appears
+     * on the EVENT's links while a game is on (rel `live`/`watch`) and is
+     * absent before kickoff, which is why PickEvent keeps the last one it saw.
+     *
+     * @param  array<string, mixed> $event  the whole event, for its links
+     * @return array{listings: list<array{name: string, type: string, market: string}>, watch: string, premium: bool}
+     */
+    public static function broadcasts(array $event): array
+    {
+        $competition = (array) (($event['competitions'] ?? [[]])[0] ?? []);
+        $listings = [];
+
+        $add = function (string $name, string $type, string $market) use (&$listings): void {
+            $name = trim($name);
+
+            if ($name === '') {
+                return;
+            }
+
+            $type = match (strtolower(trim($type))) {
+                'streaming', 'stream' => 'streaming',
+                'radio' => 'radio',
+                default => 'tv',
+            };
+
+            $market = match (strtolower(trim($market))) {
+                'home' => 'home',
+                'away' => 'away',
+                default => 'national',
+            };
+
+            // One chip per channel per market: the two shapes overlap.
+            $listings[strtolower($name) . '|' . $market] ??= ['name' => $name, 'type' => $type, 'market' => $market];
+        };
+
+        foreach ((array) ($competition['geoBroadcasts'] ?? []) as $geo) {
+            if (! is_array($geo)) {
+                continue;
+            }
+
+            $add(
+                (string) (((array) ($geo['media'] ?? []))['shortName'] ?? ''),
+                (string) (((array) ($geo['type'] ?? []))['shortName'] ?? ''),
+                (string) (((array) ($geo['market'] ?? []))['type'] ?? '')
+            );
+        }
+
+        if ($listings === []) {
+            foreach ((array) ($competition['broadcasts'] ?? []) as $broadcast) {
+                if (! is_array($broadcast)) {
+                    continue;
+                }
+
+                foreach ((array) ($broadcast['names'] ?? []) as $name) {
+                    $add((string) $name, 'tv', (string) ($broadcast['market'] ?? ''));
+                }
+            }
+        }
+
+        $watch = '';
+        $premium = false;
+
+        foreach ((array) ($event['links'] ?? []) as $link) {
+            if (! is_array($link)) {
+                continue;
+            }
+
+            $rel = array_map('strval', (array) ($link['rel'] ?? []));
+            $href = trim((string) ($link['href'] ?? ''));
+
+            if (! array_intersect($rel, ['live', 'watch', 'watchespn']) || ! self::isEspnWatchUrl($href)) {
+                continue;
+            }
+
+            $watch = $href;
+            $premium = ! empty($link['isPremium']);
+            break;
+        }
+
+        return ['listings' => array_values($listings), 'watch' => $watch, 'premium' => $premium];
+    }
+
+    /** An https link on espn.com (or a subdomain of it) with /watch in its path. */
+    public static function isEspnWatchUrl(string $href): bool
+    {
+        $parts = parse_url($href);
+
+        if (! is_array($parts) || ($parts['scheme'] ?? '') !== 'https') {
+            return false;
+        }
+
+        $host = strtolower((string) ($parts['host'] ?? ''));
+
+        return ($host === 'espn.com' || str_ends_with($host, '.espn.com'))
+            && str_contains((string) ($parts['path'] ?? ''), '/watch');
     }
 
     /**

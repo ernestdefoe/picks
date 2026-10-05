@@ -368,6 +368,7 @@ class EspnSyncService
             'venue' => (string) ($game['venue'] ?? ''),
             'venue_city' => (string) ($game['venue_city'] ?? ''),
             'broadcast' => (string) ($game['broadcast'] ?? ''),
+            'broadcasts' => (array) ($game['broadcasts'] ?? []),
         ];
     }
 

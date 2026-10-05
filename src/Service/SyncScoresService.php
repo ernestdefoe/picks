@@ -277,6 +277,7 @@ class SyncScoresService
                 $event->venue       = trim((string) (((array) ($competition['venue'] ?? []))['fullName'] ?? ''));
                 $event->venue_city  = EspnProvider::venueCity((array) ($competition['venue'] ?? []));
                 $event->broadcast   = EspnProvider::broadcast($competition);
+                $event->broadcasts  = EspnProvider::broadcasts($espnEvent);
             }
 
             // A game that has not started has no score, no clock and no result

@@ -1,0 +1,400 @@
+[
+ {
+  "_league": "college-football 2026-10-10",
+  "id": "401866436",
+  "name": "Sacramento State Hornets at Bowling Green Falcons",
+  "links": [
+   {
+    "language": "en-US",
+    "rel": [
+     "summary",
+     "desktop",
+     "event"
+    ],
+    "href": "https://www.espn.com/college-football/game/_/gameId/401866436/sacramento-st-bowling-green",
+    "text": "Gamecast",
+    "shortText": "Gamecast",
+    "isExternal": false,
+    "isPremium": false
+   }
+  ],
+  "competitions": [
+   {
+    "broadcasts": [
+     {
+      "market": "national",
+      "names": [
+       "ESPN+"
+      ]
+     }
+    ],
+    "geoBroadcasts": [
+     {
+      "type": {
+       "id": "4",
+       "shortName": "Streaming"
+      },
+      "market": {
+       "id": "1",
+       "type": "National"
+      },
+      "media": {
+       "shortName": "ESPN+",
+       "logo": "https://a.espncdn.com/guid/322a7e47-3cdb-3b5c-ab1b-678e1f2c27e5/logos/default.png",
+       "darkLogo": "https://a.espncdn.com/guid/322a7e47-3cdb-3b5c-ab1b-678e1f2c27e5/logos/default-dark.png"
+      },
+      "lang": "en",
+      "region": "us"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "_league": "college-football 2026-10-10",
+  "id": "401858482",
+  "name": "Ball State Cardinals at Northwestern Wildcats",
+  "links": [
+   {
+    "language": "en-US",
+    "rel": [
+     "summary",
+     "desktop",
+     "event"
+    ],
+    "href": "https://www.espn.com/college-football/game/_/gameId/401858482/ball-state-northwestern",
+    "text": "Gamecast",
+    "shortText": "Gamecast",
+    "isExternal": false,
+    "isPremium": false
+   }
+  ],
+  "competitions": [
+   {
+    "broadcasts": [
+     {
+      "market": "national",
+      "names": [
+       "BTN"
+      ]
+     }
+    ],
+    "geoBroadcasts": [
+     {
+      "type": {
+       "id": "1",
+       "shortName": "TV"
+      },
+      "market": {
+       "id": "1",
+       "type": "National"
+      },
+      "media": {
+       "shortName": "BTN"
+      },
+      "lang": "en",
+      "region": "us"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "_league": "college-football 2026-10-10",
+  "id": "401858484",
+  "name": "UCLA Bruins at Oregon Ducks",
+  "links": [
+   {
+    "language": "en-US",
+    "rel": [
+     "summary",
+     "desktop",
+     "event"
+    ],
+    "href": "https://www.espn.com/college-football/game/_/gameId/401858484/ucla-oregon",
+    "text": "Gamecast",
+    "shortText": "Gamecast",
+    "isExternal": false,
+    "isPremium": false
+   }
+  ],
+  "competitions": [
+   {
+    "broadcasts": [
+     {
+      "market": "national",
+      "names": [
+       "CBS"
+      ]
+     }
+    ],
+    "geoBroadcasts": [
+     {
+      "type": {
+       "id": "1",
+       "shortName": "TV"
+      },
+      "market": {
+       "id": "1",
+       "type": "National"
+      },
+      "media": {
+       "shortName": "CBS"
+      },
+      "lang": "en",
+      "region": "us"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "_league": "college-football 2026-10-10",
+  "id": "401856718",
+  "name": "Ole Miss Rebels at Vanderbilt Commodores",
+  "links": [
+   {
+    "language": "en-US",
+    "rel": [
+     "summary",
+     "desktop",
+     "event"
+    ],
+    "href": "https://www.espn.com/college-football/game/_/gameId/401856718/ole-miss-vanderbilt",
+    "text": "Gamecast",
+    "shortText": "Gamecast",
+    "isExternal": false,
+    "isPremium": false
+   }
+  ],
+  "competitions": [
+   {
+    "broadcasts": [
+     {
+      "market": "national",
+      "names": [
+       "ESPN"
+      ]
+     }
+    ],
+    "geoBroadcasts": [
+     {
+      "type": {
+       "id": "1",
+       "shortName": "TV"
+      },
+      "market": {
+       "id": "1",
+       "type": "National"
+      },
+      "media": {
+       "shortName": "ESPN",
+       "logo": "https://a.espncdn.com/guid/335fd2d2-97b9-336b-81ee-573eb6bdcffc/logos/default.png",
+       "darkLogo": ""
+      },
+      "lang": "en",
+      "region": "us"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "_league": "nhl 2026-10-04",
+  "id": "401892442",
+  "name": "Winnipeg Jets at Detroit Red Wings",
+  "links": [
+   {
+    "language": "en-US",
+    "rel": [
+     "summary",
+     "desktop",
+     "event"
+    ],
+    "href": "https://www.espn.com/nhl/game/_/gameId/401892442/jets-red-wings",
+    "text": "Gamecast",
+    "shortText": "Gamecast",
+    "isExternal": false,
+    "isPremium": false
+   },
+   {
+    "language": "en-US",
+    "rel": [
+     "boxscore",
+     "desktop",
+     "event"
+    ],
+    "href": "https://www.espn.com/nhl/boxscore/_/gameId/401892442",
+    "text": "Box Score",
+    "shortText": "Box Score",
+    "isExternal": false,
+    "isPremium": false
+   },
+   {
+    "language": "en-US",
+    "rel": [
+     "highlights",
+     "desktop"
+    ],
+    "href": "https://www.espn.com/nhl/video?gameId=401892442",
+    "text": "Highlights",
+    "shortText": "Highlights",
+    "isExternal": false,
+    "isPremium": false
+   },
+   {
+    "language": "en-US",
+    "rel": [
+     "pbp",
+     "desktop",
+     "event"
+    ],
+    "href": "https://www.espn.com/nhl/playbyplay/_/gameId/401892442",
+    "text": "Play-by-Play",
+    "shortText": "Play-by-Play",
+    "isExternal": false,
+    "isPremium": false
+   },
+   {
+    "language": "en-US",
+    "rel": [
+     "recap",
+     "desktop",
+     "event"
+    ],
+    "href": "https://www.espn.com/nhl/recap?gameId=401892442",
+    "text": "Recap",
+    "shortText": "Recap",
+    "isExternal": false,
+    "isPremium": false
+   }
+  ],
+  "competitions": [
+   {
+    "broadcasts": [
+     {
+      "market": "national",
+      "names": [
+       "NHL Net"
+      ]
+     },
+     {
+      "market": "home",
+      "names": [
+       "DSN"
+      ]
+     }
+    ],
+    "geoBroadcasts": [
+     {
+      "type": {
+       "id": "1",
+       "shortName": "TV"
+      },
+      "market": {
+       "id": "1",
+       "type": "National"
+      },
+      "media": {
+       "shortName": "NHL Net"
+      },
+      "lang": "en",
+      "region": "us"
+     },
+     {
+      "type": {
+       "id": "4",
+       "shortName": "Streaming"
+      },
+      "market": {
+       "id": "2",
+       "type": "Home"
+      },
+      "media": {
+       "shortName": "DSN"
+      },
+      "lang": "en",
+      "region": "us"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "_league": "mls 2026-10-05",
+  "id": "761660",
+  "name": "Vancouver Whitecaps at Chicago Fire FC",
+  "links": [
+   {
+    "language": "en-US",
+    "rel": [
+     "summary",
+     "desktop",
+     "event"
+    ],
+    "href": "https://www.espn.com/soccer/match/_/gameId/761660/vancouver-whitecaps-chicago-fire-fc",
+    "text": "Summary",
+    "shortText": "Summary",
+    "isExternal": false,
+    "isPremium": false,
+    "isHidden": false
+   }
+  ],
+  "competitions": [
+   {
+    "broadcasts": [
+     {
+      "market": "national",
+      "names": [
+       "Apple TV"
+      ]
+     }
+    ],
+    "geoBroadcasts": [
+     {
+      "type": {
+       "id": "4",
+       "shortName": "STREAMING"
+      },
+      "market": {
+       "id": "1",
+       "type": "National"
+      },
+      "media": {
+       "shortName": "Apple TV"
+      },
+      "lang": "en",
+      "region": "us"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "_league": "epl 2026-10-05",
+  "id": "401879268",
+  "name": "Leeds United at Arsenal",
+  "links": [
+   {
+    "language": "en-US",
+    "rel": [
+     "summary",
+     "desktop",
+     "event"
+    ],
+    "href": "https://www.espn.com/soccer/match/_/gameId/401879268/leeds-united-arsenal",
+    "text": "Summary",
+    "shortText": "Summary",
+    "isExternal": false,
+    "isPremium": false,
+    "isHidden": false
+   }
+  ],
+  "competitions": [
+   {
+    "broadcasts": [],
+    "geoBroadcasts": []
+   }
+  ]
+ }
+]
