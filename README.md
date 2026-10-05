@@ -135,7 +135,16 @@ scores never change.
 ![Confidence 10 week standings, with the tiebreaker column](screenshots/confidence-leaderboard.png)
 
 The **Leaderboard** and **History** tabs get a *Full board / Confidence 10*
-switch, with week and season standings for the contest.
+switch, with week, season and all-time standings for the contest. All time is
+the sum of each member's seasons, as on the full board.
+
+![Confidence 10 all-time standings](screenshots/confidence-alltime.png)
+
+A member's **Picks History** tab on their profile gets a Confidence 10 section
+under the full board's: the same stat cards for all time, then each season they
+played with its weeks, including the tiebreaker distance and the rank each week.
+
+![The Confidence 10 section of a member's Picks History](screenshots/confidence-profile.png)
 
 <p>
   <img src="screenshots/confidence-results.png" alt="A finished Confidence week: each pick marked correct or incorrect with its points" width="380">
