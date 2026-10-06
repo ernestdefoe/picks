@@ -231,10 +231,8 @@ Subsequently forked by [resofire](https://github.com/resofire) and now maintaine
 
 ## Support
 
-Questions, bug reports, and feature requests:
-
-- **Support forum:** https://ernestdefoe.online
-- **Issues:** https://github.com/ernestdefoe/picks/issues
+- **Support forum:** [Picks on ernestdefoe.online](https://ernestdefoe.online/d/18)
+- **Bug reports:** [GitHub issues](https://github.com/ernestdefoe/picks/issues)
 
 ## License
 
