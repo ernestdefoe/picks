@@ -25,17 +25,17 @@ class SyncTeamsController implements RequestHandlerInterface
             $result = $this->teamSyncService->sync(downloadLogos: false);
         } catch (\RuntimeException $e) {
             return new JsonResponse([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => $e->getMessage(),
             ], 422);
         }
 
         return new JsonResponse([
-            'status'  => 'success',
+            'status' => 'success',
             'created' => $result['created'],
             'updated' => $result['updated'],
-            'logos'   => $result['logos'],
-            'errors'  => $result['errors'],
+            'logos' => $result['logos'],
+            'errors' => $result['errors'],
         ]);
     }
 }

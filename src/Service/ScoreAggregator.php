@@ -80,30 +80,30 @@ class ScoreAggregator
         if ($confidenceMode) {
             // Penalty from incorrect picks, per the configured rule.
             $penaltyExpr = match ($confidencePenalty) {
-                'full'  => 'SUM(CASE WHEN is_correct = false THEN COALESCE(confidence, 0) ELSE 0 END)',
-                'half'  => 'SUM(CASE WHEN is_correct = false THEN FLOOR(COALESCE(confidence, 0) / 2) ELSE 0 END)',
+                'full' => 'SUM(CASE WHEN is_correct = false THEN COALESCE(confidence, 0) ELSE 0 END)',
+                'half' => 'SUM(CASE WHEN is_correct = false THEN FLOOR(COALESCE(confidence, 0) / 2) ELSE 0 END)',
                 default => '0',
             };
 
             $row = (clone $query)->selectRaw(
                 'COUNT(*) AS agg_total, '
-                . 'SUM(CASE WHEN is_correct = true THEN 1 ELSE 0 END) AS agg_correct, '
-                . 'SUM(CASE WHEN is_correct = true THEN COALESCE(confidence, 1) ELSE 0 END) AS agg_earned, '
-                . $penaltyExpr . ' AS agg_penalty'
+                .'SUM(CASE WHEN is_correct = true THEN 1 ELSE 0 END) AS agg_correct, '
+                .'SUM(CASE WHEN is_correct = true THEN COALESCE(confidence, 1) ELSE 0 END) AS agg_earned, '
+                .$penaltyExpr.' AS agg_penalty'
             )->first();
 
-            $totalPicks   = (int) ($row->agg_total ?? 0);
+            $totalPicks = (int) ($row->agg_total ?? 0);
             $correctPicks = (int) ($row->agg_correct ?? 0);
-            $totalPoints  = max(0, (int) ($row->agg_earned ?? 0) - (int) ($row->agg_penalty ?? 0));
+            $totalPoints = max(0, (int) ($row->agg_earned ?? 0) - (int) ($row->agg_penalty ?? 0));
         } else {
             $row = (clone $query)->selectRaw(
                 'COUNT(*) AS agg_total, '
-                . 'SUM(CASE WHEN is_correct = true THEN 1 ELSE 0 END) AS agg_correct'
+                .'SUM(CASE WHEN is_correct = true THEN 1 ELSE 0 END) AS agg_correct'
             )->first();
 
-            $totalPicks   = (int) ($row->agg_total ?? 0);
+            $totalPicks = (int) ($row->agg_total ?? 0);
             $correctPicks = (int) ($row->agg_correct ?? 0);
-            $totalPoints  = $correctPicks;
+            $totalPoints = $correctPicks;
         }
 
         $accuracy = $totalPicks > 0
@@ -132,13 +132,13 @@ class ScoreAggregator
 
             $score = $scoreQuery->first() ?? new UserScore();
 
-            $score->user_id       = $userId;
-            $score->week_id       = ($weekScope && $weekId) ? $weekId : null;
-            $score->season_id     = $seasonId;
-            $score->total_picks   = $totalPicks;
+            $score->user_id = $userId;
+            $score->week_id = ($weekScope && $weekId) ? $weekId : null;
+            $score->season_id = $seasonId;
+            $score->total_picks = $totalPicks;
             $score->correct_picks = $correctPicks;
-            $score->total_points  = $totalPoints;
-            $score->accuracy      = $accuracy;
+            $score->total_points = $totalPoints;
+            $score->accuracy = $accuracy;
             $score->save();
         });
     }
@@ -152,12 +152,13 @@ class ScoreAggregator
      */
     private function withScopeLock(int $userId, bool $weekScope, ?int $weekId, ?int $seasonId, callable $write): void
     {
-        $scope   = ($weekScope && $weekId) ? "w{$weekId}" : ($seasonId ? "s{$seasonId}" : 'all');
+        $scope = ($weekScope && $weekId) ? "w{$weekId}" : ($seasonId ? "s{$seasonId}" : 'all');
         $lockKey = "ernestdefoe-picks.score.{$userId}.{$scope}";
 
         $store = $this->cache->getStore();
         if (! $store instanceof LockProvider) {
             $write();
+
             return;
         }
 
@@ -167,6 +168,7 @@ class ScoreAggregator
             $lock->block(self::LOCK_WAIT_SECONDS);
         } catch (LockTimeoutException $e) {
             $write();
+
             return;
         }
 

@@ -17,17 +17,19 @@ class ListEventsController implements RequestHandlerInterface
     public function __construct(
         protected SettingsRepositoryInterface $settings
     ) {
-    }    public function handle(ServerRequestInterface $request): ResponseInterface
+    }
+
+    public function handle(ServerRequestInterface $request): ResponseInterface
     {
         RequestUtil::getActor($request)->assertCan('picks.manage');
 
-        $params  = $request->getQueryParams();
-        $page    = max(1, (int) Arr::get($params, 'page', 1));
+        $params = $request->getQueryParams();
+        $page = max(1, (int) Arr::get($params, 'page', 1));
         $perPage = max(1, min(100, (int) Arr::get($params, 'per_page', 50)));
-        $search  = trim(Arr::get($params, 'search', ''));
-        $weekId  = Arr::get($params, 'week_id', '');
-        $status  = Arr::get($params, 'status', '');
-        $sort    = Arr::get($params, 'sort', 'date_asc');
+        $search = trim(Arr::get($params, 'search', ''));
+        $weekId = Arr::get($params, 'week_id', '');
+        $status = Arr::get($params, 'status', '');
+        $sort = Arr::get($params, 'sort', 'date_asc');
 
         $query = PickEvent::with(['homeTeam', 'awayTeam', 'week']);
 
@@ -48,8 +50,8 @@ class ListEventsController implements RequestHandlerInterface
 
         match ($sort) {
             'date_desc' => $query->orderByDesc('match_date'),
-            'status'    => $query->orderBy('status')->orderBy('match_date'),
-            default     => $query->orderBy('match_date'),
+            'status' => $query->orderBy('status')->orderBy('match_date'),
+            default => $query->orderBy('match_date'),
         };
 
         $total = (clone $query)->count();
@@ -57,17 +59,17 @@ class ListEventsController implements RequestHandlerInterface
 
         return new JsonResponse([
             'data' => $items->map(fn (PickEvent $e) => [
-                'id'         => $e->id,
-                'cfbd_id'    => $e->cfbd_id,
-                'week_id'    => $e->week_id,
-                'week_name'  => $e->week?->name,
-                'status'     => $e->status,
+                'id' => $e->id,
+                'cfbd_id' => $e->cfbd_id,
+                'week_id' => $e->week_id,
+                'week_name' => $e->week?->name,
+                'status' => $e->status,
                 'match_date' => $e->match_date?->toIso8601String(),
-                'cutoff_date'=> $e->cutoff_date?->toIso8601String(),
+                'cutoff_date' => $e->cutoff_date?->toIso8601String(),
                 'neutral_site' => $e->neutral_site,
                 'home_score' => $e->home_score,
                 'away_score' => $e->away_score,
-                'result'     => $e->result,
+                'result' => $e->result,
                 /*
                  * 🚨 On the GAME, beside the score, not folded into the team.
                  * A rank belongs to the week the fixture was played in — see
@@ -76,16 +78,16 @@ class ListEventsController implements RequestHandlerInterface
                  * Nesting it under `home_team` would say the opposite, to
                  * whoever reads this payload next.
                  */
-                'home_rank'  => (int) $e->home_rank ?: null,
-                'away_rank'  => (int) $e->away_rank ?: null,
-                'home_team'  => $this->serializeTeam($e->homeTeam),
-                'away_team'  => $this->serializeTeam($e->awayTeam),
+                'home_rank' => (int) $e->home_rank ?: null,
+                'away_rank' => (int) $e->away_rank ?: null,
+                'home_team' => $this->serializeTeam($e->homeTeam),
+                'away_team' => $this->serializeTeam($e->awayTeam),
             ])->values()->toArray(),
             'meta' => [
-                'total'        => $total,
+                'total' => $total,
                 'current_page' => $page,
-                'per_page'     => $perPage,
-                'last_page'    => max(1, (int) ceil($total / $perPage)),
+                'per_page' => $perPage,
+                'last_page' => max(1, (int) ceil($total / $perPage)),
             ],
         ]);
     }
@@ -96,14 +98,13 @@ class ListEventsController implements RequestHandlerInterface
             return null;
         }
 
-
         return [
-            'id'           => $team->id,
-            'name'         => $team->name,
+            'id' => $team->id,
+            'name' => $team->name,
             'abbreviation' => $team->abbreviation,
-            'conference'   => $team->conference,
-            'logo_path'    => $team->logo_path,
-/*
+            'conference' => $team->conference,
+            'logo_path' => $team->logo_path,
+            /*
              * 🚨 Through the MODEL, never by gluing the forum URL onto the
              * stored path. `logo_path` is not always relative: a team synced
              * from ESPN — every league but college football — stores the
@@ -112,7 +113,7 @@ class ListEventsController implements RequestHandlerInterface
              * renders as a broken crest on every card. `Team::logo_url` has
              * always handled both; four controllers were quietly rebuilding it.
              */
-            'logo_url'      => $team->logo_url,
+            'logo_url' => $team->logo_url,
             'logo_dark_url' => $team->logo_dark_url,
         ];
     }

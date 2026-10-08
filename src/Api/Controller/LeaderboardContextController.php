@@ -15,7 +15,7 @@ use Resofire\Picks\Service\CurrentSeasonService;
 use Resofire\Picks\Week;
 
 /**
- * GET /picks/leaderboard-context
+ * GET /picks/leaderboard-context.
  *
  * Returns the current leaderboard context so the frontend knows whether
  * the season is active, in off-season retention, or fully off-season.
@@ -51,13 +51,13 @@ class LeaderboardContextController implements RequestHandlerInterface
             if ($activeWeek) {
                 // Season is active — no off-season context needed
                 return new JsonResponse([
-                    'is_active'          => true,
-                    'is_off_season'      => false,
-                    'retention_expired'  => false,
-                    'days_since_ended'   => null,
-                    'last_week_id'       => null,
-                    'last_season_id'     => null,
-                    'last_season_name'   => null,
+                    'is_active' => true,
+                    'is_off_season' => false,
+                    'retention_expired' => false,
+                    'days_since_ended' => null,
+                    'last_week_id' => null,
+                    'last_season_id' => null,
+                    'last_season_name' => null,
                 ]);
             }
 
@@ -72,13 +72,13 @@ class LeaderboardContextController implements RequestHandlerInterface
             if (! $lastSeason) {
                 // No completed seasons at all — truly no data
                 return new JsonResponse([
-                    'is_active'          => false,
-                    'is_off_season'      => false,
-                    'retention_expired'  => false,
-                    'days_since_ended'   => null,
-                    'last_week_id'       => null,
-                    'last_season_id'     => null,
-                    'last_season_name'   => null,
+                    'is_active' => false,
+                    'is_off_season' => false,
+                    'retention_expired' => false,
+                    'days_since_ended' => null,
+                    'last_week_id' => null,
+                    'last_season_id' => null,
+                    'last_season_name' => null,
                 ]);
             }
 
@@ -107,20 +107,20 @@ class LeaderboardContextController implements RequestHandlerInterface
                 ->first();
 
             return new JsonResponse([
-                'is_active'          => false,
-                'is_off_season'      => true,
-                'retention_expired'  => $retentionExpired,
-                'days_since_ended'   => $daysSinceEnded,
-                'last_week_id'       => $lastWeek->id ?? null,
-                'last_season_id'     => (int) $lastSeason->id,
-                'last_season_name'   => $lastSeason->name,
+                'is_active' => false,
+                'is_off_season' => true,
+                'retention_expired' => $retentionExpired,
+                'days_since_ended' => $daysSinceEnded,
+                'last_week_id' => $lastWeek->id ?? null,
+                'last_season_id' => (int) $lastSeason->id,
+                'last_season_name' => $lastSeason->name,
             ]);
 
         } catch (\Exception $e) {
             // Unexpected failure → 500 (the detail is logged). The valid
             // "no completed seasons / off-season" states are returned with 200
             // from the normal path above.
-            $this->log->error('[Picks] LeaderboardContext failed: ' . $e->getMessage(), ['exception' => $e]);
+            $this->log->error('[Picks] LeaderboardContext failed: '.$e->getMessage(), ['exception' => $e]);
 
             return new JsonResponse(['error' => 'Failed to load leaderboard context.'], 500);
         }

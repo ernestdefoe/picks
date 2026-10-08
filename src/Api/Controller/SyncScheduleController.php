@@ -24,13 +24,13 @@ class SyncScheduleController implements RequestHandlerInterface
             $result = $this->scheduleSyncService->sync();
         } catch (\RuntimeException $e) {
             return new JsonResponse([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => $e->getMessage(),
             ], 422);
         }
 
         return new JsonResponse([
-            'status'       => 'success',
+            'status' => 'success',
             'weeksCreated' => $result['weeksCreated'],
             'weeksUpdated' => $result['weeksUpdated'],
             'gamesCreated' => $result['gamesCreated'],

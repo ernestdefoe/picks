@@ -34,7 +34,7 @@ class UnlockWeeksCommand extends AbstractCommand
     {
         $opened = $this->syncScoresService->unlockDueWeeks();
 
-        $this->info($opened === [] ? 'No week due to open.' : 'Opened week id(s): ' . implode(', ', $opened));
+        $this->info($opened === [] ? 'No week due to open.' : 'Opened week id(s): '.implode(', ', $opened));
 
         return 0;
     }

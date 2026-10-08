@@ -11,7 +11,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 use Resofire\Picks\Jobs\SyncScoresJob;
 
 /**
- * GET /picks/sync/scores/status
+ * GET /picks/sync/scores/status.
  *
  * Reports the background score-sync state for the admin UI to poll after it
  * POSTs to SyncScoresController. Returns the status (idle|running|done|failed),
@@ -28,13 +28,13 @@ class SyncScoresStatusController implements RequestHandlerInterface
     {
         RequestUtil::getActor($request)->assertCan('picks.manage');
 
-        $status    = $this->settings->get(SyncScoresJob::STATUS_KEY) ?: 'idle';
+        $status = $this->settings->get(SyncScoresJob::STATUS_KEY) ?: 'idle';
         $resultRaw = $this->settings->get(SyncScoresJob::RESULT_KEY);
-        $result    = $resultRaw ? json_decode($resultRaw, true) : null;
+        $result = $resultRaw ? json_decode($resultRaw, true) : null;
 
         return new JsonResponse([
-            'status'    => $status,
-            'result'    => is_array($result) ? $result : null,
+            'status' => $status,
+            'result' => is_array($result) ? $result : null,
             'last_sync' => $this->settings->get('ernestdefoe-picks.last_scores_sync'),
         ]);
     }

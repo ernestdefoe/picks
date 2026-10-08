@@ -38,11 +38,11 @@ final class Profile
         foreach ($allTime as $index => $line) {
             if ($line['user_id'] === $userId) {
                 $alltime = [
-                    'total_points'  => $line['points'],
-                    'total_picks'   => $line['picks'],
+                    'total_points' => $line['points'],
+                    'total_picks' => $line['picks'],
                     'correct_picks' => $line['correct'],
-                    'accuracy'      => (float) $line['accuracy'],
-                    'rank'          => $index + 1,
+                    'accuracy' => (float) $line['accuracy'],
+                    'rank' => $index + 1,
                     'total_players' => count($allTime),
                 ];
                 break;
@@ -86,14 +86,14 @@ final class Profile
             });
 
             $out[] = [
-                'season_id'  => $id,
-                'name'       => $season['name'],
-                'year'       => (int) $season['year'],
+                'season_id' => $id,
+                'name' => $season['name'],
+                'year' => (int) $season['year'],
                 'is_current' => $id === $currentSeasonId,
-                'stats'      => self::line($stats, $players),
-                'weeks'      => array_map(fn (array $row) => [
-                    'week_id'    => (int) $row['week_id'],
-                    'week_name'  => $weeks[$row['week_id']]['name'],
+                'stats' => self::line($stats, $players),
+                'weeks' => array_map(fn (array $row) => [
+                    'week_id' => (int) $row['week_id'],
+                    'week_name' => $weeks[$row['week_id']]['name'],
                     'is_current' => (int) $row['week_id'] === $currentWeekId,
                 ] + self::line($row, $players), $played),
             ];
@@ -106,12 +106,12 @@ final class Profile
     private static function line(array $row, array $players): array
     {
         return [
-            'total_points'  => (int) $row['points'],
-            'total_picks'   => (int) $row['picks'],
+            'total_points' => (int) $row['points'],
+            'total_picks' => (int) $row['picks'],
             'correct_picks' => (int) $row['correct'],
-            'accuracy'      => (float) $row['accuracy'],
+            'accuracy' => (float) $row['accuracy'],
             'tiebreak_diff' => $row['diff'],
-            'rank'          => $row['rank'],
+            'rank' => $row['rank'],
             'total_players' => (int) ($players[$row['scope']] ?? 0),
         ];
     }

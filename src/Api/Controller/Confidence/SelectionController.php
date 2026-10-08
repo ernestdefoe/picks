@@ -44,7 +44,7 @@ class SelectionController implements RequestHandlerInterface
             if ($auto) {
                 $error = $this->contest->autoSelect($week);
             } else {
-                $ids   = Arr::get((array) $request->getParsedBody(), 'event_ids', []);
+                $ids = Arr::get((array) $request->getParsedBody(), 'event_ids', []);
                 $error = is_array($ids) ? $this->contest->setSelection($week, $ids) : 'bad_request';
             }
 
@@ -59,10 +59,10 @@ class SelectionController implements RequestHandlerInterface
     private function view(Week $week): array
     {
         $selection = $this->contest->selection($week->id);
-        $chosen    = $selection->pluck('event_id')->map(fn ($id) => (int) $id)->all();
+        $chosen = $selection->pluck('event_id')->map(fn ($id) => (int) $id)->all();
 
         $events = PickEvent::with(['homeTeam', 'awayTeam', 'week'])->where('week_id', $week->id)->get();
-        $order  = array_flip(Selector::order($events->map(fn ($e) => ConfidenceContest::row($e))->all(), Carbon::now('UTC')));
+        $order = array_flip(Selector::order($events->map(fn ($e) => ConfidenceContest::row($e))->all(), Carbon::now('UTC')));
 
         // Biggest first, then everything that has already started, by kickoff.
         $others = $events
@@ -71,13 +71,13 @@ class SelectionController implements RequestHandlerInterface
             ->values();
 
         return [
-            'week_id'    => (int) $week->id,
-            'week_name'  => $week->name,
-            'week_open'  => (bool) $week->is_open,
-            'enabled'    => $this->contest->enabled(),
-            'size'       => $this->contest->size(),
-            'frozen'     => $this->contest->isFrozen($selection),
-            'selection'  => $selection->map(fn (ConfidenceGame $g) => ConfidenceContest::gamePayload($g->event) + ['position' => (int) $g->position])->values()->all(),
+            'week_id' => (int) $week->id,
+            'week_name' => $week->name,
+            'week_open' => (bool) $week->is_open,
+            'enabled' => $this->contest->enabled(),
+            'size' => $this->contest->size(),
+            'frozen' => $this->contest->isFrozen($selection),
+            'selection' => $selection->map(fn (ConfidenceGame $g) => ConfidenceContest::gamePayload($g->event) + ['position' => (int) $g->position])->values()->all(),
             'candidates' => $others->map(fn (PickEvent $e) => ConfidenceContest::gamePayload($e))->all(),
         ];
     }

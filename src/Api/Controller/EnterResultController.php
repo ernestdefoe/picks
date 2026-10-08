@@ -25,24 +25,24 @@ class EnterResultController implements RequestHandlerInterface
     {
         RequestUtil::getActor($request)->assertCan('picks.manage');
 
-        $id    = (int) Arr::get($request->getAttribute('routeParameters'), 'id', 0);
+        $id = (int) Arr::get($request->getAttribute('routeParameters'), 'id', 0);
         $event = PickEvent::findOrFail($id);
 
-        $body      = $request->getParsedBody() ?? [];
+        $body = $request->getParsedBody() ?? [];
         $homeScore = Arr::get($body, 'homeScore');
         $awayScore = Arr::get($body, 'awayScore');
 
         if ($homeScore === null || $awayScore === null) {
             return new JsonResponse([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'homeScore and awayScore are required.',
             ], 422);
         }
 
         $event->home_score = (int) $homeScore;
         $event->away_score = (int) $awayScore;
-        $event->status     = PickEvent::STATUS_FINISHED;
-        $event->result     = $event->calculateResult();
+        $event->status = PickEvent::STATUS_FINISHED;
+        $event->result = $event->calculateResult();
         $event->save();
 
         $this->queue->push(new ScorePicksJob($event->id));
@@ -54,12 +54,12 @@ class EnterResultController implements RequestHandlerInterface
         }
 
         return new JsonResponse([
-            'status'           => 'success',
-            'id'               => $event->id,
-            'homeScore'        => $event->home_score,
-            'awayScore'        => $event->away_score,
-            'result'           => $event->result,
-            'gameStatus'       => $event->status,
+            'status' => 'success',
+            'id' => $event->id,
+            'homeScore' => $event->home_score,
+            'awayScore' => $event->away_score,
+            'result' => $event->result,
+            'gameStatus' => $event->status,
             'nextWeekUnlocked' => $nextWeekUnlocked,
         ]);
     }

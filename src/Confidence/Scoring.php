@@ -25,8 +25,8 @@ final class Scoring
     public static function penalty(int $confidence, string $rule): int
     {
         return match ($rule) {
-            'full'  => $confidence,
-            'half'  => intdiv($confidence, 2),
+            'full' => $confidence,
+            'half' => intdiv($confidence, 2),
             default => 0,
         };
     }
@@ -37,8 +37,8 @@ final class Scoring
      */
     public static function total(array $picks, string $penalty): array
     {
-        $points  = 0;
-        $scored  = 0;
+        $points = 0;
+        $scored = 0;
         $correct = 0;
 
         foreach ($picks as $pick) {
@@ -58,9 +58,9 @@ final class Scoring
         }
 
         return [
-            'points'   => $points,
-            'picks'    => $scored,
-            'correct'  => $correct,
+            'points' => $points,
+            'picks' => $scored,
+            'correct' => $correct,
             'accuracy' => $scored > 0 ? round($correct / $scored * 100, 2) : 0.0,
         ];
     }
@@ -117,8 +117,8 @@ final class Scoring
             $id = (int) $row['user_id'];
             $line = $byUser[$id] ?? ['user_id' => $id, 'points' => 0, 'picks' => 0, 'correct' => 0, 'diff' => null];
 
-            $line['points']  += (int) $row['points'];
-            $line['picks']   += (int) $row['picks'];
+            $line['points'] += (int) $row['points'];
+            $line['picks'] += (int) $row['picks'];
             $line['correct'] += (int) $row['correct'];
 
             if ($row['diff'] !== null) {

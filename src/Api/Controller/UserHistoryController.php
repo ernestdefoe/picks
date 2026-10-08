@@ -17,7 +17,7 @@ use Resofire\Picks\UserScore;
 use Resofire\Picks\Week;
 
 /**
- * GET /picks/user-history?user_id=X
+ * GET /picks/user-history?user_id=X.
  *
  * Returns the full season-by-season pick history for a user, including
  * per-week breakdowns within each season. Used by the profile history stack.
@@ -37,11 +37,11 @@ class UserHistoryController implements RequestHandlerInterface
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-        $actor  = RequestUtil::getActor($request);
+        $actor = RequestUtil::getActor($request);
         $params = $request->getQueryParams();
         $userId = (int) Arr::get($params, 'user_id', 0);
 
-        if (!$userId) {
+        if (! $userId) {
             return new JsonResponse(['error' => 'user_id required'], 422);
         }
 
@@ -59,9 +59,9 @@ class UserHistoryController implements RequestHandlerInterface
                 ->get();
 
             // ── Current week (shared via CurrentSeasonService) ───────────────
-            $currentWeek     = $this->currentSeason->getCurrentWeek();
+            $currentWeek = $this->currentSeason->getCurrentWeek();
             $currentSeasonId = $currentWeek?->season_id;
-            $currentWeekId   = $currentWeek?->id;
+            $currentWeekId = $currentWeek?->id;
 
             // This user's own season/week score rows — defines the only scopes
             // we need rank data for. Loading these first lets us bound every
@@ -87,7 +87,7 @@ class UserHistoryController implements RequestHandlerInterface
             // Season/week rank sets, scoped to ONLY the seasons/weeks this user
             // participated in (was: every season and every week for every player).
             $seasonIds = $userSeasonScores->keys()->all();
-            $weekIds   = $userWeekScores->keys()->all();
+            $weekIds = $userWeekScores->keys()->all();
 
             $seasonScoresBySeason = empty($seasonIds) ? collect() : UserScore::query()
                 ->whereNull('week_id')->whereIn('season_id', $seasonIds)
@@ -116,7 +116,7 @@ class UserHistoryController implements RequestHandlerInterface
             ]);
 
         } catch (\Exception $e) {
-            $this->log->error('[Picks] UserHistory failed: ' . $e->getMessage(), ['exception' => $e]);
+            $this->log->error('[Picks] UserHistory failed: '.$e->getMessage(), ['exception' => $e]);
 
             return new JsonResponse(['error' => 'Failed to load history.'], 500);
         }
@@ -138,22 +138,22 @@ class UserHistoryController implements RequestHandlerInterface
             return null;
         }
 
-        $alltimeRank         = null;
+        $alltimeRank = null;
         $alltimeTotalPlayers = 0;
         if ($alltimeRow->total_picks > 0) {
-            $alltimeRank         = UserScore::rankIn($alltimeScores, $alltimeRow->total_points);
+            $alltimeRank = UserScore::rankIn($alltimeScores, $alltimeRow->total_points);
             $alltimeTotalPlayers = $alltimeScores->count();
         }
 
         return [
-            'total_picks'    => (int) $alltimeRow->total_picks,
-            'correct_picks'  => (int) $alltimeRow->correct_picks,
-            'total_points'   => (int) $alltimeRow->total_points,
-            'accuracy'       => (float) $alltimeRow->accuracy,
-            'rank'           => $alltimeRank,
-            'total_players'  => $alltimeTotalPlayers,
+            'total_picks' => (int) $alltimeRow->total_picks,
+            'correct_picks' => (int) $alltimeRow->correct_picks,
+            'total_points' => (int) $alltimeRow->total_points,
+            'accuracy' => (float) $alltimeRow->accuracy,
+            'rank' => $alltimeRank,
+            'total_players' => $alltimeTotalPlayers,
             'longest_streak' => $this->buildStreakStat($userId),
-            'best_week'      => $this->buildBestWeek($userId),
+            'best_week' => $this->buildBestWeek($userId),
         ];
     }
 
@@ -183,12 +183,12 @@ class UserHistoryController implements RequestHandlerInterface
         }
 
         return [
-            'week_name'     => $bestWeekRow->getAttribute('week_name'),
-            'season_year'   => (int) $bestWeekRow->getAttribute('season_year'),
-            'accuracy'      => (float) $bestWeekRow->accuracy,
+            'week_name' => $bestWeekRow->getAttribute('week_name'),
+            'season_year' => (int) $bestWeekRow->getAttribute('season_year'),
+            'accuracy' => (float) $bestWeekRow->accuracy,
             'correct_picks' => (int) $bestWeekRow->correct_picks,
-            'total_picks'   => (int) $bestWeekRow->total_picks,
-            'total_points'  => (int) $bestWeekRow->total_points,
+            'total_picks' => (int) $bestWeekRow->total_picks,
+            'total_points' => (int) $bestWeekRow->total_points,
         ];
     }
 
@@ -227,12 +227,12 @@ class UserHistoryController implements RequestHandlerInterface
             $seasonScore = $userSeasonScores->get($season->id);
 
             // Season rank — from the pre-loaded collection (no per-season query)
-            $seasonRank         = null;
+            $seasonRank = null;
             $seasonTotalPlayers = 0;
-            $seasonScopeScores  = $seasonScoresBySeason->get($season->id, collect());
+            $seasonScopeScores = $seasonScoresBySeason->get($season->id, collect());
 
             if ($seasonScore && $seasonScore->total_picks > 0) {
-                $seasonRank         = UserScore::rankIn($seasonScopeScores, $seasonScore->total_points);
+                $seasonRank = UserScore::rankIn($seasonScopeScores, $seasonScore->total_points);
                 $seasonTotalPlayers = $seasonScopeScores->count();
             }
 
@@ -241,8 +241,8 @@ class UserHistoryController implements RequestHandlerInterface
             // picked it yet — so every week still appears.
             $weeksData = [];
             foreach ($weeksBySeason->get($season->id, collect()) as $week) {
-                $userWeek    = $userWeekScores->get($week->id);
-                $totalPicks  = (int) ($userWeek->total_picks ?? 0);
+                $userWeek = $userWeekScores->get($week->id);
+                $totalPicks = (int) ($userWeek->total_picks ?? 0);
                 $totalPoints = (int) ($userWeek->total_points ?? 0);
 
                 // Week rank — from the pre-loaded collection (no per-week query)
@@ -255,32 +255,32 @@ class UserHistoryController implements RequestHandlerInterface
                 }
 
                 $weeksData[] = [
-                    'week_id'       => (int) $week->id,
-                    'week_name'     => $week->name,
-                    'week_number'   => (int) $week->week_number,
-                    'is_current'    => ((int) $week->id === (int) $currentWeekId),
-                    'total_picks'   => $totalPicks,
+                    'week_id' => (int) $week->id,
+                    'week_name' => $week->name,
+                    'week_number' => (int) $week->week_number,
+                    'is_current' => ((int) $week->id === (int) $currentWeekId),
+                    'total_picks' => $totalPicks,
                     'correct_picks' => (int) ($userWeek->correct_picks ?? 0),
-                    'total_points'  => $totalPoints,
-                    'accuracy'      => (float) ($userWeek->accuracy ?? 0.0),
-                    'rank'          => $weekRank,
+                    'total_points' => $totalPoints,
+                    'accuracy' => (float) ($userWeek->accuracy ?? 0.0),
+                    'rank' => $weekRank,
                 ];
             }
 
             $seasonsData[] = [
-                'season_id'    => (int) $season->id,
-                'name'         => $season->name,
-                'year'         => (int) $season->year,
-                'is_current'   => ((int) $season->id === (int) $currentSeasonId),
-                'stats'        => $seasonScore ? [
-                    'total_picks'   => (int) $seasonScore->total_picks,
+                'season_id' => (int) $season->id,
+                'name' => $season->name,
+                'year' => (int) $season->year,
+                'is_current' => ((int) $season->id === (int) $currentSeasonId),
+                'stats' => $seasonScore ? [
+                    'total_picks' => (int) $seasonScore->total_picks,
                     'correct_picks' => (int) $seasonScore->correct_picks,
-                    'total_points'  => (int) $seasonScore->total_points,
-                    'accuracy'      => (float) $seasonScore->accuracy,
-                    'rank'          => $seasonRank,
+                    'total_points' => (int) $seasonScore->total_points,
+                    'accuracy' => (float) $seasonScore->accuracy,
+                    'rank' => $seasonRank,
                     'total_players' => $seasonTotalPlayers,
                 ] : null,
-                'weeks'        => $weeksData,
+                'weeks' => $weeksData,
             ];
         }
 
@@ -321,9 +321,9 @@ class UserHistoryController implements RequestHandlerInterface
                 'picks_picks.is_correct as is_correct',
                 $connection->raw(
                     "ROW_NUMBER() OVER (ORDER BY {$p}picks_events.match_date, {$p}picks_events.id)"
-                    . ' - ROW_NUMBER() OVER ('
-                    . "PARTITION BY {$p}picks_picks.is_correct"
-                    . " ORDER BY {$p}picks_events.match_date, {$p}picks_events.id) AS grp"
+                    .' - ROW_NUMBER() OVER ('
+                    ."PARTITION BY {$p}picks_picks.is_correct"
+                    ." ORDER BY {$p}picks_events.match_date, {$p}picks_events.id) AS grp"
                 ),
             ]);
 

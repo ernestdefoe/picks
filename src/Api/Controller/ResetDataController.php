@@ -21,12 +21,12 @@ class ResetDataController implements RequestHandlerInterface
     {
         RequestUtil::getActor($request)->assertAdmin();
 
-        $body  = $request->getParsedBody() ?? [];
+        $body = $request->getParsedBody() ?? [];
         $scope = Arr::get($body, 'scope');
 
         if (! in_array($scope, ['schedule', 'all'], true)) {
             return new JsonResponse([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Invalid scope. Must be "schedule" or "all".',
             ], 422);
         }
@@ -61,7 +61,7 @@ class ResetDataController implements RequestHandlerInterface
 
         return new JsonResponse([
             'status' => 'success',
-            'scope'  => $scope,
+            'scope' => $scope,
             'counts' => $counts,
         ]);
     }

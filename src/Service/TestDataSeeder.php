@@ -24,13 +24,13 @@ use Resofire\Picks\Week;
  */
 class TestDataSeeder
 {
-    protected const FAKE_YEAR       = 2025;
-    protected const FAKE_SLUG       = '2025-season-fake';
+    protected const FAKE_YEAR = 2025;
+    protected const FAKE_SLUG = '2025-season-fake';
     protected const EVENTS_PER_WEEK = 8;
     protected const FAKE_WEEK_COUNT = 16;
 
     /** Bulk-insert pick rows in batches of this size instead of one INSERT each. */
-    protected const INSERT_CHUNK    = 500;
+    protected const INSERT_CHUNK = 500;
 
     // Hit rates assigned randomly across users — produces a realistic spread.
     protected const HIT_RATES = [0.82, 0.75, 0.70, 0.65, 0.60, 0.55, 0.50];
@@ -44,7 +44,7 @@ class TestDataSeeder
     ) {
         // Seeded scores must honour the same confidence settings as live
         // scoring, so the Testing-tab leaderboard matches production behaviour.
-        $this->confidenceMode    = (bool) $settings->get('ernestdefoe-picks.confidence_mode', false);
+        $this->confidenceMode = (bool) $settings->get('ernestdefoe-picks.confidence_mode', false);
         $this->confidencePenalty = $settings->get('ernestdefoe-picks.confidence_penalty', 'none');
     }
 
@@ -67,8 +67,8 @@ class TestDataSeeder
             return ['status' => 'error', 'message' => 'No events found in picks_events. Import your 2026 schedule first.'];
         }
 
-        $eventsByWeek  = $events->groupBy('week_id');
-        $weekIds       = $eventsByWeek->keys()->toArray();
+        $eventsByWeek = $events->groupBy('week_id');
+        $weekIds = $eventsByWeek->keys()->toArray();
         $picksInserted = 0;
 
         // Preload every existing (user_id, event_id) pair in ONE query, keyed
@@ -79,41 +79,41 @@ class TestDataSeeder
                 ->whereIn('event_id', $events->pluck('id')->all())
                 ->get(['user_id', 'event_id']) as $existing
         ) {
-            $existingPairs[$existing->user_id . ':' . $existing->event_id] = true;
+            $existingPairs[$existing->user_id.':'.$existing->event_id] = true;
         }
 
         // Batch-load the weeks once instead of Week::find() inside the loop.
         $weeksById = Week::query()->whereIn('id', $weekIds)->get()->keyBy('id');
 
         foreach ($weekIds as $weekId) {
-            $weekEvents   = $eventsByWeek[$weekId];
+            $weekEvents = $eventsByWeek[$weekId];
             $weekPickRows = [];
 
             foreach ($userIds as $userId) {
                 $hitRate = $hitRates[$userId];
 
                 foreach ($weekEvents as $event) {
-                    if (isset($existingPairs[$userId . ':' . $event->id])) {
+                    if (isset($existingPairs[$userId.':'.$event->id])) {
                         continue;
                     }
 
                     $isCorrect = null;
-                    $outcome   = $this->randomOutcome();
+                    $outcome = $this->randomOutcome();
 
                     if ($event->status === PickEvent::STATUS_FINISHED && $event->result) {
-                        $correct   = $this->rollCorrect($hitRate);
-                        $outcome   = $correct ? $event->result : ($event->result === 'home' ? 'away' : 'home');
+                        $correct = $this->rollCorrect($hitRate);
+                        $outcome = $correct ? $event->result : ($event->result === 'home' ? 'away' : 'home');
                         $isCorrect = ($outcome === $event->result);
                     }
 
                     $weekPickRows[] = [
-                        'user_id'          => $userId,
-                        'event_id'         => $event->id,
+                        'user_id' => $userId,
+                        'event_id' => $event->id,
                         'selected_outcome' => $outcome,
-                        'is_correct'       => $isCorrect,
-                        'confidence'       => null,
-                        'created_at'       => Carbon::now(),
-                        'updated_at'       => Carbon::now(),
+                        'is_correct' => $isCorrect,
+                        'confidence' => null,
+                        'created_at' => Carbon::now(),
+                        'updated_at' => Carbon::now(),
                     ];
 
                     $picksInserted++;
@@ -144,8 +144,8 @@ class TestDataSeeder
         }
 
         return [
-            'status'  => 'success',
-            'message' => "Seeded {$picksInserted} picks for " . count($userIds) . " users across " . count($weekIds) . " weeks.",
+            'status' => 'success',
+            'message' => "Seeded {$picksInserted} picks for ".count($userIds).' users across '.count($weekIds).' weeks.',
         ];
     }
 
@@ -170,35 +170,35 @@ class TestDataSeeder
         $hitRates = $this->assignHitRates($userIds);
 
         // Create fake season
-        $season             = new Season();
-        $season->name       = '2025 Season';
-        $season->slug       = self::FAKE_SLUG;
-        $season->year       = self::FAKE_YEAR;
+        $season = new Season();
+        $season->name = '2025 Season';
+        $season->slug = self::FAKE_SLUG;
+        $season->year = self::FAKE_YEAR;
         $season->start_date = '2025-08-28';
-        $season->end_date   = '2025-12-06';
+        $season->end_date = '2025-12-06';
         $season->save();
 
         $picksInserted = 0;
-        $weeksCreated  = 0;
+        $weeksCreated = 0;
 
         for ($wn = 1; $wn <= self::FAKE_WEEK_COUNT; $wn++) {
             $weekStart = Carbon::parse('2025-08-28')->addWeeks($wn - 1);
-            $weekEnd   = $weekStart->copy()->addDays(6);
+            $weekEnd = $weekStart->copy()->addDays(6);
 
-            $week              = new Week();
-            $week->season_id   = $season->id;
-            $week->name        = 'Week ' . $wn;
+            $week = new Week();
+            $week->season_id = $season->id;
+            $week->name = 'Week '.$wn;
             $week->week_number = $wn;
             $week->season_type = 'regular';
-            $week->start_date  = $weekStart->toDateString();
-            $week->end_date    = $weekEnd->toDateString();
-            $week->is_open     = false;
+            $week->start_date = $weekStart->toDateString();
+            $week->end_date = $weekEnd->toDateString();
+            $week->is_open = false;
             $week->save();
 
             $usedTeams = [];
-            $eventIds  = [];
-            $results   = [];
-            $gameDate  = $weekStart->copy()->addDays(5)->setTime(15, 0);
+            $eventIds = [];
+            $results = [];
+            $gameDate = $weekStart->copy()->addDays(5)->setTime(15, 0);
 
             for ($e = 0; $e < self::EVENTS_PER_WEEK; $e++) {
                 [$homeId, $awayId] = $this->pickTeamPair($teamIds, $usedTeams);
@@ -208,25 +208,25 @@ class TestDataSeeder
 
                 $usedTeams[] = $homeId;
                 $usedTeams[] = $awayId;
-                $result      = $this->randomOutcome();
+                $result = $this->randomOutcome();
 
                 $eventId = PickEvent::query()->insertGetId([
-                    'week_id'      => $week->id,
+                    'week_id' => $week->id,
                     'home_team_id' => $homeId,
                     'away_team_id' => $awayId,
-                    'cfbd_id'      => null,
+                    'cfbd_id' => null,
                     'neutral_site' => false,
-                    'match_date'   => $gameDate->copy(),
-                    'cutoff_date'  => $gameDate->copy()->subMinutes(30),
-                    'status'       => PickEvent::STATUS_FINISHED,
-                    'home_score'   => $result === 'home' ? rand(21, 42) : rand(7, 20),
-                    'away_score'   => $result === 'away' ? rand(21, 42) : rand(7, 20),
-                    'result'       => $result,
-                    'created_at'   => Carbon::now(),
-                    'updated_at'   => Carbon::now(),
+                    'match_date' => $gameDate->copy(),
+                    'cutoff_date' => $gameDate->copy()->subMinutes(30),
+                    'status' => PickEvent::STATUS_FINISHED,
+                    'home_score' => $result === 'home' ? rand(21, 42) : rand(7, 20),
+                    'away_score' => $result === 'away' ? rand(21, 42) : rand(7, 20),
+                    'result' => $result,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now(),
                 ]);
 
-                $eventIds[]        = $eventId;
+                $eventIds[] = $eventId;
                 $results[$eventId] = $result;
                 $gameDate->addHours(2);
             }
@@ -243,13 +243,13 @@ class TestDataSeeder
                         : ($results[$eventId] === 'home' ? 'away' : 'home');
 
                     $weekPickRows[] = [
-                        'user_id'          => $userId,
-                        'event_id'         => $eventId,
+                        'user_id' => $userId,
+                        'event_id' => $eventId,
                         'selected_outcome' => $outcome,
-                        'is_correct'       => $correct,
-                        'confidence'       => null,
-                        'created_at'       => Carbon::now(),
-                        'updated_at'       => Carbon::now(),
+                        'is_correct' => $correct,
+                        'confidence' => null,
+                        'created_at' => Carbon::now(),
+                        'updated_at' => Carbon::now(),
                     ];
 
                     $picksInserted++;
@@ -276,7 +276,7 @@ class TestDataSeeder
         }
 
         return [
-            'status'  => 'success',
+            'status' => 'success',
             'message' => "Created fake 2025 season with {$weeksCreated} weeks and {$picksInserted} picks.",
         ];
     }
@@ -326,7 +326,7 @@ class TestDataSeeder
         // events, weeks, or seasons.
         $season2026 = Season::query()->where('year', 2026)->first();
 
-        $picksDeleted  = 0;
+        $picksDeleted = 0;
         $scoresDeleted = 0;
 
         if ($season2026) {
@@ -347,7 +347,7 @@ class TestDataSeeder
         // Also clean fake 2025 if it exists
         $fakeSeason = Season::where('year', self::FAKE_YEAR)->where('slug', self::FAKE_SLUG)->first();
         if ($fakeSeason) {
-            $weekIds  = Week::where('season_id', $fakeSeason->id)->pluck('id')->toArray();
+            $weekIds = Week::where('season_id', $fakeSeason->id)->pluck('id')->toArray();
             $eventIds = PickEvent::query()->whereIn('week_id', $weekIds)->pluck('id')->toArray();
 
             if (! empty($eventIds)) {
@@ -365,7 +365,7 @@ class TestDataSeeder
         $scoresDeleted += UserScore::query()->whereNull('week_id')->whereNull('season_id')->delete();
 
         return [
-            'status'  => 'success',
+            'status' => 'success',
             'message' => "Wiped {$picksDeleted} picks and {$scoresDeleted} score rows. Real schedule data (events/weeks/seasons) is intact.",
         ];
     }
@@ -394,6 +394,7 @@ class TestDataSeeder
         foreach ($userIds as $i => $userId) {
             $hitRates[$userId] = $rates[$i % count($rates)];
         }
+
         return $hitRates;
     }
 
@@ -414,6 +415,7 @@ class TestDataSeeder
             return [null, null];
         }
         shuffle($available);
+
         return [$available[0], $available[1]];
     }
 }

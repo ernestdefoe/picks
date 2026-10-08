@@ -33,9 +33,9 @@ class SyncScoresJob extends AbstractJob
             $result = $service->sync();
 
             $settings->set(self::RESULT_KEY, json_encode([
-                'status'  => 'success',
+                'status' => 'success',
                 'updated' => $result['updated'],
-                'scored'  => $result['scored'],
+                'scored' => $result['scored'],
                 'skipped' => $result['skipped'],
             ]));
             $settings->set(self::STATUS_KEY, 'done');
@@ -44,7 +44,7 @@ class SyncScoresJob extends AbstractJob
             // so a sync-driver inline run doesn't bubble a 500 out of the
             // dispatching controller.
             $settings->set(self::RESULT_KEY, json_encode([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => $e->getMessage(),
             ]));
             $settings->set(self::STATUS_KEY, 'failed');

@@ -2,13 +2,10 @@
 
 namespace Resofire\Picks\Api\Resource;
 
-use Flarum\Api\Context as FlarumContext;
 use Flarum\Api\Endpoint;
 use Flarum\Api\Resource\AbstractDatabaseResource;
 use Flarum\Api\Schema;
-use Flarum\Http\RequestUtil;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Str;
 use Resofire\Picks\Team;
 use Tobyz\JsonApiServer\Context;
 

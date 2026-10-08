@@ -83,7 +83,7 @@ class BackfillLeadInCommand extends AbstractCommand
         $weeks = $this->weeks($year, $postseason, $upcoming);
 
         if ($weeks === []) {
-            $this->error('No weeks with fixtures for ' . $year . '. Sync the schedule first.');
+            $this->error('No weeks with fixtures for '.$year.'. Sync the schedule first.');
 
             return 1;
         }
@@ -102,7 +102,7 @@ class BackfillLeadInCommand extends AbstractCommand
 
         foreach ($weeks as $week) {
             if ($this->requests >= self::MAX_REQUESTS) {
-                $this->error('Stopped at ' . self::MAX_REQUESTS . ' requests. Narrow it with --weeks.');
+                $this->error('Stopped at '.self::MAX_REQUESTS.' requests. Narrow it with --weeks.');
 
                 break;
             }
@@ -110,7 +110,7 @@ class BackfillLeadInCommand extends AbstractCommand
             $payload = $this->week($year, $week, $postseason);
 
             if ($payload === null) {
-                $this->error('  week ' . $week . ': the feed did not answer.');
+                $this->error('  week '.$week.': the feed did not answer.');
 
                 continue;
             }
@@ -335,7 +335,7 @@ class BackfillLeadInCommand extends AbstractCommand
             usleep(self::PAUSE_MICROSECONDS);
         }
 
-        $url = self::BASE . '?' . http_build_query([
+        $url = self::BASE.'?'.http_build_query([
             // 80 is FBS; the limit covers the biggest Saturday in the sport.
             'groups' => 80,
             'limit' => 300,
@@ -353,14 +353,14 @@ class BackfillLeadInCommand extends AbstractCommand
              */
             $response = $this->http->request('GET', $url, ['timeout' => 20, 'http_errors' => false]);
         } catch (\Throwable $e) {
-            $this->error('  ' . $e->getMessage());
+            $this->error('  '.$e->getMessage());
 
             return null;
         }
 
         if ($response->getStatusCode() !== 200) {
             // The status, always. A bare failure here reads as "ESPN is down".
-            $this->error('  HTTP ' . $response->getStatusCode() . ' for week ' . $week);
+            $this->error('  HTTP '.$response->getStatusCode().' for week '.$week);
 
             return null;
         }

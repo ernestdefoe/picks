@@ -5,30 +5,29 @@ namespace Resofire\Picks;
 use Flarum\Api\Resource;
 use Flarum\Extend;
 use Flarum\Frontend\Document;
-use Resofire\Picks\Service\Leagues\Leagues;
-use Resofire\Picks\Api\Controller\WeekOpenController;
+use Resofire\Picks\Api\Controller\Confidence;
 use Resofire\Picks\Api\Controller\DeletePickController;
 use Resofire\Picks\Api\Controller\EnterResultController;
+use Resofire\Picks\Api\Controller\LeaderboardContextController;
+use Resofire\Picks\Api\Controller\LeaderboardHistoryController;
 use Resofire\Picks\Api\Controller\ListEventsController;
 use Resofire\Picks\Api\Controller\ListLeaderboardController;
 use Resofire\Picks\Api\Controller\ListPicksController;
+use Resofire\Picks\Api\Controller\PublicStatsController;
 use Resofire\Picks\Api\Controller\RefreshTeamLogoController;
 use Resofire\Picks\Api\Controller\ResetDataController;
+use Resofire\Picks\Api\Controller\SeedTestDataController;
+use Resofire\Picks\Api\Controller\StatsController;
+use Resofire\Picks\Api\Controller\SubmitPickController;
+use Resofire\Picks\Api\Controller\SyncEspnController;
 use Resofire\Picks\Api\Controller\SyncLogosController;
 use Resofire\Picks\Api\Controller\SyncScheduleController;
-use Resofire\Picks\Api\Controller\SyncEspnController;
 use Resofire\Picks\Api\Controller\SyncScoresController;
 use Resofire\Picks\Api\Controller\SyncScoresStatusController;
 use Resofire\Picks\Api\Controller\SyncTeamsController;
-use Resofire\Picks\Api\Controller\PublicStatsController;
-use Resofire\Picks\Api\Controller\StatsController;
-use Resofire\Picks\Api\Controller\SubmitPickController;
-use Resofire\Picks\Api\Controller\UserScoresController;
 use Resofire\Picks\Api\Controller\UserHistoryController;
-use Resofire\Picks\Api\Controller\LeaderboardContextController;
-use Resofire\Picks\Api\Controller\LeaderboardHistoryController;
-use Resofire\Picks\Api\Controller\SeedTestDataController;
-use Resofire\Picks\Api\Controller\Confidence;
+use Resofire\Picks\Api\Controller\UserScoresController;
+use Resofire\Picks\Api\Controller\WeekOpenController;
 use Resofire\Picks\Api\ForumPicksAttributes;
 use Resofire\Picks\Api\Resource\EventResource;
 use Resofire\Picks\Api\Resource\SeasonResource;
@@ -36,13 +35,13 @@ use Resofire\Picks\Api\Resource\TeamResource;
 use Resofire\Picks\Api\Resource\WeekResource;
 use Resofire\Picks\Console\BackfillLeadInCommand;
 use Resofire\Picks\Console\PollLiveScoresCommand;
+use Resofire\Picks\Console\PostStandingsCommand;
 use Resofire\Picks\Console\SyncBoxScoresCommand;
 use Resofire\Picks\Console\SyncEspnCommand;
-use Resofire\Picks\Console\PostStandingsCommand;
-use Resofire\Picks\Console\UnlockWeeksCommand;
 use Resofire\Picks\Console\SyncTeamsCommand;
+use Resofire\Picks\Console\UnlockWeeksCommand;
 use Resofire\Picks\Frontend\PicksPageContent;
-use Resofire\Picks\PicksServiceProvider;
+use Resofire\Picks\Service\Leagues\Leagues;
 
 $extenders = [
     // -------------------------------------------------------------------------
@@ -141,42 +140,42 @@ $extenders = [
     // Custom API routes (non-resource actions)
     // -------------------------------------------------------------------------
     (new Extend\Routes('api'))
-        ->get('/picks/events',              'picks.events.index',         ListEventsController::class)
-        ->get('/picks/my-picks',            'picks.my-picks',             ListPicksController::class)
-        ->get('/picks/leaderboard',         'picks.leaderboard',          ListLeaderboardController::class)
-        ->post('/picks/submit',             'picks.submit',               SubmitPickController::class)
-        ->delete('/picks/events/{id}/pick', 'picks.pick.delete',          DeletePickController::class)
-        ->post('/picks/weeks/{id}/open',    'picks.weeks.open',           WeekOpenController::class)
-        ->post('/picks/sync/teams',         'picks.sync.teams',           SyncTeamsController::class)
-        ->post('/picks/sync/logos',         'picks.sync.logos',           SyncLogosController::class)
-        ->post('/picks/sync/schedule',      'picks.sync.schedule',        SyncScheduleController::class)
-        ->post('/picks/sync/scores',        'picks.sync.scores',          SyncScoresController::class)
-        ->post('/picks/sync/espn',          'picks.sync.espn',            SyncEspnController::class)
-        ->get('/picks/sync/scores/status',  'picks.sync.scores.status',   SyncScoresStatusController::class)
-        ->get('/picks/stats',               'picks.stats',                StatsController::class)
-        ->get('/picks/public-stats',        'picks.public-stats',         PublicStatsController::class)
-        ->post('/picks/reset',              'picks.reset',                ResetDataController::class)
-        ->post('/picks/events/{id}/result', 'picks.events.result',        EnterResultController::class)
+        ->get('/picks/events', 'picks.events.index', ListEventsController::class)
+        ->get('/picks/my-picks', 'picks.my-picks', ListPicksController::class)
+        ->get('/picks/leaderboard', 'picks.leaderboard', ListLeaderboardController::class)
+        ->post('/picks/submit', 'picks.submit', SubmitPickController::class)
+        ->delete('/picks/events/{id}/pick', 'picks.pick.delete', DeletePickController::class)
+        ->post('/picks/weeks/{id}/open', 'picks.weeks.open', WeekOpenController::class)
+        ->post('/picks/sync/teams', 'picks.sync.teams', SyncTeamsController::class)
+        ->post('/picks/sync/logos', 'picks.sync.logos', SyncLogosController::class)
+        ->post('/picks/sync/schedule', 'picks.sync.schedule', SyncScheduleController::class)
+        ->post('/picks/sync/scores', 'picks.sync.scores', SyncScoresController::class)
+        ->post('/picks/sync/espn', 'picks.sync.espn', SyncEspnController::class)
+        ->get('/picks/sync/scores/status', 'picks.sync.scores.status', SyncScoresStatusController::class)
+        ->get('/picks/stats', 'picks.stats', StatsController::class)
+        ->get('/picks/public-stats', 'picks.public-stats', PublicStatsController::class)
+        ->post('/picks/reset', 'picks.reset', ResetDataController::class)
+        ->post('/picks/events/{id}/result', 'picks.events.result', EnterResultController::class)
         ->post('/picks/teams/{id}/refresh-logo', 'picks.teams.refresh-logo', RefreshTeamLogoController::class)
         // ── New routes ────────────────────────────────────────────────────────
-        ->get('/picks/user-scores',         'picks.user-scores',         UserScoresController::class)
-        ->get('/picks/user-history',        'picks.user-history',        UserHistoryController::class)
+        ->get('/picks/user-scores', 'picks.user-scores', UserScoresController::class)
+        ->get('/picks/user-history', 'picks.user-history', UserHistoryController::class)
         ->get('/picks/leaderboard-history', 'picks.leaderboard-history', LeaderboardHistoryController::class)
         ->get('/picks/leaderboard-context', 'picks.leaderboard-context', LeaderboardContextController::class)
 
         // Admin "Testing" tab: seed/clean test data (seed2026, seedFake2025,
         // cleanFake, wipeAll). The controller existed but was never routed.
-        ->post('/picks/seed-test-data',     'picks.seed-test-data',      SeedTestDataController::class)
+        ->post('/picks/seed-test-data', 'picks.seed-test-data', SeedTestDataController::class)
 
         // ── Confidence contest (Confidence\ConfidenceContest) ─────────────────
-        ->get('/picks/confidence',                    'picks.confidence',             Confidence\BoardController::class)
-        ->post('/picks/confidence',                   'picks.confidence.save',        Confidence\SaveController::class)
-        ->get('/picks/confidence/leaderboard',        'picks.confidence.leaderboard', Confidence\LeaderboardController::class)
-        ->get('/picks/confidence/history',            'picks.confidence.history',     Confidence\HistoryController::class)
-        ->get('/picks/confidence/user-history',       'picks.confidence.user-history', Confidence\UserHistoryController::class)
-        ->get('/picks/confidence/weeks/{id}',         'picks.confidence.week',        Confidence\SelectionController::class)
-        ->post('/picks/confidence/weeks/{id}',        'picks.confidence.week.save',   Confidence\SelectionController::class)
-        ->post('/picks/confidence/weeks/{id}/auto',   'picks.confidence.week.auto',   Confidence\SelectionController::class),
+        ->get('/picks/confidence', 'picks.confidence', Confidence\BoardController::class)
+        ->post('/picks/confidence', 'picks.confidence.save', Confidence\SaveController::class)
+        ->get('/picks/confidence/leaderboard', 'picks.confidence.leaderboard', Confidence\LeaderboardController::class)
+        ->get('/picks/confidence/history', 'picks.confidence.history', Confidence\HistoryController::class)
+        ->get('/picks/confidence/user-history', 'picks.confidence.user-history', Confidence\UserHistoryController::class)
+        ->get('/picks/confidence/weeks/{id}', 'picks.confidence.week', Confidence\SelectionController::class)
+        ->post('/picks/confidence/weeks/{id}', 'picks.confidence.week.save', Confidence\SelectionController::class)
+        ->post('/picks/confidence/weeks/{id}/auto', 'picks.confidence.week.auto', Confidence\SelectionController::class),
 
     // -------------------------------------------------------------------------
     // Console commands
@@ -194,7 +193,7 @@ $extenders = [
             try {
                 resolve(\Resofire\Picks\Service\SyncScoresService::class)->unlockDueWeeks();
             } catch (\Throwable $e) {
-                resolve(\Psr\Log\LoggerInterface::class)->warning('[picks] auto-unlock on save failed: ' . $e->getMessage());
+                resolve(\Psr\Log\LoggerInterface::class)->warning('[picks] auto-unlock on save failed: '.$e->getMessage());
             }
         }),
 
@@ -291,15 +290,15 @@ $extenders = [
             // time announced in the afternoon has to land before Game Day opens
             // that game's thread. Four runs a day is still a few dozen requests.
             $event->cron('30 */6 * * *')->withoutOverlapping();
-        /*
-         * 🚨 Passed positionally, NOT as ['--upcoming' => true].
-         *
-         * A keyed entry renders as `--upcoming='1'`, and a no-value option
-         * refuses that: "The --upcoming option does not accept a value." The
-         * scheduler sends its output to /dev/null, so the task would have
-         * failed silently every night and the board would have gone on showing
-         * September's records with nothing anywhere saying why.
-         */
+            /*
+             * 🚨 Passed positionally, NOT as ['--upcoming' => true].
+             *
+             * A keyed entry renders as `--upcoming='1'`, and a no-value option
+             * refuses that: "The --upcoming option does not accept a value." The
+             * scheduler sends its output to /dev/null, so the task would have
+             * failed silently every night and the board would have gone on showing
+             * September's records with nothing anywhere saying why.
+             */
         }, ['--upcoming']),
 ];
 
@@ -321,4 +320,3 @@ if (class_exists(\Ernestdefoe\PageBuilder\Extend\PageBuilderBlock::class)) {
 }
 
 return $extenders;
-

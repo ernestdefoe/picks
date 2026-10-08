@@ -3,8 +3,8 @@
 namespace Resofire\Picks;
 
 use Flarum\Database\AbstractModel;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Flarum\User\User;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Collection;
 
 /**
@@ -41,12 +41,12 @@ class UserScore extends AbstractModel
     ];
 
     protected $casts = [
-        'total_points'  => 'integer',
-        'total_picks'   => 'integer',
+        'total_points' => 'integer',
+        'total_picks' => 'integer',
         'correct_picks' => 'integer',
-        'accuracy'      => 'float',
+        'accuracy' => 'float',
         'previous_rank' => 'integer',
-        'current_rank'  => 'integer',
+        'current_rank' => 'integer',
     ];
 
     /** @return BelongsTo<User, $this> */

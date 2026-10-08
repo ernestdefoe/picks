@@ -2,7 +2,6 @@
 
 namespace Resofire\Picks\Api\Resource;
 
-use Flarum\Api\Context as FlarumContext;
 use Flarum\Api\Endpoint;
 use Flarum\Api\Resource\AbstractDatabaseResource;
 use Flarum\Api\Schema;

@@ -52,10 +52,10 @@ class PickEvent extends AbstractModel
 
     protected $table = 'picks_events';
 
-    const STATUS_SCHEDULED   = 'scheduled';
-    const STATUS_CLOSED      = 'closed';
+    const STATUS_SCHEDULED = 'scheduled';
+    const STATUS_CLOSED = 'closed';
     const STATUS_IN_PROGRESS = 'in_progress';
-    const STATUS_FINISHED    = 'finished';
+    const STATUS_FINISHED = 'finished';
 
     const RESULT_HOME = 'home';
     const RESULT_AWAY = 'away';
@@ -100,18 +100,18 @@ class PickEvent extends AbstractModel
     ];
 
     protected $casts = [
-        'match_date'  => 'datetime',
+        'match_date' => 'datetime',
         'cutoff_date' => 'datetime',
         'neutral_site' => 'boolean',
-        'home_score'  => 'integer',
-        'away_score'  => 'integer',
-        'period'      => 'integer',
-        'clock_at'    => 'integer',
-        'red_zone'    => 'boolean',
-        'home_rank'   => 'integer',
-        'away_rank'   => 'integer',
-        'time_tbd'    => 'boolean',
-        'highlights'  => 'array',
+        'home_score' => 'integer',
+        'away_score' => 'integer',
+        'period' => 'integer',
+        'clock_at' => 'integer',
+        'red_zone' => 'boolean',
+        'home_rank' => 'integer',
+        'away_rank' => 'integer',
+        'time_tbd' => 'boolean',
+        'highlights' => 'array',
         'highlights_checked_at' => 'datetime',
     ];
 

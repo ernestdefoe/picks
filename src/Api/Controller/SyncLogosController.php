@@ -22,7 +22,7 @@ class SyncLogosController implements RequestHandlerInterface
         RequestUtil::getActor($request)->assertCan('picks.manage');
 
         // Allow the batch size to be overridden via request body, default 20.
-        $body      = $request->getParsedBody() ?? [];
+        $body = $request->getParsedBody() ?? [];
         $batchSize = (int) Arr::get($body, 'batchSize', 20);
         $batchSize = max(1, min(50, $batchSize)); // clamp between 1 and 50
 
@@ -30,15 +30,15 @@ class SyncLogosController implements RequestHandlerInterface
             $result = $this->teamSyncService->syncLogos($batchSize);
         } catch (\RuntimeException $e) {
             return new JsonResponse([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => $e->getMessage(),
             ], 422);
         }
 
         return new JsonResponse([
-            'status'    => 'success',
-            'saved'     => $result['saved'],
-            'failed'    => $result['failed'],
+            'status' => 'success',
+            'saved' => $result['saved'],
+            'failed' => $result['failed'],
             'remaining' => $result['remaining'],
         ]);
     }

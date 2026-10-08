@@ -3,8 +3,8 @@
 namespace Resofire\Picks;
 
 use Flarum\Database\AbstractModel;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Flarum\User\User;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property int         $id

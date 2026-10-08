@@ -2,10 +2,10 @@
 
 namespace Resofire\Picks\Tests\integration\api;
 
-use Resofire\Picks\Tests\integration\SeedsPicks;
 use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use Resofire\Picks\Tests\integration\SeedsPicks;
 
 class ResultTest extends TestCase
 {

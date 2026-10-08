@@ -93,17 +93,17 @@ final class Selector
         $home = self::rank($game['home_rank'] ?? null);
         $away = self::rank($game['away_rank'] ?? null);
 
-        $tv        = -self::broadcastWeight((string) ($game['broadcast'] ?? ''));
+        $tv = -self::broadcastWeight((string) ($game['broadcast'] ?? ''));
         $primetime = self::isPrimetime($game) ? -1 : 0;
-        $kickoff   = isset($game['match_date']) && $game['match_date'] ? self::ts((string) $game['match_date']) : PHP_INT_MAX;
-        $id        = (int) ($game['id'] ?? 0);
+        $kickoff = isset($game['match_date']) && $game['match_date'] ? self::ts((string) $game['match_date']) : PHP_INT_MAX;
+        $id = (int) ($game['id'] ?? 0);
 
         if ($home !== null && $away !== null) {
             return [0, $home + $away, min($home, $away), $tv, $primetime, $kickoff, $id];
         }
 
         if ($home !== null || $away !== null) {
-            $ranked   = $home ?? $away;
+            $ranked = $home ?? $away;
             $opponent = $home === null ? ($game['home_record'] ?? null) : ($game['away_record'] ?? null);
 
             return [1, $ranked, -self::winPct($opponent), $tv, $primetime, $kickoff, $id];
@@ -137,7 +137,7 @@ final class Selector
             return 0.5;
         }
 
-        $wins   = (int) $m[1];
+        $wins = (int) $m[1];
         $played = $wins + (int) $m[2] + (int) ($m[3] ?? 0);
 
         return $played > 0 ? $wins / $played : 0.5;
@@ -168,7 +168,7 @@ final class Selector
             return false;
         }
 
-        $local = (new DateTimeImmutable('@' . self::ts((string) $game['match_date'])))
+        $local = (new DateTimeImmutable('@'.self::ts((string) $game['match_date'])))
             ->setTimezone(new DateTimeZone('America/New_York'));
 
         return (int) $local->format('G') >= 19;

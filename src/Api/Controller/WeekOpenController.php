@@ -17,13 +17,13 @@ class WeekOpenController implements RequestHandlerInterface
         RequestUtil::getActor($request)->assertCan('picks.manage');
 
         $weekId = (int) Arr::get($request->getAttribute('routeParameters'), 'id', 0);
-        $week   = Week::find($weekId);
+        $week = Week::find($weekId);
 
         if (! $week) {
             return new JsonResponse(['status' => 'error', 'message' => 'Week not found.'], 404);
         }
 
-        $body   = $request->getParsedBody() ?? [];
+        $body = $request->getParsedBody() ?? [];
         $isOpen = (bool) Arr::get($body, 'is_open', false);
 
         $week->is_open = $isOpen;
@@ -34,12 +34,12 @@ class WeekOpenController implements RequestHandlerInterface
             try {
                 resolve(\Resofire\Picks\Confidence\ConfidenceContest::class)->ensureSelected($week);
             } catch (\Throwable $e) {
-                resolve(\Psr\Log\LoggerInterface::class)->warning('[picks] confidence selection on open failed: ' . $e->getMessage());
+                resolve(\Psr\Log\LoggerInterface::class)->warning('[picks] confidence selection on open failed: '.$e->getMessage());
             }
         }
 
         return new JsonResponse([
-            'status'  => 'success',
+            'status' => 'success',
             'week_id' => $week->id,
             'is_open' => $week->is_open,
         ]);

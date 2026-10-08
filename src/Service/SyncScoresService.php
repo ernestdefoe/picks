@@ -40,18 +40,22 @@ class SyncScoresService
      */
     public function sync(): array
     {
-        $year           = (int) $this->settings->get('ernestdefoe-picks.season_year', (int) date('Y'));
-        $syncRegular    = (bool) $this->settings->get('ernestdefoe-picks.sync_regular_season', true);
+        $year = (int) $this->settings->get('ernestdefoe-picks.season_year', (int) date('Y'));
+        $syncRegular = (bool) $this->settings->get('ernestdefoe-picks.sync_regular_season', true);
         $syncPostseason = (bool) $this->settings->get('ernestdefoe-picks.sync_postseason', true);
 
         $updated = 0;
-        $scored  = 0;
+        $scored = 0;
         $skipped = 0;
 
         // Fetch all weeks for this year so we know which week numbers exist
         $seasonTypes = [];
-        if ($syncRegular)    $seasonTypes[] = 'regular';
-        if ($syncPostseason) $seasonTypes[] = 'postseason';
+        if ($syncRegular) {
+            $seasonTypes[] = 'regular';
+        }
+        if ($syncPostseason) {
+            $seasonTypes[] = 'postseason';
+        }
 
         $weekIdsToCheck = [];
 
@@ -81,10 +85,10 @@ class SyncScoresService
                 $apiGames = $this->cfbd->fetchGames($year, $seasonType, $weekNumber);
 
                 foreach ($apiGames as $apiGame) {
-                    $cfbdId    = Arr::get($apiGame, 'id');
+                    $cfbdId = Arr::get($apiGame, 'id');
                     $completed = (bool) Arr::get($apiGame, 'completed', false);
-                    $homePts   = Arr::get($apiGame, 'homePoints');
-                    $awayPts   = Arr::get($apiGame, 'awayPoints');
+                    $homePts = Arr::get($apiGame, 'homePoints');
+                    $awayPts = Arr::get($apiGame, 'awayPoints');
 
                     if (! $completed || $homePts === null || $awayPts === null) {
                         $skipped++;
@@ -111,8 +115,8 @@ class SyncScoresService
 
                     $event->home_score = (int) $homePts;
                     $event->away_score = (int) $awayPts;
-                    $event->status     = PickEvent::STATUS_FINISHED;
-                    $event->result     = $event->calculateResult();
+                    $event->status = PickEvent::STATUS_FINISHED;
+                    $event->result = $event->calculateResult();
                     $event->save();
 
                     $updated++;
@@ -169,7 +173,7 @@ class SyncScoresService
          *
          * groups=80 is FBS; limit=300 covers a full Saturday.
          */
-        $url      = 'https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard'
+        $url = 'https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard'
             .'?groups=80&limit=300';
         $response = $this->fetchJson($url);
 
@@ -177,10 +181,10 @@ class SyncScoresService
             throw new \RuntimeException('Failed to fetch ESPN scoreboard: '.($this->lastError ?? 'no detail'));
         }
 
-        $events    = $response['events'] ?? [];
-        $updated   = 0;
-        $finished  = 0;
-        $skipped   = 0;
+        $events = $response['events'] ?? [];
+        $updated = 0;
+        $finished = 0;
+        $skipped = 0;
 
         // Bulk-load every event referenced in this scoreboard payload in ONE
         // query (keyed by cfbd_id) rather than a SELECT per game. This command
@@ -212,7 +216,7 @@ class SyncScoresService
             ->flip();
 
         foreach ($events as $espnEvent) {
-            $espnId      = $espnEvent['id'] ?? null;
+            $espnId = $espnEvent['id'] ?? null;
             $competition = $espnEvent['competitions'][0] ?? null;
 
             if (! $espnId || ! $competition) {
@@ -221,8 +225,8 @@ class SyncScoresService
             }
 
             $statusType = $competition['status']['type'] ?? [];
-            $state      = $statusType['state'] ?? 'pre';
-            $completed  = (bool) ($statusType['completed'] ?? false);
+            $state = $statusType['state'] ?? 'pre';
+            $completed = (bool) ($statusType['completed'] ?? false);
 
             // Match to our event by cfbd_id (ESPN event id = CFBD game id)
             $event = $eventsByCfbdId->get((int) $espnId);
@@ -270,14 +274,14 @@ class SyncScoresService
              * records include the game that has just been played.
              */
             if (! $completed && $event->status !== PickEvent::STATUS_FINISHED) {
-                $event->home_rank   = EspnProvider::rank($this->competitor($competition, 'home'));
-                $event->away_rank   = EspnProvider::rank($this->competitor($competition, 'away'));
+                $event->home_rank = EspnProvider::rank($this->competitor($competition, 'home'));
+                $event->away_rank = EspnProvider::rank($this->competitor($competition, 'away'));
                 $event->home_record = EspnProvider::record($this->competitor($competition, 'home'));
                 $event->away_record = EspnProvider::record($this->competitor($competition, 'away'));
-                $event->venue       = trim((string) (((array) ($competition['venue'] ?? []))['fullName'] ?? ''));
-                $event->venue_city  = EspnProvider::venueCity((array) ($competition['venue'] ?? []));
-                $event->broadcast   = EspnProvider::broadcast($competition);
-                $event->broadcasts  = EspnProvider::broadcasts($espnEvent);
+                $event->venue = trim((string) (((array) ($competition['venue'] ?? []))['fullName'] ?? ''));
+                $event->venue_city = EspnProvider::venueCity((array) ($competition['venue'] ?? []));
+                $event->broadcast = EspnProvider::broadcast($competition);
+                $event->broadcasts = EspnProvider::broadcasts($espnEvent);
             }
 
             // A game that has not started has no score, no clock and no result
@@ -300,11 +304,15 @@ class SyncScoresService
             $awayScore = null;
 
             foreach ($competition['competitors'] ?? [] as $competitor) {
-                $side  = $competitor['homeAway'] ?? null;
+                $side = $competitor['homeAway'] ?? null;
                 $score = isset($competitor['score']) ? (int) $competitor['score'] : null;
 
-                if ($side === 'home') $homeScore = $score;
-                if ($side === 'away') $awayScore = $score;
+                if ($side === 'home') {
+                    $homeScore = $score;
+                }
+                if ($side === 'away') {
+                    $awayScore = $score;
+                }
             }
 
             if ($homeScore === null || $awayScore === null) {
@@ -342,10 +350,10 @@ class SyncScoresService
              * against ESPN's momentary "4th & -1" that is worth having once.
              */
             $statusBlock = (array) ($competition['status'] ?? $espnEvent['status'] ?? []);
-            $situation   = (array) ($competition['situation'] ?? []);
+            $situation = (array) ($competition['situation'] ?? []);
 
             $possession = '';
-            $hasBall    = (string) ($situation['possession'] ?? '');
+            $hasBall = (string) ($situation['possession'] ?? '');
 
             if ($hasBall !== '') {
                 foreach ($competition['competitors'] ?? [] as $competitor) {
@@ -356,22 +364,22 @@ class SyncScoresService
                 }
             }
 
-            $clock  = trim((string) ($statusBlock['displayClock'] ?? ''));
+            $clock = trim((string) ($statusBlock['displayClock'] ?? ''));
             $period = (int) ($statusBlock['period'] ?? 0);
 
-            $event->period        = $period;
-            $event->clock         = $clock;
-            $event->clock_detail  = trim((string) ($statusType['shortDetail'] ?? $statusType['detail'] ?? ''));
+            $event->period = $period;
+            $event->clock = $clock;
+            $event->clock_detail = trim((string) ($statusType['shortDetail'] ?? $statusType['detail'] ?? ''));
             // Stamped here, not defaulted in the database: the panel needs to
             // know how old the clock is before it shows a number that moves
             // every second.
-            $event->clock_at      = ($clock !== '' || $period > 0) ? time() : 0;
-            $event->possession    = $possession;
+            $event->clock_at = ($clock !== '' || $period > 0) ? time() : 0;
+            $event->possession = $possession;
             $event->down_distance = EspnProvider::downAndDistance($situation);
             // The feed's own text - "BC 49", "50" - printed as sent. See the
             // migration for why this is not stored as a number.
-            $event->ball_on       = trim((string) ($situation['possessionText'] ?? ''));
-            $event->red_zone      = ! empty($situation['isRedZone']);
+            $event->ball_on = trim((string) ($situation['possessionText'] ?? ''));
+            $event->red_zone = ! empty($situation['isRedZone']);
 
             $event->save();
             $updated++;
@@ -503,7 +511,7 @@ class SyncScoresService
                     resolve(ConfidenceContest::class)->ensureSelected($week);
                 }
             } catch (\Throwable $e) {
-                resolve(\Psr\Log\LoggerInterface::class)->warning('[picks] confidence selection on unlock failed: ' . $e->getMessage());
+                resolve(\Psr\Log\LoggerInterface::class)->warning('[picks] confidence selection on unlock failed: '.$e->getMessage());
             }
         }
 
@@ -539,7 +547,7 @@ class SyncScoresService
              * spoofed browser is both a lie and, here, a 403 anyway.
              */
             $response = $this->http->request('GET', $url, [
-                'timeout'     => self::ESPN_TIMEOUT,
+                'timeout' => self::ESPN_TIMEOUT,
                 'http_errors' => false,
             ]);
         } catch (\Throwable $e) {

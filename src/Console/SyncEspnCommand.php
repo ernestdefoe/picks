@@ -56,7 +56,7 @@ class SyncEspnCommand extends Command
                  * following four leagues should not lose the other three
                  * because ESPN was briefly unhappy about one of them.
                  */
-                $this->error($season->name . ' (' . $league->name . '): ' . $e->getMessage());
+                $this->error($season->name.' ('.$league->name.'): '.$e->getMessage());
 
                 continue;
             }

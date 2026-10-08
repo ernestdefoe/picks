@@ -13,7 +13,7 @@ use Resofire\Picks\Service\CurrentSeasonService;
 use Resofire\Picks\UserScore;
 
 /**
- * GET /picks/leaderboard-history
+ * GET /picks/leaderboard-history.
  *
  * Returns the final standings for every completed past season.
  * The current (in-progress) season is excluded — it belongs on the
@@ -74,27 +74,27 @@ class LeaderboardHistoryController implements RequestHandlerInterface
                 $scores = $scoresBySeason->get($season->id, collect());
 
                 $entries = [];
-                $rank    = 1;
+                $rank = 1;
 
                 foreach ($scores as $score) {
                     $entries[] = [
-                        'rank'          => $rank,
-                        'user_id'       => (int) $score->user_id,
-                        'username'      => $score->user?->username,
-                        'display_name'  => $score->user->display_name ?? $score->user?->username,
-                        'avatar_url'    => $score->user?->avatarUrl,
-                        'total_picks'   => (int) $score->total_picks,
+                        'rank' => $rank,
+                        'user_id' => (int) $score->user_id,
+                        'username' => $score->user?->username,
+                        'display_name' => $score->user->display_name ?? $score->user?->username,
+                        'avatar_url' => $score->user?->avatarUrl,
+                        'total_picks' => (int) $score->total_picks,
                         'correct_picks' => (int) $score->correct_picks,
-                        'total_points'  => (int) $score->total_points,
-                        'accuracy'      => (float) $score->accuracy,
+                        'total_points' => (int) $score->total_points,
+                        'accuracy' => (float) $score->accuracy,
                     ];
                     $rank++;
                 }
 
                 $seasonsData[] = [
                     'season_id' => (int) $season->id,
-                    'name'      => $season->name,
-                    'year'      => (int) $season->year,
+                    'name' => $season->name,
+                    'year' => (int) $season->year,
                     'standings' => $entries,
                 ];
             }
@@ -102,7 +102,7 @@ class LeaderboardHistoryController implements RequestHandlerInterface
             return new JsonResponse(['seasons' => $seasonsData]);
 
         } catch (\Exception $e) {
-            $this->log->error('[Picks] LeaderboardHistory failed: ' . $e->getMessage(), ['exception' => $e]);
+            $this->log->error('[Picks] LeaderboardHistory failed: '.$e->getMessage(), ['exception' => $e]);
 
             return new JsonResponse(['error' => 'Failed to load leaderboard history.'], 500);
         }

@@ -23,8 +23,8 @@ class LeaderboardController implements RequestHandlerInterface
         $actor->assertCan('picks.view');
 
         $params = $request->getQueryParams();
-        $scope  = Arr::get($params, 'scope', 'week');
-        $limit  = min(50, max(1, (int) Arr::get($params, 'limit', 25)));
+        $scope = Arr::get($params, 'scope', 'week');
+        $limit = min(50, max(1, (int) Arr::get($params, 'limit', 25)));
 
         if ($scope === 'alltime') {
             return new JsonResponse([
@@ -34,9 +34,9 @@ class LeaderboardController implements RequestHandlerInterface
         }
 
         $key = match ($scope) {
-            'week'   => ($id = (int) Arr::get($params, 'week_id')) ? 'w' . $id : null,
-            'season' => ($id = (int) Arr::get($params, 'season_id')) ? 's' . $id : null,
-            default  => null,
+            'week' => ($id = (int) Arr::get($params, 'week_id')) ? 'w'.$id : null,
+            'season' => ($id = (int) Arr::get($params, 'season_id')) ? 's'.$id : null,
+            default => null,
         };
 
         if ($key === null) {

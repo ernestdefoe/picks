@@ -40,14 +40,14 @@ class StatsController implements RequestHandlerInterface
 
         return new JsonResponse([
             'participation' => $this->participationStats($weekId),
-            'accuracy'      => array_merge(
+            'accuracy' => array_merge(
                 $this->accuracyStats($weekId),
                 [
-                    'upset_rate'       => $this->upsetRate($pickCountsByEvent),
+                    'upset_rate' => $this->upsetRate($pickCountsByEvent),
                     'most_picked_team' => $this->mostPickedTeam(),
                 ]
             ),
-            'coverage'      => $this->coverage($pickCountsByEvent),
+            'coverage' => $this->coverage($pickCountsByEvent),
         ]);
     }
 
@@ -59,15 +59,15 @@ class StatsController implements RequestHandlerInterface
             ->whereHas('event', fn ($q) => $q->where('week_id', $weekId));
 
         $totalGamesThisWeek = $weekId ? PickEvent::query()->where('week_id', $weekId)->count() : 0;
-        $picksThisWeek      = $weekId ? $pickedThisWeek()->count() : 0;
-        $uniquePickers      = $weekId ? $pickedThisWeek()->distinct('user_id')->count('user_id') : 0;
+        $picksThisWeek = $weekId ? $pickedThisWeek()->count() : 0;
+        $uniquePickers = $weekId ? $pickedThisWeek()->distinct('user_id')->count('user_id') : 0;
 
         return [
-            'total_players'              => $totalPlayers,
-            'unique_pickers_this_week'   => $uniquePickers,
-            'picks_this_week'            => $picksThisWeek,
-            'total_games_this_week'      => $totalGamesThisWeek,
-            'participation_rate'         => ($totalPlayers > 0 && $weekId)
+            'total_players' => $totalPlayers,
+            'unique_pickers_this_week' => $uniquePickers,
+            'picks_this_week' => $picksThisWeek,
+            'total_games_this_week' => $totalGamesThisWeek,
+            'participation_rate' => ($totalPlayers > 0 && $weekId)
                 ? round($uniquePickers / $totalPlayers * 100, 1) : null,
             'users_not_picked_this_week' => $weekId ? max(0, $totalPlayers - $uniquePickers) : null,
         ];
@@ -96,7 +96,7 @@ class StatsController implements RequestHandlerInterface
         }
 
         return [
-            'avg_accuracy_all_time'  => $avgAccuracyAllTime,
+            'avg_accuracy_all_time' => $avgAccuracyAllTime,
             'avg_accuracy_this_week' => $avgAccuracyThisWeek,
         ];
     }
@@ -120,7 +120,7 @@ class StatsController implements RequestHandlerInterface
     /** % of finished games where the majority picked the loser. */
     private function upsetRate(Collection $pickCountsByEvent): ?float
     {
-        $upsets            = 0;
+        $upsets = 0;
         $finishedWithPicks = 0;
 
         $finishedEvents = PickEvent::query()
@@ -148,7 +148,7 @@ class StatsController implements RequestHandlerInterface
     private function coverage(Collection $pickCountsByEvent): array
     {
         $consensusCount = 0;
-        $contested      = [];
+        $contested = [];
 
         $eventsWithPicks = PickEvent::query()->has('picks')->get(['id', 'home_team_id', 'away_team_id']);
 
@@ -165,13 +165,13 @@ class StatsController implements RequestHandlerInterface
             }
 
             $contested[] = [
-                'event_id'     => $event->id,
+                'event_id' => $event->id,
                 'home_team_id' => $event->home_team_id,
                 'away_team_id' => $event->away_team_id,
-                'home_pct'     => round($homePct * 100, 1),
-                'away_pct'     => round((1 - $homePct) * 100, 1),
-                'total'        => $total,
-                'split'        => abs($homePct - 0.5), // closest to 50/50 = most contested
+                'home_pct' => round($homePct * 100, 1),
+                'away_pct' => round((1 - $homePct) * 100, 1),
+                'total' => $total,
+                'split' => abs($homePct - 0.5), // closest to 50/50 = most contested
             ];
         }
 
@@ -192,21 +192,21 @@ class StatsController implements RequestHandlerInterface
 
         $mostContested = array_map(function ($g) use ($teams) {
             return [
-                'event_id'  => $g['event_id'],
+                'event_id' => $g['event_id'],
                 'home_team' => $teams->get($g['home_team_id'])->abbreviation ?? '?',
                 'away_team' => $teams->get($g['away_team_id'])->abbreviation ?? '?',
-                'home_pct'  => $g['home_pct'],
-                'away_pct'  => $g['away_pct'],
-                'total'     => $g['total'],
+                'home_pct' => $g['home_pct'],
+                'away_pct' => $g['away_pct'],
+                'total' => $g['total'],
             ];
         }, $top);
 
         return [
-            'total_finished'  => PickEvent::query()->where('status', PickEvent::STATUS_FINISHED)->count(),
+            'total_finished' => PickEvent::query()->where('status', PickEvent::STATUS_FINISHED)->count(),
             'total_scheduled' => PickEvent::query()->where('status', PickEvent::STATUS_SCHEDULED)->count(),
-            'games_no_picks'  => PickEvent::query()->whereDoesntHave('picks')->count(),
+            'games_no_picks' => PickEvent::query()->whereDoesntHave('picks')->count(),
             'consensus_games' => $consensusCount,
-            'most_contested'  => $mostContested,
+            'most_contested' => $mostContested,
         ];
     }
 

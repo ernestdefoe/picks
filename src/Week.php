@@ -36,8 +36,8 @@ class Week extends AbstractModel
     ];
 
     protected $casts = [
-        'is_open'     => 'boolean',
-        'season_id'   => 'integer',
+        'is_open' => 'boolean',
+        'season_id' => 'integer',
         'week_number' => 'integer',
     ];
 

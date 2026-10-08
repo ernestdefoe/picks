@@ -9,7 +9,7 @@ use RuntimeException;
 class CfbdService
 {
     protected const BASE_URL = 'https://api.collegefootballdata.com';
-    protected const TIMEOUT  = 30;
+    protected const TIMEOUT = 30;
 
     public function __construct(
         protected SettingsRepositoryInterface $settings,
@@ -54,8 +54,8 @@ class CfbdService
         }
 
         $params = [
-            'year'           => $year,
-            'seasonType'     => $seasonType,
+            'year' => $year,
+            'seasonType' => $seasonType,
             'classification' => 'fbs',
         ];
 
@@ -126,16 +126,16 @@ class CfbdService
         }
 
         $rows = $this->request($endpoint, [
-            'year'           => $year,
-            'seasonType'     => $seasonType,
-            'week'           => $week,
+            'year' => $year,
+            'seasonType' => $seasonType,
+            'week' => $week,
             'classification' => 'fbs',
         ], $apiKey);
 
         $out = [];
 
         foreach ($rows as $row) {
-            if (!is_array($row)) {
+            if (! is_array($row)) {
                 continue;
             }
 
@@ -148,7 +148,7 @@ class CfbdService
              * blank column reads as the other team having done nothing, which
              * is worse than showing no box score at all.
              */
-            if ($id < 1 || !is_array($sides) || count($sides) < 2) {
+            if ($id < 1 || ! is_array($sides) || count($sides) < 2) {
                 continue;
             }
 
@@ -167,28 +167,28 @@ class CfbdService
     private function request(string $endpoint, array $params, string $apiKey): array
     {
         try {
-            $response = $this->http->request('GET', self::BASE_URL . $endpoint, [
+            $response = $this->http->request('GET', self::BASE_URL.$endpoint, [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $apiKey,
-                    'Accept'        => 'application/json',
+                    'Authorization' => 'Bearer '.$apiKey,
+                    'Accept' => 'application/json',
                 ],
-                'query'       => $params,
-                'timeout'     => self::TIMEOUT,
+                'query' => $params,
+                'timeout' => self::TIMEOUT,
                 'http_errors' => false,
             ]);
         } catch (\Throwable $e) {
-            throw new RuntimeException('CFBD request failed: ' . $e->getMessage(), 0, $e);
+            throw new RuntimeException('CFBD request failed: '.$e->getMessage(), 0, $e);
         }
 
         $status = $response->getStatusCode();
 
         if ($status < 200 || $status >= 300) {
-            throw new RuntimeException('CFBD API returned HTTP ' . $status . ' for ' . $endpoint);
+            throw new RuntimeException('CFBD API returned HTTP '.$status.' for '.$endpoint);
         }
 
         $decoded = json_decode((string) $response->getBody(), true);
 
-        if (!is_array($decoded)) {
+        if (! is_array($decoded)) {
             throw new RuntimeException('CFBD response was not valid JSON.');
         }
 

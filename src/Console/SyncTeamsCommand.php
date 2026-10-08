@@ -7,7 +7,7 @@ use Resofire\Picks\Service\TeamSyncService;
 
 class SyncTeamsCommand extends Command
 {
-    protected $signature   = 'picks:sync-teams';
+    protected $signature = 'picks:sync-teams';
     protected $description = 'Sync FBS teams from the College Football Data API.';
 
     public function handle(TeamSyncService $teamSyncService): int

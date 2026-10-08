@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
+use Flarum\Settings\SettingsRepositoryInterface;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -10,7 +11,6 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Resofire\Picks\Pick;
 use Resofire\Picks\PickEvent;
-use Flarum\Settings\SettingsRepositoryInterface;
 
 class ListPicksController implements RequestHandlerInterface
 {
@@ -31,7 +31,6 @@ class ListPicksController implements RequestHandlerInterface
             return new JsonResponse(['status' => 'error', 'message' => 'week_id is required.'], 422);
         }
 
-
         // All events for this week with home/away teams
         $events = PickEvent::with(['homeTeam', 'awayTeam', 'week'])
             ->where('week_id', (int) $weekId)
@@ -48,10 +47,10 @@ class ListPicksController implements RequestHandlerInterface
 
             foreach ($picks as $eventId => $pick) {
                 $myPicks[$eventId] = [
-                    'id'               => $pick->id,
+                    'id' => $pick->id,
                     'selected_outcome' => $pick->selected_outcome,
-                    'is_correct'       => $pick->is_correct,
-                    'confidence'       => $pick->confidence,
+                    'is_correct' => $pick->is_correct,
+                    'confidence' => $pick->confidence,
                 ];
             }
         }
@@ -62,43 +61,43 @@ class ListPicksController implements RequestHandlerInterface
             $pick = $myPicks[$e->id] ?? null;
 
             return [
-                'id'          => $e->id,
-                'status'      => $e->status,
-                'can_pick'    => $e->canPick(),
-                'match_date'  => $e->match_date?->toIso8601String(),
-                'time_tbd'    => (bool) $e->time_tbd,
+                'id' => $e->id,
+                'status' => $e->status,
+                'can_pick' => $e->canPick(),
+                'match_date' => $e->match_date?->toIso8601String(),
+                'time_tbd' => (bool) $e->time_tbd,
                 'cutoff_date' => $e->cutoff_date?->toIso8601String(),
-                'neutral_site'=> $e->neutral_site,
-                'home_score'  => $e->home_score,
-                'away_score'  => $e->away_score,
-                'result'      => $e->result,
-                'home_team'   => $home ? [
-                    'id'           => $home->id,
-                    'name'         => $home->name,
+                'neutral_site' => $e->neutral_site,
+                'home_score' => $e->home_score,
+                'away_score' => $e->away_score,
+                'result' => $e->result,
+                'home_team' => $home ? [
+                    'id' => $home->id,
+                    'name' => $home->name,
                     'abbreviation' => $home->abbreviation,
-                    'conference'   => $home->conference,
+                    'conference' => $home->conference,
                     /*
                      * 🚨 Through the MODEL, never by gluing the forum URL onto
                      * the stored path — `logo_path` is absolute for every team
                      * synced from ESPN. See ListEventsController.
                      */
-                    'logo_url'     => $home->logo_url,
-                    'logo_dark_url'=> $home->logo_dark_url,
+                    'logo_url' => $home->logo_url,
+                    'logo_dark_url' => $home->logo_dark_url,
                 ] : null,
-                'away_team'   => $away ? [
-                    'id'           => $away->id,
-                    'name'         => $away->name,
+                'away_team' => $away ? [
+                    'id' => $away->id,
+                    'name' => $away->name,
                     'abbreviation' => $away->abbreviation,
-                    'conference'   => $away->conference,
+                    'conference' => $away->conference,
                     /*
                      * 🚨 Through the MODEL, never by gluing the forum URL onto
                      * the stored path — `logo_path` is absolute for every team
                      * synced from ESPN. See ListEventsController.
                      */
-                    'logo_url'     => $away->logo_url,
-                    'logo_dark_url'=> $away->logo_dark_url,
+                    'logo_url' => $away->logo_url,
+                    'logo_dark_url' => $away->logo_dark_url,
                 ] : null,
-                'my_pick'     => $pick,
+                'my_pick' => $pick,
             ];
         });
 
@@ -109,10 +108,10 @@ class ListPicksController implements RequestHandlerInterface
         return new JsonResponse([
             'data' => $data->values()->toArray(),
             'meta' => [
-                'week_id'    => (int) $weekId,
-                'week_open'  => $weekObj ? (bool) $weekObj->is_open : false,
-                'total'      => $events->count(),
-                'picked'     => count($myPicks),
+                'week_id' => (int) $weekId,
+                'week_open' => $weekObj ? (bool) $weekObj->is_open : false,
+                'total' => $events->count(),
+                'picked' => count($myPicks),
             ],
         ]);
     }

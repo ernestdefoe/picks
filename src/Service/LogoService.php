@@ -11,8 +11,8 @@ use Psr\Log\LoggerInterface;
 class LogoService
 {
     protected const LOGO_DIRECTORY = 'picks/logos';
-    protected const WEBP_QUALITY   = 85;
-    protected const TIMEOUT        = 15;
+    protected const WEBP_QUALITY = 85;
+    protected const TIMEOUT = 15;
 
     public function __construct(
         protected ImageManager $imageManager,
@@ -30,7 +30,7 @@ class LogoService
     public function downloadFromUrls(?string $logoUrl, ?string $logoDarkUrl, string $slug): array
     {
         return [
-            'logo_path'      => $logoUrl
+            'logo_path' => $logoUrl
                 ? $this->processLogo($logoUrl, $slug, '')
                 : null,
             'logo_dark_path' => $logoDarkUrl
@@ -65,16 +65,16 @@ class LogoService
             $response = $this->http->request('GET', $url, [
                 // No User-Agent override - see SyncScoresService::fetchJson().
                 // ESPN 403s this custom string; Guzzle's own default is accepted.
-                'timeout'         => self::TIMEOUT,
+                'timeout' => self::TIMEOUT,
                 'allow_redirects' => true,
-                'http_errors'     => false,
+                'http_errors' => false,
             ]);
         } catch (\Throwable $e) {
             return null;
         }
 
         $status = $response->getStatusCode();
-        $body   = (string) $response->getBody();
+        $body = (string) $response->getBody();
 
         if ($status < 200 || $status >= 300 || $body === '') {
             return null;
@@ -94,22 +94,22 @@ class LogoService
                 ->read($imageData)
                 ->toWebp(self::WEBP_QUALITY);
 
-            $filename = $slug . $suffix . '.webp';
+            $filename = $slug.$suffix.'.webp';
 
             // Write through the flarum-assets disk (public/assets) so the
             // extension works on cloud/CDN-backed public disks too. put()
             // creates any missing directories.
             $this->filesystem
                 ->disk('flarum-assets')
-                ->put(self::LOGO_DIRECTORY . '/' . $filename, (string) $encoded);
+                ->put(self::LOGO_DIRECTORY.'/'.$filename, (string) $encoded);
 
-            return 'assets/' . self::LOGO_DIRECTORY . '/' . $filename;
+            return 'assets/'.self::LOGO_DIRECTORY.'/'.$filename;
         } catch (\Throwable $e) {
             // Image decode/encode or filesystem write failed. Log it so operators
             // can diagnose missing logos after a sync instead of seeing a silent
             // null. Returning null keeps the sync resilient to one bad image.
             $this->log->warning(
-                '[Picks] Logo convert/save failed for ' . $slug . $suffix . ': ' . $e->getMessage()
+                '[Picks] Logo convert/save failed for '.$slug.$suffix.': '.$e->getMessage()
             );
 
             return null;

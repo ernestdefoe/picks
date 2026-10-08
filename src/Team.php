@@ -40,8 +40,8 @@ class Team extends AbstractModel
 
     protected $casts = [
         'logo_custom' => 'boolean',
-        'cfbd_id'     => 'integer',
-        'espn_id'     => 'integer',
+        'cfbd_id' => 'integer',
+        'espn_id' => 'integer',
     ];
 
     /**
@@ -74,6 +74,6 @@ class Team extends AbstractModel
 
         $baseUrl = resolve(SettingsRepositoryInterface::class)->get('url');
 
-        return rtrim($baseUrl, '/') . '/' . ltrim($path, '/');
+        return rtrim($baseUrl, '/').'/'.ltrim($path, '/');
     }
 }

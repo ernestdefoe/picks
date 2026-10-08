@@ -2,7 +2,6 @@
 
 namespace Resofire\Picks\Api\Controller;
 
-use Carbon\Carbon;
 use Flarum\Http\RequestUtil;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Illuminate\Support\Arr;
@@ -26,14 +25,14 @@ class SubmitPickController implements RequestHandlerInterface
         $actor->assertRegistered();
         $actor->assertCan('picks.makePicks');
 
-        $body       = $request->getParsedBody() ?? [];
-        $eventId    = (int) Arr::get($body, 'event_id');
-        $outcome    = Arr::get($body, 'selected_outcome');
+        $body = $request->getParsedBody() ?? [];
+        $eventId = (int) Arr::get($body, 'event_id');
+        $outcome = Arr::get($body, 'selected_outcome');
         $confidence = Arr::get($body, 'confidence');
 
         if (! $eventId || ! in_array($outcome, ['home', 'away'], true)) {
             return new JsonResponse([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'event_id and selected_outcome (home or away) are required.',
             ], 422);
         }
@@ -49,7 +48,7 @@ class SubmitPickController implements RequestHandlerInterface
             $confidence = (int) $confidence;
             if ($confidence < 1 || $confidence > 10) {
                 return new JsonResponse([
-                    'status'  => 'error',
+                    'status' => 'error',
                     'message' => 'Confidence must be between 1 and 10.',
                 ], 422);
             }
@@ -63,7 +62,7 @@ class SubmitPickController implements RequestHandlerInterface
 
         if (! $event->canPick()) {
             return new JsonResponse([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'This game is no longer open for picks.',
             ], 422);
         }
@@ -80,20 +79,20 @@ class SubmitPickController implements RequestHandlerInterface
             }
         } else {
             $pick = new Pick();
-            $pick->user_id          = $actor->id;
-            $pick->event_id         = $eventId;
+            $pick->user_id = $actor->id;
+            $pick->event_id = $eventId;
             $pick->selected_outcome = $outcome;
-            $pick->confidence       = $confidence;
+            $pick->confidence = $confidence;
         }
 
         $pick->save();
 
         return new JsonResponse([
-            'status'           => 'success',
-            'pick_id'          => $pick->id,
-            'event_id'         => $eventId,
+            'status' => 'success',
+            'pick_id' => $pick->id,
+            'event_id' => $eventId,
             'selected_outcome' => $pick->selected_outcome,
-            'confidence'       => $pick->confidence,
+            'confidence' => $pick->confidence,
         ]);
     }
 }

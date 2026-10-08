@@ -1,7 +1,6 @@
 <?php
 
 use Flarum\Database\Migration;
-use Illuminate\Database\Schema\Blueprint;
 
 /*
  * 🚨 The league belongs to the SEASON, not to a setting.

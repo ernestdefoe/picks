@@ -62,7 +62,7 @@ class EspnProvider implements Provider
 
     public function games(League $league, int $year, ?int $week = null, string $seasonType = 'regular'): array
     {
-        if (!$this->supports($league)) {
+        if (! $this->supports($league)) {
             return [];
         }
 
@@ -83,7 +83,7 @@ class EspnProvider implements Provider
             $params['dates'] = $year;
         }
 
-        $response = $this->get($league->espnPath . '/scoreboard', $params);
+        $response = $this->get($league->espnPath.'/scoreboard', $params);
 
         $games = [];
 
@@ -100,11 +100,11 @@ class EspnProvider implements Provider
 
     public function boxScore(League $league, string $externalId, int $year, ?int $week = null, string $seasonType = 'regular'): ?array
     {
-        if (!$this->supports($league) || $externalId === '') {
+        if (! $this->supports($league) || $externalId === '') {
             return null;
         }
 
-        if ($this->fetched >= self::MAX_SUMMARIES_PER_RUN && !isset($this->summaries[$externalId])) {
+        if ($this->fetched >= self::MAX_SUMMARIES_PER_RUN && ! isset($this->summaries[$externalId])) {
             return null;
         }
 
@@ -561,7 +561,7 @@ class EspnProvider implements Provider
         }
 
         // Whatever trailed it — a ties column — is carried through untouched.
-        return $wins . '-' . $losses . $m[3];
+        return $wins.'-'.$losses.$m[3];
     }
 
     /**
@@ -669,7 +669,7 @@ class EspnProvider implements Provider
             };
 
             // One chip per channel per market: the two shapes overlap.
-            $listings[strtolower($name) . '|' . $market] ??= ['name' => $name, 'type' => $type, 'market' => $market];
+            $listings[strtolower($name).'|'.$market] ??= ['name' => $name, 'type' => $type, 'market' => $market];
         };
 
         foreach ((array) ($competition['geoBroadcasts'] ?? []) as $geo) {
@@ -870,7 +870,7 @@ class EspnProvider implements Provider
         $out = [];
 
         foreach ($teams as $side) {
-            if (!is_array($side)) {
+            if (! is_array($side)) {
                 continue;
             }
 
@@ -906,7 +906,7 @@ class EspnProvider implements Provider
         $out = [];
 
         foreach ($statistics as $entry) {
-            if (!is_array($entry)) {
+            if (! is_array($entry)) {
                 continue;
             }
 
@@ -917,7 +917,7 @@ class EspnProvider implements Provider
             }
 
             if (isset($entry['stats']) && is_array($entry['stats'])) {
-                foreach ($this->flatten($entry['stats'], $prefix . $name . '.') as $nested) {
+                foreach ($this->flatten($entry['stats'], $prefix.$name.'.') as $nested) {
                     $out[] = $nested;
                 }
 
@@ -925,7 +925,7 @@ class EspnProvider implements Provider
             }
 
             $out[] = [
-                'category' => $prefix . $name,
+                'category' => $prefix.$name,
                 'stat' => (string) ($entry['displayValue'] ?? ''),
             ];
         }
@@ -955,14 +955,14 @@ class EspnProvider implements Provider
         $out = [];
 
         foreach ($players as $side) {
-            if (!is_array($side)) {
+            if (! is_array($side)) {
                 continue;
             }
 
             $categories = [];
 
             foreach ((array) ($side['statistics'] ?? []) as $group) {
-                if (!is_array($group)) {
+                if (! is_array($group)) {
                     continue;
                 }
 
@@ -986,14 +986,14 @@ class EspnProvider implements Provider
                     $entries = [];
 
                     foreach ($athletes as $athlete) {
-                        if (!is_array($athlete)) {
+                        if (! is_array($athlete)) {
                             continue;
                         }
 
                         $stats = array_values((array) ($athlete['stats'] ?? []));
 
                         // A short row is a row, not a reason to drop the athlete.
-                        if (!array_key_exists($index, $stats)) {
+                        if (! array_key_exists($index, $stats)) {
                             continue;
                         }
 
@@ -1022,7 +1022,7 @@ class EspnProvider implements Provider
                 $lines = [];
 
                 foreach ($athletes as $athlete) {
-                    if (!is_array($athlete)) {
+                    if (! is_array($athlete)) {
                         continue;
                     }
 
@@ -1115,7 +1115,7 @@ class EspnProvider implements Provider
         $this->fetched++;
 
         try {
-            $summary = $this->get($league->espnPath . '/summary', ['event' => $eventId]);
+            $summary = $this->get($league->espnPath.'/summary', ['event' => $eventId]);
         } catch (RuntimeException) {
             /*
              * 🚨 Swallowed on purpose, and only here. A game whose summary is
@@ -1131,7 +1131,7 @@ class EspnProvider implements Provider
     /** @return array<string, mixed> */
     protected function get(string $path, array $params): array
     {
-        $response = $this->http->get(self::BASE . '/' . ltrim($path, '/'), [
+        $response = $this->http->get(self::BASE.'/'.ltrim($path, '/'), [
             'query' => $params,
             'timeout' => self::TIMEOUT,
             'headers' => ['Accept' => 'application/json'],
@@ -1139,13 +1139,13 @@ class EspnProvider implements Provider
         ]);
 
         if ($response->getStatusCode() !== 200) {
-            throw new RuntimeException('ESPN returned ' . $response->getStatusCode() . ' for ' . $path);
+            throw new RuntimeException('ESPN returned '.$response->getStatusCode().' for '.$path);
         }
 
         $decoded = json_decode((string) $response->getBody(), true);
 
-        if (!is_array($decoded)) {
-            throw new RuntimeException('ESPN returned something that is not JSON for ' . $path);
+        if (! is_array($decoded)) {
+            throw new RuntimeException('ESPN returned something that is not JSON for '.$path);
         }
 
         return $decoded;

@@ -13,7 +13,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 use Resofire\Picks\Jobs\SyncScoresJob;
 
 /**
- * POST /picks/sync/scores
+ * POST /picks/sync/scores.
  *
  * Dispatches a background SyncScoresJob and returns 202 Accepted immediately,
  * instead of running the multi-week CFBD fetch loop synchronously in the admin

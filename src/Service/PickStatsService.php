@@ -40,15 +40,15 @@ class PickStatsService
             ->selectRaw("{$p}picks_events.away_team_id as team_id, COUNT(*) as cnt")
             ->orderByDesc('cnt')->first();
 
-        $topTeamId  = null;
+        $topTeamId = null;
         $topTeamCnt = 0;
 
         if ($homeTop && $homeTop->getAttribute('cnt') > $topTeamCnt) {
-            $topTeamId  = (int) $homeTop->getAttribute('team_id');
+            $topTeamId = (int) $homeTop->getAttribute('team_id');
             $topTeamCnt = (int) $homeTop->getAttribute('cnt');
         }
         if ($awayTop && $awayTop->getAttribute('cnt') > $topTeamCnt) {
-            $topTeamId  = (int) $awayTop->getAttribute('team_id');
+            $topTeamId = (int) $awayTop->getAttribute('team_id');
             $topTeamCnt = (int) $awayTop->getAttribute('cnt');
         }
 

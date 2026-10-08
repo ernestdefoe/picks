@@ -6,9 +6,9 @@ use Flarum\Settings\SettingsRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Resofire\Picks\BoxScore;
+use Resofire\Picks\PickEvent;
 use Resofire\Picks\Service\Leagues\League;
 use Resofire\Picks\Service\Leagues\Leagues;
-use Resofire\Picks\PickEvent;
 use Resofire\Picks\Week;
 
 /**
@@ -159,7 +159,7 @@ class BoxScoreService
         foreach ($this->finishedIn($week) as $event) {
             $gameId = (int) $event->cfbd_id;
 
-            if (!isset($teams[$gameId])) {
+            if (! isset($teams[$gameId])) {
                 continue;
             }
 
@@ -172,7 +172,7 @@ class BoxScoreService
             BoxScore::updateOrCreate(
                 ['event_id' => $event->id],
                 ['payload' => json_encode($document, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                 'fetched_at' => Carbon::now()],
+                    'fetched_at' => Carbon::now()],
             );
 
             $stored++;
@@ -194,7 +194,7 @@ class BoxScoreService
      */
     protected function fetchWeekFromEspn(Week $week, League $league, int $year): int
     {
-        if (!$this->espn->supports($league)) {
+        if (! $this->espn->supports($league)) {
             return 0;
         }
 
@@ -224,7 +224,7 @@ class BoxScoreService
             BoxScore::updateOrCreate(
                 ['event_id' => $event->id],
                 ['payload' => json_encode($document, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                 'fetched_at' => Carbon::now()],
+                    'fetched_at' => Carbon::now()],
             );
 
             $stored++;
@@ -297,14 +297,14 @@ class BoxScoreService
             $where = ($side['homeAway'] ?? '') === 'away' ? 'away' : 'home';
 
             $document[$where] = [
-                'team'    => (string) ($side['team'] ?? ''),
-                'points'  => isset($side['points']) ? (int) $side['points'] : null,
-                'stats'   => $this->teamStats($side['stats'] ?? []),
+                'team' => (string) ($side['team'] ?? ''),
+                'points' => isset($side['points']) ? (int) $side['points'] : null,
+                'stats' => $this->teamStats($side['stats'] ?? []),
                 'leaders' => [],
             ];
         }
 
-        if (!isset($document['home'], $document['away'])) {
+        if (! isset($document['home'], $document['away'])) {
             return null;
         }
 
@@ -317,7 +317,7 @@ class BoxScoreService
          * which reads as a fact.
          */
         foreach (['linescores', 'scoring', 'market', 'swing'] as $key) {
-            if (!empty($extra[$key])) {
+            if (! empty($extra[$key])) {
                 $document[$key] = $extra[$key];
             }
         }
@@ -494,7 +494,7 @@ class BoxScoreService
         $out = [];
 
         foreach (is_array($stats) ? $stats : [] as $entry) {
-            if (!is_array($entry)) {
+            if (! is_array($entry)) {
                 continue;
             }
 
@@ -531,28 +531,28 @@ class BoxScoreService
         $out = [];
 
         foreach (is_array($categories) ? $categories : [] as $category) {
-            if (!is_array($category)) {
+            if (! is_array($category)) {
                 continue;
             }
 
             $name = (string) ($category['name'] ?? '');
 
-            if (!isset($decidedBy[$name])) {
+            if (! isset($decidedBy[$name])) {
                 continue;
             }
 
             $players = [];
-            $order   = [];
+            $order = [];
 
             foreach ((array) ($category['types'] ?? []) as $type) {
-                if (!is_array($type)) {
+                if (! is_array($type)) {
                     continue;
                 }
 
                 $figure = (string) ($type['name'] ?? '');
 
                 foreach ((array) ($type['athletes'] ?? []) as $athlete) {
-                    if (!is_array($athlete)) {
+                    if (! is_array($athlete)) {
                         continue;
                     }
 
@@ -564,7 +564,7 @@ class BoxScoreService
 
                     $players[$who][$figure] = (string) ($athlete['stat'] ?? '');
 
-                    if (!isset($order[$who])) {
+                    if (! isset($order[$who])) {
                         $order[$who] = count($order);
                     }
                 }
@@ -574,7 +574,7 @@ class BoxScoreService
                 continue;
             }
 
-            $best      = null;
+            $best = null;
             $bestScore = null;
 
             foreach ($players as $who => $figures) {
@@ -583,7 +583,7 @@ class BoxScoreService
                 // Ties go to whoever the feed listed first, which is the order
                 // it considers most notable.
                 if ($bestScore === null || $score > $bestScore) {
-                    $best      = $who;
+                    $best = $who;
                     $bestScore = $score;
                 }
             }

@@ -73,7 +73,7 @@ class PostStandingsCommand extends AbstractCommand
              * post every week is a board advertising that no one is here, which
              * is the opposite of what it is for.
              */
-            $this->info('Nobody has a scored pick for ' . $week->name . '. Nothing published.');
+            $this->info('Nobody has a scored pick for '.$week->name.'. Nothing published.');
 
             return 0;
         }
@@ -99,7 +99,7 @@ class PostStandingsCommand extends AbstractCommand
         $author = $this->author();
 
         if ($author === null) {
-            $this->error('No author to post as. Set ' . self::SETTING_AUTHOR . ' or give an admin account.');
+            $this->error('No author to post as. Set '.self::SETTING_AUTHOR.' or give an admin account.');
 
             return 1;
         }
@@ -202,9 +202,9 @@ class PostStandingsCommand extends AbstractCommand
                 'place' => $place,
                 'name' => (string) ($score->user->display_name ?? $score->user->username ?? ''),
                 'points' => (int) $score->total_points,
-                'record' => $score->correct_picks . '-' . max(0, $score->total_picks - $score->correct_picks),
+                'record' => $score->correct_picks.'-'.max(0, $score->total_picks - $score->correct_picks),
                 'accuracy' => (float) $score->accuracy,
-                'week' => $w ? $w->correct_picks . '-' . max(0, $w->total_picks - $w->correct_picks) : null,
+                'week' => $w ? $w->correct_picks.'-'.max(0, $w->total_picks - $w->correct_picks) : null,
                 'movement' => $score->previous_rank !== null ? ((int) $score->previous_rank - $place) : null,
             ];
         }
@@ -227,8 +227,8 @@ class PostStandingsCommand extends AbstractCommand
              */
             $move = match (true) {
                 $r['movement'] === null => '',
-                $r['movement'] > 0 => '  ▲' . $r['movement'],
-                $r['movement'] < 0 => '  ▼' . abs($r['movement']),
+                $r['movement'] > 0 => '  ▲'.$r['movement'],
+                $r['movement'] < 0 => '  ▼'.abs($r['movement']),
                 default => '  –',
             };
 
@@ -238,7 +238,7 @@ class PostStandingsCommand extends AbstractCommand
                 $r['name'],
                 $r['record'],
                 round($r['accuracy']),
-                $r['week'] !== null ? '  ·  ' . $this->trans('row_week', ['record' => $r['week']]) : '',
+                $r['week'] !== null ? '  ·  '.$this->trans('row_week', ['record' => $r['week']]) : '',
                 $move
             );
         }
@@ -254,7 +254,7 @@ class PostStandingsCommand extends AbstractCommand
             $blocks[] = $best;
         }
 
-        $blocks[] = $this->trans('open', ['url' => $this->url() . '/picks']);
+        $blocks[] = $this->trans('open', ['url' => $this->url().'/picks']);
         $blocks[] = $this->trans('outro');
 
         return implode("\n\n", $blocks);
@@ -277,15 +277,15 @@ class PostStandingsCommand extends AbstractCommand
         $name = (string) ($top->user->display_name ?? $top->user->username ?? '');
 
         return $name === '' ? null : $this->trans('best', [
-            'name'   => $name,
-            'record' => $top->correct_picks . '-' . max(0, $top->total_picks - $top->correct_picks),
+            'name' => $name,
+            'record' => $top->correct_picks.'-'.max(0, $top->total_picks - $top->correct_picks),
         ]);
     }
 
     /** @param array<string, string|int> $params */
     protected function trans(string $key, array $params = []): string
     {
-        return $this->translator->trans('ernestdefoe-picks.api.standings_post.' . $key, $params);
+        return $this->translator->trans('ernestdefoe-picks.api.standings_post.'.$key, $params);
     }
 
     /**
@@ -331,7 +331,7 @@ class PostStandingsCommand extends AbstractCommand
         $tagId = $this->db->table('tags')->where('slug', $slug)->value('id');
 
         if ($tagId === null) {
-            $this->error('No tag with slug "' . $slug . '" — the standings were posted untagged.');
+            $this->error('No tag with slug "'.$slug.'" — the standings were posted untagged.');
 
             return;
         }

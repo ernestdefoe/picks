@@ -55,7 +55,7 @@ class SyncEspnController implements RequestHandlerInterface
         if ($league->provider !== 'espn') {
             return new JsonResponse([
                 'status' => 'error',
-                'message' => $league->name . ' is not synced from ESPN — use the schedule sync.',
+                'message' => $league->name.' is not synced from ESPN — use the schedule sync.',
             ], 422);
         }
 

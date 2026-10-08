@@ -54,15 +54,15 @@ class UserHistoryController implements RequestHandlerInterface
             ->where('total_picks', '>', 0)
             ->get()
             ->map(fn (ConfidenceScore $s) => [
-                'scope'     => (string) $s->scope,
+                'scope' => (string) $s->scope,
                 'season_id' => (int) $s->season_id,
-                'week_id'   => $s->week_id === null ? null : (int) $s->week_id,
-                'points'    => (int) $s->total_points,
-                'picks'     => (int) $s->total_picks,
-                'correct'   => (int) $s->correct_picks,
-                'accuracy'  => (float) $s->accuracy,
-                'diff'      => $s->tiebreak_diff,
-                'rank'      => $s->current_rank,
+                'week_id' => $s->week_id === null ? null : (int) $s->week_id,
+                'points' => (int) $s->total_points,
+                'picks' => (int) $s->total_picks,
+                'correct' => (int) $s->correct_picks,
+                'accuracy' => (float) $s->accuracy,
+                'diff' => $s->tiebreak_diff,
+                'rank' => $s->current_rank,
             ])
             ->all();
 
@@ -91,8 +91,8 @@ class UserHistoryController implements RequestHandlerInterface
             ->whereIn('id', array_filter(array_column($rows, 'week_id')) ?: [0])
             ->get(['id', 'name', 'season_type', 'week_number'])
             ->mapWithKeys(fn (Week $w) => [(int) $w->id => [
-                'name'   => (string) $w->name,
-                'type'   => (string) $w->season_type,
+                'name' => (string) $w->name,
+                'type' => (string) $w->season_type,
                 'number' => (int) $w->week_number,
             ]])
             ->all();

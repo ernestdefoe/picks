@@ -34,7 +34,7 @@ class ScheduleSyncService
     {
         $year = (int) $this->settings->get('ernestdefoe-picks.season_year', (int) date('Y'));
 
-        $syncRegular    = (bool) $this->settings->get('ernestdefoe-picks.sync_regular_season', true);
+        $syncRegular = (bool) $this->settings->get('ernestdefoe-picks.sync_regular_season', true);
         $syncPostseason = (bool) $this->settings->get('ernestdefoe-picks.sync_postseason', true);
 
         $season = $this->syncSeason($year);
@@ -68,8 +68,8 @@ class ScheduleSyncService
 
             foreach ($regularWeeks as $calWeek) {
                 $weekNumber = (int) $calWeek['week'];
-                $startDate  = $this->parseDate($calWeek['startDate'] ?? null);
-                $endDate    = $this->parseDate($calWeek['endDate'] ?? null);
+                $startDate = $this->parseDate($calWeek['startDate'] ?? null);
+                $endDate = $this->parseDate($calWeek['endDate'] ?? null);
 
                 $week = $this->syncWeek(
                     season:     $season,
@@ -108,7 +108,7 @@ class ScheduleSyncService
                 ));
 
                 $startDate = ! empty($dates) ? min($dates) : null;
-                $endDate   = ! empty($dates) ? max($dates) : null;
+                $endDate = ! empty($dates) ? max($dates) : null;
 
                 $week = $this->syncWeek(
                     season:     $season,
@@ -165,10 +165,10 @@ class ScheduleSyncService
             ->first();
 
         if (! $season) {
-            $season       = new Season();
+            $season = new Season();
             $season->year = $year;
-            $season->name = $year . ' Season';
-            $season->slug = Str::slug($year . '-season');
+            $season->name = $year.' Season';
+            $season->slug = Str::slug($year.'-season');
         }
 
         // Stamped on every pass, so a pre-league row is repaired the first time
@@ -185,10 +185,10 @@ class ScheduleSyncService
      * Find or create a week record, updating its dates if it already exists.
      */
     private function syncWeek(
-        Season  $season,
-        int     $weekNumber,
-        string  $seasonType,
-        string  $name,
+        Season $season,
+        int $weekNumber,
+        string $seasonType,
+        string $name,
         ?string $startDate,
         ?string $endDate
     ): Week {
@@ -198,15 +198,15 @@ class ScheduleSyncService
             ->first();
 
         if (! $week) {
-            $week              = new Week();
-            $week->season_id   = $season->id;
+            $week = new Week();
+            $week->season_id = $season->id;
             $week->week_number = $weekNumber;
             $week->season_type = $seasonType;
-            $week->name        = $name;
+            $week->name = $name;
         }
 
         $week->start_date = $startDate;
-        $week->end_date   = $endDate;
+        $week->end_date = $endDate;
         $week->save();
 
         // $week->wasRecentlyCreated is set by Eloquent's performInsert():
@@ -232,8 +232,8 @@ class ScheduleSyncService
 
         foreach ($apiGames as $apiGame) {
             $cfbdGameId = Arr::get($apiGame, 'id');
-            $homeId     = Arr::get($apiGame, 'homeId');
-            $awayId     = Arr::get($apiGame, 'awayId');
+            $homeId = Arr::get($apiGame, 'homeId');
+            $awayId = Arr::get($apiGame, 'awayId');
 
             if (! $cfbdGameId || ! $homeId || ! $awayId) {
                 continue;
@@ -247,14 +247,14 @@ class ScheduleSyncService
                 continue;
             }
 
-            $startDateRaw  = Arr::get($apiGame, 'startDate');
-            $startTimeTbd  = (bool) Arr::get($apiGame, 'startTimeTBD', false);
-            $neutralSite   = (bool) Arr::get($apiGame, 'neutralSite', false);
-            $completed     = (bool) Arr::get($apiGame, 'completed', false);
-            $homePoints    = Arr::get($apiGame, 'homePoints');
-            $awayPoints    = Arr::get($apiGame, 'awayPoints');
+            $startDateRaw = Arr::get($apiGame, 'startDate');
+            $startTimeTbd = (bool) Arr::get($apiGame, 'startTimeTBD', false);
+            $neutralSite = (bool) Arr::get($apiGame, 'neutralSite', false);
+            $completed = (bool) Arr::get($apiGame, 'completed', false);
+            $homePoints = Arr::get($apiGame, 'homePoints');
+            $awayPoints = Arr::get($apiGame, 'awayPoints');
 
-            $matchDate  = $startDateRaw ? Carbon::parse($startDateRaw) : null;
+            $matchDate = $startDateRaw ? Carbon::parse($startDateRaw) : null;
             $cutoffDate = $this->calculateCutoffDate($matchDate, $startTimeTbd);
 
             if (! $matchDate || ! $cutoffDate) {
@@ -270,20 +270,20 @@ class ScheduleSyncService
                 $event->cfbd_id = $cfbdGameId;
             }
 
-            $event->week_id      = $week->id;
+            $event->week_id = $week->id;
             $event->home_team_id = $homeTeamId;
             $event->away_team_id = $awayTeamId;
             $event->neutral_site = $neutralSite;
-            $event->match_date   = $matchDate;
-            $event->time_tbd     = $startTimeTbd;
-            $event->cutoff_date  = $cutoffDate;
+            $event->match_date = $matchDate;
+            $event->time_tbd = $startTimeTbd;
+            $event->cutoff_date = $cutoffDate;
 
             // Only update scores/status if the game is completed
             if ($completed && $homePoints !== null && $awayPoints !== null) {
                 $event->home_score = (int) $homePoints;
                 $event->away_score = (int) $awayPoints;
-                $event->status     = PickEvent::STATUS_FINISHED;
-                $event->result     = $event->calculateResult();
+                $event->status = PickEvent::STATUS_FINISHED;
+                $event->result = $event->calculateResult();
             } elseif ($isNew) {
                 $event->status = PickEvent::STATUS_SCHEDULED;
             }

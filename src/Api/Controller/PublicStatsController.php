@@ -34,14 +34,14 @@ class PublicStatsController implements RequestHandlerInterface
         RequestUtil::getActor($request)->assertCan('picks.view');
 
         // Shared with the other picks endpoints via CurrentSeasonService.
-        $currentWeek   = $this->currentSeason->getCurrentWeek();
+        $currentWeek = $this->currentSeason->getCurrentWeek();
         $currentWeekId = $currentWeek?->id;
 
         // This is a public, every-page-load endpoint that runs 10+ aggregate
         // queries. The data is identical for every viewer, so cache the computed
         // payload for a short window (keyed by the current week).
         $payload = $this->cache->remember(
-            'ernestdefoe-picks.public_stats.' . ($currentWeekId ?? 0),
+            'ernestdefoe-picks.public_stats.'.($currentWeekId ?? 0),
             self::CACHE_TTL,
             fn () => $this->buildPayload($currentWeek)
         );
@@ -56,9 +56,9 @@ class PublicStatsController implements RequestHandlerInterface
      */
     private function buildPayload($currentWeek): array
     {
-        $currentWeekId   = $currentWeek?->id;
+        $currentWeekId = $currentWeek?->id;
         $currentWeekName = $currentWeek?->name;
-        $currentWeekNum  = $currentWeek?->week_number;
+        $currentWeekNum = $currentWeek?->week_number;
 
         // ── Participation ─────────────────────────────────────────────────────
         // Total eligible players = all registered users (including admins).
@@ -86,9 +86,9 @@ class PublicStatsController implements RequestHandlerInterface
 
         $avgAccuracyThisWeek = null;
         if ($currentWeekId) {
-            $weekScored  = Pick::whereNotNull('is_correct')
+            $weekScored = Pick::whereNotNull('is_correct')
                 ->whereHas('event', fn ($q) => $q->where('week_id', $currentWeekId));
-            $weekTotal   = $weekScored->count();
+            $weekTotal = $weekScored->count();
             $weekCorrect = (clone $weekScored)->where('is_correct', true)->count();
 
             if ($weekTotal > 0) {
@@ -109,9 +109,9 @@ class PublicStatsController implements RequestHandlerInterface
         if ($topScore && $topScore->user) {
             $seasonLeader = [
                 'display_name' => $topScore->user->display_name ?? $topScore->user->username,
-                'avatar_url'   => $topScore->user->avatarUrl,
+                'avatar_url' => $topScore->user->avatarUrl,
                 'total_points' => $topScore->total_points,
-                'accuracy'     => $topScore->accuracy,
+                'accuracy' => $topScore->accuracy,
             ];
         }
 
@@ -123,16 +123,16 @@ class PublicStatsController implements RequestHandlerInterface
             $team = Team::find($topTeamId);
             if ($team) {
                 $mostPickedTeam = [
-                    'name'         => $team->name,
+                    'name' => $team->name,
                     'abbreviation' => $team->abbreviation,
                     /*
                      * 🚨 Through the MODEL, never by gluing the forum URL onto
                      * the stored path — `logo_path` is absolute for every team
                      * synced from ESPN. See ListEventsController.
                      */
-                    'logo_url'     => $team->logo_url,
+                    'logo_url' => $team->logo_url,
                     'logo_dark_url' => $team->logo_dark_url,
-                    'picks'        => $topTeamCnt,
+                    'picks' => $topTeamCnt,
                 ];
             }
         }
@@ -159,7 +159,6 @@ class PublicStatsController implements RequestHandlerInterface
                 ->limit(5)
                 ->get();
 
-
             // Resolve every referenced team in ONE query.
             $teamIds = $gameCounts
                 ->flatMap(fn ($row) => [$row->getAttribute('home_team_id'), $row->getAttribute('away_team_id')])
@@ -175,19 +174,19 @@ class PublicStatsController implements RequestHandlerInterface
                 }
 
                 return [
-                    'name'          => $team->name,
-                    'abbreviation'  => $team->abbreviation,
-                    'logo_url'      => $team->logo_url,
+                    'name' => $team->name,
+                    'abbreviation' => $team->abbreviation,
+                    'logo_url' => $team->logo_url,
                     'logo_dark_url' => $team->logo_dark_url,
                 ];
             };
 
             foreach ($gameCounts as $row) {
                 $mostPickedGames[] = [
-                    'event_id'    => $row->event_id,
+                    'event_id' => $row->event_id,
                     'total_picks' => (int) $row->getAttribute('total_picks'),
-                    'home_team'   => $teamPayload($row->getAttribute('home_team_id')),
-                    'away_team'   => $teamPayload($row->getAttribute('away_team_id')),
+                    'home_team' => $teamPayload($row->getAttribute('home_team_id')),
+                    'away_team' => $teamPayload($row->getAttribute('away_team_id')),
                 ];
             }
         }
@@ -195,6 +194,7 @@ class PublicStatsController implements RequestHandlerInterface
         // ── Most followed teams (top 10 by fan count on users table) ─────────
         // Defensive — the football_team column is added by the Team extension.
         $mostFollowedTeams = [];
+
         try {
             // Probing information_schema on every request is heavyweight; the
             // column only changes when the Team extension is installed/removed,
@@ -215,7 +215,6 @@ class PublicStatsController implements RequestHandlerInterface
                     ->limit(10)
                     ->get();
 
-
                 // Resolve every referenced team in ONE query (slug OR abbreviation).
                 $footballTeams = $fanCounts->pluck('football_team')->filter()->unique()->values()->all();
                 $teamRecords = ! empty($footballTeams)
@@ -235,10 +234,10 @@ class PublicStatsController implements RequestHandlerInterface
 
                     $mostFollowedTeams[] = [
                         'football_team' => $footballTeam,
-                        'fan_count'     => (int) $row->getAttribute('fan_count'),
-                        'name'          => $team->name ?? $footballTeam,
-                        'abbreviation'  => $team->abbreviation ?? $footballTeam,
-                        'logo_url'      => $team?->logo_url,
+                        'fan_count' => (int) $row->getAttribute('fan_count'),
+                        'name' => $team->name ?? $footballTeam,
+                        'abbreviation' => $team->abbreviation ?? $footballTeam,
+                        'logo_url' => $team?->logo_url,
                         'logo_dark_url' => $team?->logo_dark_url,
                     ];
                 }
@@ -250,22 +249,22 @@ class PublicStatsController implements RequestHandlerInterface
 
         return [
             'current_week' => [
-                'id'          => $currentWeekId,
-                'name'        => $currentWeekName,
+                'id' => $currentWeekId,
+                'name' => $currentWeekName,
                 'week_number' => $currentWeekNum,
             ],
             'participation' => [
-                'total_players'      => $totalPlayers,
-                'pickers_this_week'  => $uniquePickersThisWeek,
+                'total_players' => $totalPlayers,
+                'pickers_this_week' => $uniquePickersThisWeek,
                 'participation_rate' => $participationRate,
             ],
             'accuracy' => [
-                'avg_accuracy_all_time'  => $avgAccuracyAllTime,
+                'avg_accuracy_all_time' => $avgAccuracyAllTime,
                 'avg_accuracy_this_week' => $avgAccuracyThisWeek,
             ],
-            'season_leader'       => $seasonLeader,
-            'most_picked_team'    => $mostPickedTeam,
-            'most_picked_games'   => $mostPickedGames,
+            'season_leader' => $seasonLeader,
+            'most_picked_team' => $mostPickedTeam,
+            'most_picked_games' => $mostPickedGames,
             'most_followed_teams' => $mostFollowedTeams,
         ];
     }

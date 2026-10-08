@@ -32,7 +32,7 @@ class LeaderboardBlock extends AbstractBlock
      */
     private function t(string $key): string
     {
-        return $this->translator->trans('ernestdefoe-picks.admin.block.' . $key);
+        return $this->translator->trans('ernestdefoe-picks.admin.block.'.$key);
     }
 
     public function type(): string
@@ -181,6 +181,6 @@ class LeaderboardBlock extends AbstractBlock
             return $name;
         }
 
-        return rtrim((string) resolve('flarum.config')->url(), '/') . '/assets/avatars/' . $name;
+        return rtrim((string) resolve('flarum.config')->url(), '/').'/assets/avatars/'.$name;
     }
 }

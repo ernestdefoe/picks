@@ -142,8 +142,8 @@ class ConfidenceContest
             return 'frozen';
         }
 
-        $events  = PickEvent::where('week_id', $week->id)->whereIn('id', $eventIds ?: [0])->get()->keyBy('id');
-        $now     = Carbon::now('UTC');
+        $events = PickEvent::where('week_id', $week->id)->whereIn('id', $eventIds ?: [0])->get()->keyBy('id');
+        $now = Carbon::now('UTC');
         $already = $current->pluck('event_id')->map(fn ($id) => (int) $id)->all();
 
         foreach ($eventIds as $id) {
@@ -158,7 +158,7 @@ class ConfidenceContest
             }
         }
 
-        $removed  = array_values(array_diff($already, $eventIds));
+        $removed = array_values(array_diff($already, $eventIds));
         $oldFirst = $already[0] ?? null;
         $newFirst = $eventIds[0] ?? null;
 
@@ -166,12 +166,12 @@ class ConfidenceContest
             ConfidenceGame::where('week_id', $week->id)->delete();
 
             $stamp = Carbon::now();
-            $rows  = [];
+            $rows = [];
             foreach ($eventIds as $i => $id) {
                 $rows[] = [
-                    'week_id'    => $week->id,
-                    'event_id'   => $id,
-                    'position'   => $i + 1,
+                    'week_id' => $week->id,
+                    'event_id' => $id,
+                    'position' => $i + 1,
                     'created_at' => $stamp,
                     'updated_at' => $stamp,
                 ];
@@ -202,9 +202,9 @@ class ConfidenceContest
         $this->ensureSelected($week);
 
         $selection = $this->selection($week->id);
-        $eventIds  = $selection->pluck('event_id')->all();
+        $eventIds = $selection->pluck('event_id')->all();
 
-        $mine  = collect();
+        $mine = collect();
         $entry = null;
         $score = null;
 
@@ -215,7 +215,7 @@ class ConfidenceContest
                 ->keyBy('event_id');
 
             $entry = ConfidenceEntry::where('user_id', $actor->id)->where('week_id', $week->id)->first();
-            $score = ConfidenceScore::where('user_id', $actor->id)->where('scope', 'w' . $week->id)->first();
+            $score = ConfidenceScore::where('user_id', $actor->id)->where('scope', 'w'.$week->id)->first();
         }
 
         $first = $selection->first();
@@ -224,39 +224,39 @@ class ConfidenceContest
             $pick = $mine->get($g->event_id);
 
             return self::gamePayload($g->event) + [
-                'position'      => (int) $g->position,
+                'position' => (int) $g->position,
                 'is_tiebreaker' => (int) $g->position === 1,
-                'my_pick'       => $pick ? [
+                'my_pick' => $pick ? [
                     'selected_outcome' => $pick->selected_outcome,
-                    'confidence'       => (int) $pick->confidence,
-                    'is_correct'       => $pick->is_correct,
+                    'confidence' => (int) $pick->confidence,
+                    'is_correct' => $pick->is_correct,
                 ] : null,
             ];
         })->values()->all();
 
         return [
-            'week_id'    => (int) $week->id,
-            'week_open'  => (bool) $week->is_open,
-            'enabled'    => $this->enabled(),
-            'size'       => $this->size(),
-            'penalty'    => $this->penalty(),
-            'frozen'     => $this->isFrozen($selection),
-            'games'      => $games,
+            'week_id' => (int) $week->id,
+            'week_open' => (bool) $week->is_open,
+            'enabled' => $this->enabled(),
+            'size' => $this->size(),
+            'penalty' => $this->penalty(),
+            'frozen' => $this->isFrozen($selection),
+            'games' => $games,
             'tiebreaker' => $first ? [
-                'event_id'     => (int) $first->event_id,
-                'can_change'   => $first->event->canPick(),
-                'guess'        => $entry?->tiebreaker_total,
+                'event_id' => (int) $first->event_id,
+                'can_change' => $first->event->canPick(),
+                'guess' => $entry?->tiebreaker_total,
                 'actual_total' => $first->event->hasScores()
                     ? (int) $first->event->home_score + (int) $first->event->away_score
                     : null,
             ] : null,
-            'my_score'   => $score ? [
-                'total_points'  => (int) $score->total_points,
-                'total_picks'   => (int) $score->total_picks,
+            'my_score' => $score ? [
+                'total_points' => (int) $score->total_points,
+                'total_picks' => (int) $score->total_picks,
                 'correct_picks' => (int) $score->correct_picks,
                 'tiebreak_diff' => $score->tiebreak_diff,
             ] : null,
-            'picked'     => $mine->filter(fn ($p) => in_array($p->event_id, $eventIds))->count(),
+            'picked' => $mine->filter(fn ($p) => in_array($p->event_id, $eventIds))->count(),
         ];
     }
 
@@ -286,7 +286,7 @@ class ConfidenceContest
             ->where('week_id', $week->id)
             ->get()
             ->mapWithKeys(fn (ConfidencePick $p) => [(int) $p->event_id => [
-                'outcome'    => $p->selected_outcome,
+                'outcome' => $p->selected_outcome,
                 'confidence' => (int) $p->confidence,
             ]])
             ->all();
@@ -312,7 +312,7 @@ class ConfidenceContest
 
             $first = $selection->first();
             $entry = ConfidenceEntry::where('user_id', $actor->id)->where('week_id', $week->id)->first();
-            $was   = $entry?->tiebreaker_total;
+            $was = $entry?->tiebreaker_total;
 
             if ($checked['value'] !== $was && ! $first->event->canPick()) {
                 return ['error' => Rules::LOCKED, 'event_id' => (int) $first->event_id];
@@ -333,17 +333,17 @@ class ConfidenceContest
                 ->delete();
 
             $stamp = Carbon::now();
-            $rows  = [];
+            $rows = [];
             foreach ($result['write'] as $eventId => $pick) {
                 $rows[] = [
-                    'user_id'          => $actor->id,
-                    'week_id'          => $week->id,
-                    'event_id'         => $eventId,
+                    'user_id' => $actor->id,
+                    'week_id' => $week->id,
+                    'event_id' => $eventId,
                     'selected_outcome' => $pick['outcome'],
-                    'confidence'       => $pick['confidence'],
-                    'is_correct'       => null,
-                    'created_at'       => $stamp,
-                    'updated_at'       => $stamp,
+                    'confidence' => $pick['confidence'],
+                    'is_correct' => null,
+                    'created_at' => $stamp,
+                    'updated_at' => $stamp,
                 ];
             }
             if ($rows !== []) {
@@ -373,7 +373,7 @@ class ConfidenceContest
         }
 
         $inContest = ConfidenceGame::where('week_id', $event->week_id)->where('event_id', $event->id)->first();
-        $hasPicks  = ConfidencePick::where('event_id', $event->id)->exists();
+        $hasPicks = ConfidencePick::where('event_id', $event->id)->exists();
 
         if (! $inContest && ! $hasPicks) {
             return;
@@ -411,20 +411,20 @@ class ConfidenceContest
         }
 
         $penalty = $this->penalty();
-        $first   = ConfidenceGame::with('event')->where('week_id', $weekId)->where('position', 1)->first();
+        $first = ConfidenceGame::with('event')->where('week_id', $weekId)->where('position', 1)->first();
 
         $seasonWeekIds = Week::where('season_id', $week->season_id)->pluck('id')->all();
 
         foreach ($userIds as $userId) {
             $weekPicks = ConfidencePick::where('user_id', $userId)->where('week_id', $weekId)->get(['is_correct', 'confidence']);
-            $total     = Scoring::total(self::scorable($weekPicks), $penalty);
+            $total = Scoring::total(self::scorable($weekPicks), $penalty);
 
             $guess = ConfidenceEntry::where('user_id', $userId)->where('week_id', $weekId)->value('tiebreaker_total');
-            $diff  = $first && $first->event && $first->event->isFinished()
+            $diff = $first && $first->event && $first->event->isFinished()
                 ? Scoring::tiebreakDiff($guess === null ? null : (int) $guess, $first->event->home_score, $first->event->away_score)
                 : null;
 
-            $this->writeScore($userId, (int) $week->season_id, $weekId, 'w' . $weekId, $total, $diff);
+            $this->writeScore($userId, (int) $week->season_id, $weekId, 'w'.$weekId, $total, $diff);
 
             $seasonPicks = ConfidencePick::where('user_id', $userId)->whereIn('week_id', $seasonWeekIds)->get(['is_correct', 'confidence']);
             $seasonTotal = Scoring::total(self::scorable($seasonPicks), $penalty);
@@ -437,14 +437,14 @@ class ConfidenceContest
                 $userId,
                 (int) $week->season_id,
                 null,
-                's' . $week->season_id,
+                's'.$week->season_id,
                 $seasonTotal,
                 $seasonDiffs->isEmpty() ? null : (int) $seasonDiffs->sum()
             );
         }
 
-        $this->rerank('w' . $weekId);
-        $this->rerank('s' . $week->season_id);
+        $this->rerank('w'.$weekId);
+        $this->rerank('s'.$week->season_id);
     }
 
     private function writeScore(int $userId, int $seasonId, ?int $weekId, string $scope, array $total, ?int $diff): void
@@ -452,12 +452,12 @@ class ConfidenceContest
         ConfidenceScore::updateOrCreate(
             ['user_id' => $userId, 'scope' => $scope],
             [
-                'season_id'     => $seasonId,
-                'week_id'       => $weekId,
-                'total_points'  => $total['points'],
-                'total_picks'   => $total['picks'],
+                'season_id' => $seasonId,
+                'week_id' => $weekId,
+                'total_points' => $total['points'],
+                'total_picks' => $total['picks'],
                 'correct_picks' => $total['correct'],
-                'accuracy'      => $total['accuracy'],
+                'accuracy' => $total['accuracy'],
                 'tiebreak_diff' => $diff,
             ]
         );
@@ -469,7 +469,7 @@ class ConfidenceContest
         $rows = $this->rankedRows($scope);
 
         foreach ($rows as $index => $row) {
-            $rank  = $index + 1;
+            $rank = $index + 1;
             $score = $row['model'];
 
             if ((int) $score->current_rank === $rank && $score->previous_rank !== null) {
@@ -477,7 +477,7 @@ class ConfidenceContest
             }
 
             $score->previous_rank = $score->current_rank ?? $rank;
-            $score->current_rank  = $rank;
+            $score->current_rank = $rank;
             $score->save();
         }
     }
@@ -491,10 +491,10 @@ class ConfidenceContest
             ->get()
             ->map(fn (ConfidenceScore $s) => [
                 'user_id' => (int) $s->user_id,
-                'points'  => (int) $s->total_points,
+                'points' => (int) $s->total_points,
                 'correct' => (int) $s->correct_picks,
-                'diff'    => $s->tiebreak_diff,
-                'model'   => $s,
+                'diff' => $s->tiebreak_diff,
+                'model' => $s,
             ])
             ->all();
 
@@ -524,19 +524,19 @@ class ConfidenceContest
             $user = $users->get($line['user_id']);
 
             return [
-                'rank'          => $index + 1,
+                'rank' => $index + 1,
                 'previous_rank' => null,
-                'movement'      => null,
-                'user_id'       => $line['user_id'],
-                'username'      => $user?->username,
-                'display_name'  => $user->display_name ?? $user?->username,
-                'avatar_url'    => $user?->avatarUrl,
-                'total_points'  => $line['points'],
-                'total_picks'   => $line['picks'],
+                'movement' => null,
+                'user_id' => $line['user_id'],
+                'username' => $user?->username,
+                'display_name' => $user->display_name ?? $user?->username,
+                'avatar_url' => $user?->avatarUrl,
+                'total_points' => $line['points'],
+                'total_picks' => $line['picks'],
                 'correct_picks' => $line['correct'],
-                'accuracy'      => (float) $line['accuracy'],
+                'accuracy' => (float) $line['accuracy'],
                 'tiebreak_diff' => $line['diff'],
-                'is_me'         => $actor !== null && ! $actor->isGuest() && $line['user_id'] === (int) $actor->id,
+                'is_me' => $actor !== null && ! $actor->isGuest() && $line['user_id'] === (int) $actor->id,
             ];
         }, $lines, array_keys($lines));
     }
@@ -554,10 +554,10 @@ class ConfidenceContest
             ->get(['user_id', 'total_points', 'total_picks', 'correct_picks', 'tiebreak_diff'])
             ->map(fn (ConfidenceScore $s) => [
                 'user_id' => (int) $s->user_id,
-                'points'  => (int) $s->total_points,
-                'picks'   => (int) $s->total_picks,
+                'points' => (int) $s->total_points,
+                'picks' => (int) $s->total_picks,
                 'correct' => (int) $s->correct_picks,
-                'diff'    => $s->tiebreak_diff,
+                'diff' => $s->tiebreak_diff,
             ])
             ->all();
 
@@ -570,25 +570,25 @@ class ConfidenceContest
 
         return array_map(function (array $row, int $index) use ($actor) {
             /** @var ConfidenceScore $s */
-            $s    = $row['model'];
+            $s = $row['model'];
             $rank = $index + 1;
 
             return [
-                'rank'          => $rank,
+                'rank' => $rank,
                 'previous_rank' => $s->previous_rank,
-                'movement'      => $s->previous_rank !== null && $s->current_rank !== null
+                'movement' => $s->previous_rank !== null && $s->current_rank !== null
                     ? (int) $s->previous_rank - (int) $s->current_rank
                     : null,
-                'user_id'       => (int) $s->user_id,
-                'username'      => $s->user?->username,
-                'display_name'  => $s->user->display_name ?? $s->user?->username,
-                'avatar_url'    => $s->user?->avatarUrl,
-                'total_points'  => (int) $s->total_points,
-                'total_picks'   => (int) $s->total_picks,
+                'user_id' => (int) $s->user_id,
+                'username' => $s->user?->username,
+                'display_name' => $s->user->display_name ?? $s->user?->username,
+                'avatar_url' => $s->user?->avatarUrl,
+                'total_points' => (int) $s->total_points,
+                'total_picks' => (int) $s->total_picks,
                 'correct_picks' => (int) $s->correct_picks,
-                'accuracy'      => (float) $s->accuracy,
+                'accuracy' => (float) $s->accuracy,
                 'tiebreak_diff' => $s->tiebreak_diff,
-                'is_me'         => $actor !== null && ! $actor->isGuest() && (int) $s->user_id === (int) $actor->id,
+                'is_me' => $actor !== null && ! $actor->isGuest() && (int) $s->user_id === (int) $actor->id,
             ];
         }, $rows, array_keys($rows));
     }
@@ -608,19 +608,19 @@ class ConfidenceContest
     public static function row(PickEvent $e): array
     {
         $cutoff = $e->getRawOriginal('cutoff_date');
-        $match  = $e->getRawOriginal('match_date');
+        $match = $e->getRawOriginal('match_date');
 
         return [
-            'id'          => (int) $e->id,
-            'status'      => (string) $e->status,
-            'cutoff'      => $cutoff ? Carbon::parse((string) $cutoff, 'UTC')->utc()->format('Y-m-d H:i:s') : null,
-            'match_date'  => $match ? Carbon::parse((string) $match, 'UTC')->utc()->format('Y-m-d H:i:s') : null,
-            'home_rank'   => $e->home_rank,
-            'away_rank'   => $e->away_rank,
+            'id' => (int) $e->id,
+            'status' => (string) $e->status,
+            'cutoff' => $cutoff ? Carbon::parse((string) $cutoff, 'UTC')->utc()->format('Y-m-d H:i:s') : null,
+            'match_date' => $match ? Carbon::parse((string) $match, 'UTC')->utc()->format('Y-m-d H:i:s') : null,
+            'home_rank' => $e->home_rank,
+            'away_rank' => $e->away_rank,
             'home_record' => $e->home_record,
             'away_record' => $e->away_record,
-            'broadcast'   => $e->broadcast,
-            'time_tbd'    => (bool) $e->time_tbd,
+            'broadcast' => $e->broadcast,
+            'time_tbd' => (bool) $e->time_tbd,
         ];
     }
 
@@ -628,33 +628,33 @@ class ConfidenceContest
     public static function gamePayload(PickEvent $e): array
     {
         $team = fn ($t) => $t ? [
-            'id'            => $t->id,
-            'name'          => $t->name,
-            'abbreviation'  => $t->abbreviation,
-            'conference'    => $t->conference,
-            'logo_url'      => $t->logo_url,
+            'id' => $t->id,
+            'name' => $t->name,
+            'abbreviation' => $t->abbreviation,
+            'conference' => $t->conference,
+            'logo_url' => $t->logo_url,
             'logo_dark_url' => $t->logo_dark_url,
         ] : null;
 
         return [
-            'id'           => (int) $e->id,
-            'status'       => $e->status,
-            'can_pick'     => $e->canPick(),
-            'pickable'     => Selector::isPickable(self::row($e), Carbon::now('UTC')),
-            'match_date'   => $e->match_date?->toIso8601String(),
-            'time_tbd'     => (bool) $e->time_tbd,
-            'cutoff_date'  => $e->cutoff_date?->toIso8601String(),
+            'id' => (int) $e->id,
+            'status' => $e->status,
+            'can_pick' => $e->canPick(),
+            'pickable' => Selector::isPickable(self::row($e), Carbon::now('UTC')),
+            'match_date' => $e->match_date?->toIso8601String(),
+            'time_tbd' => (bool) $e->time_tbd,
+            'cutoff_date' => $e->cutoff_date?->toIso8601String(),
             'neutral_site' => (bool) $e->neutral_site,
-            'home_score'   => $e->home_score,
-            'away_score'   => $e->away_score,
-            'result'       => $e->result,
-            'home_rank'    => Selector::rank($e->home_rank),
-            'away_rank'    => Selector::rank($e->away_rank),
-            'home_record'  => $e->home_record ?: null,
-            'away_record'  => $e->away_record ?: null,
-            'broadcast'    => $e->broadcast ?: null,
-            'home_team'    => $team($e->homeTeam),
-            'away_team'    => $team($e->awayTeam),
+            'home_score' => $e->home_score,
+            'away_score' => $e->away_score,
+            'result' => $e->result,
+            'home_rank' => Selector::rank($e->home_rank),
+            'away_rank' => Selector::rank($e->away_rank),
+            'home_record' => $e->home_record ?: null,
+            'away_record' => $e->away_record ?: null,
+            'broadcast' => $e->broadcast ?: null,
+            'home_team' => $team($e->homeTeam),
+            'away_team' => $team($e->awayTeam),
         ];
     }
 }

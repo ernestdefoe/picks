@@ -21,13 +21,13 @@ namespace Resofire\Picks\Confidence;
  */
 final class Rules
 {
-    public const NOT_IN_CONTEST  = 'not_in_contest';
-    public const LOCKED          = 'locked';
-    public const BAD_OUTCOME     = 'bad_outcome';
-    public const OUT_OF_RANGE    = 'out_of_range';
+    public const NOT_IN_CONTEST = 'not_in_contest';
+    public const LOCKED = 'locked';
+    public const BAD_OUTCOME = 'bad_outcome';
+    public const OUT_OF_RANGE = 'out_of_range';
     public const DUPLICATE_VALUE = 'duplicate_value';
-    public const DUPLICATE_GAME  = 'duplicate_game';
-    public const BAD_TIEBREAKER  = 'bad_tiebreaker';
+    public const DUPLICATE_GAME = 'duplicate_game';
+    public const BAD_TIEBREAKER = 'bad_tiebreaker';
 
     /** The highest total a tiebreaker guess may name. */
     public const TIEBREAKER_MAX = 250;
@@ -45,7 +45,7 @@ final class Rules
     public static function validate(int $n, array $selection, array $locked, array $existing, array $submitted): array
     {
         $selection = array_map('intval', $selection);
-        $locked    = array_map('intval', $locked);
+        $locked = array_map('intval', $locked);
 
         $fail = fn (string $code, ?int $eventId = null) => ['error' => $code, 'event_id' => $eventId, 'write' => []];
 
@@ -58,7 +58,7 @@ final class Rules
         }
 
         $write = [];
-        $seen  = [];
+        $seen = [];
 
         foreach ($submitted as $row) {
             $eventId = (int) ($row['event_id'] ?? 0);
@@ -73,7 +73,7 @@ final class Rules
             $seen[$eventId] = true;
 
             $outcome = $row['selected_outcome'] ?? null;
-            $value   = $row['confidence'] ?? null;
+            $value = $row['confidence'] ?? null;
 
             if (in_array($eventId, $locked, true)) {
                 $mine = $existing[$eventId] ?? null;

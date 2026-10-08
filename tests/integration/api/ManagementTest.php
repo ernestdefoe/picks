@@ -2,11 +2,11 @@
 
 namespace Resofire\Picks\Tests\integration\api;
 
-use Resofire\Picks\Tests\integration\SeedsPicks;
 use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
+use Resofire\Picks\Tests\integration\SeedsPicks;
 
 /**
  * Syncing, results, resets and the admin views are for those who manage the

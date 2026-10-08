@@ -18,15 +18,15 @@ declare(strict_types=1);
  *     php tests/run.php
  */
 
-require __DIR__ . '/../src/Service/Leagues/League.php';
-require __DIR__ . '/../src/Service/Leagues/Leagues.php';
-require __DIR__ . '/../src/Service/Providers/Provider.php';
-require __DIR__ . '/../src/Service/Providers/EspnProvider.php';
-require __DIR__ . '/../src/Service/CurrentWeek.php';
-require __DIR__ . '/../src/Confidence/Selector.php';
-require __DIR__ . '/../src/Confidence/Rules.php';
-require __DIR__ . '/../src/Confidence/Scoring.php';
-require __DIR__ . '/../src/Confidence/Profile.php';
+require __DIR__.'/../src/Service/Leagues/League.php';
+require __DIR__.'/../src/Service/Leagues/Leagues.php';
+require __DIR__.'/../src/Service/Providers/Provider.php';
+require __DIR__.'/../src/Service/Providers/EspnProvider.php';
+require __DIR__.'/../src/Service/CurrentWeek.php';
+require __DIR__.'/../src/Confidence/Selector.php';
+require __DIR__.'/../src/Confidence/Rules.php';
+require __DIR__.'/../src/Confidence/Scoring.php';
+require __DIR__.'/../src/Confidence/Profile.php';
 
 use Resofire\Picks\Confidence\Profile;
 use Resofire\Picks\Confidence\Rules;
@@ -46,14 +46,14 @@ function ok(bool $condition, string $why, string $context = ''): void
 {
     global $failures;
 
-    if (!$condition) {
-        $failures[] = $why . ($context === '' ? '' : ' — ' . $context);
+    if (! $condition) {
+        $failures[] = $why.($context === '' ? '' : ' — '.$context);
     }
 }
 
 function same($expected, $actual, string $why): void
 {
-    ok($expected === $actual, $why . ' (expected ' . json_encode($expected) . ', got ' . json_encode($actual) . ')');
+    ok($expected === $actual, $why.' (expected '.json_encode($expected).', got '.json_encode($actual).')');
 }
 
 /**
@@ -77,10 +77,10 @@ final class FixtureEspn extends EspnProvider
     {
         $this->calls++;
 
-        $json = file_get_contents(__DIR__ . '/fixtures/' . $this->file);
+        $json = file_get_contents(__DIR__.'/fixtures/'.$this->file);
 
         if ($json === false) {
-            throw new RuntimeException('missing fixture ' . $this->file);
+            throw new RuntimeException('missing fixture '.$this->file);
         }
 
         return json_decode($json, true);
@@ -122,8 +122,8 @@ $tests['the registry answers, and an unknown league falls back'] = function () u
 
     // Weeks are a gridiron idea. Everything else is played to a date.
     ok($leagues->get('nfl')->hasWeeks, 'the NFL lost its weeks');
-    ok(!$leagues->get('nba')->hasWeeks, 'basketball grew weeks');
-    ok(!$leagues->get('epl')->hasWeeks, 'league football grew weeks');
+    ok(! $leagues->get('nba')->hasWeeks, 'basketball grew weeks');
+    ok(! $leagues->get('epl')->hasWeeks, 'league football grew weeks');
 };
 
 $tests['a finished game is read from the state, never the status name'] = function () use ($espn, $leagues) {
@@ -188,7 +188,7 @@ $tests['an NFL box score lands in the shape the recap already reads'] = function
     }
 
     foreach (['firstDowns', 'totalYards', 'thirdDownEff', 'turnovers', 'possessionTime'] as $key) {
-        ok(isset($stats[$key]), $key . ' is missing from an NFL box score');
+        ok(isset($stats[$key]), $key.' is missing from an NFL box score');
     }
 
     // The ratio and the clock survive as themselves rather than as numbers.
@@ -239,10 +239,10 @@ $tests['a baseball box score is prefixed, because three groups say "hits"'] = fu
     }
 
     foreach (['batting.hits', 'batting.runs', 'batting.homeRuns', 'pitching.strikeouts', 'fielding.errors'] as $key) {
-        ok(isset($stats[$key]), $key . ' is missing from a baseball box score');
+        ok(isset($stats[$key]), $key.' is missing from a baseball box score');
     }
 
-    ok(!isset($stats['hits']), 'an unprefixed "hits" survived — three groups would have fought over it');
+    ok(! isset($stats['hits']), 'an unprefixed "hits" survived — three groups would have fought over it');
 
     // Batting hits and fielding hits are different numbers and stayed different.
     ok($stats['batting.hits'] !== $stats['fielding.hits'], 'the groups collapsed into one another');
@@ -270,7 +270,7 @@ $tests['a basketball box score has one unnamed group and keeps it'] = function (
     }
 
     foreach (['fieldGoalPct', 'totalRebounds', 'assists', 'turnovers', 'pointsInPaint'] as $key) {
-        ok(isset($stats[$key]), $key . ' is missing from a basketball box score');
+        ok(isset($stats[$key]), $key.' is missing from a basketball box score');
     }
 
     // A made-attempted pair stays a pair.
@@ -300,7 +300,7 @@ $tests['a hockey box score names its groups from the other field again'] = funct
      * heading over nothing in every hockey recap; a group with nobody in it is
      * not a group.
      */
-    ok(!in_array('skaters', $names, true), 'an empty group survived');
+    ok(! in_array('skaters', $names, true), 'an empty group survived');
 };
 
 $tests['the away team\'s players are not filed under the home team'] = function () use ($espn, $leagues) {
@@ -311,15 +311,15 @@ $tests['the away team\'s players are not filed under the home team'] = function 
      * reads perfectly plausibly and would never be noticed in a recap.
      */
     foreach (['nfl' => 'nfl', 'mlb' => 'mlb', 'nba' => 'nba', 'nhl' => 'nhl'] as $file => $league) {
-        $box = $espn('espn-summary-' . $file . '.json')->boxScore($leagues->get($league), '1', 2026);
+        $box = $espn('espn-summary-'.$file.'.json')->boxScore($leagues->get($league), '1', 2026);
 
-        ok($box !== null, $file . ': no box score');
+        ok($box !== null, $file.': no box score');
 
         $sides = array_column($box['players'], 'homeAway');
 
         sort($sides);
 
-        same(['away', 'home'], $sides, $file . ': the two player sides are not one of each');
+        same(['away', 'home'], $sides, $file.': the two player sides are not one of each');
     }
 };
 
@@ -340,7 +340,7 @@ $tests['a summary is fetched once per game, and only so many per run'] = functio
     same(1, $provider->calls, 'the same game was fetched twice');
 
     for ($i = 0; $i < EspnProvider::MAX_SUMMARIES_PER_RUN + 10; $i++) {
-        $provider->boxScore($league, 'game-' . $i, 2026, 1);
+        $provider->boxScore($league, 'game-'.$i, 2026, 1);
     }
 
     same(EspnProvider::MAX_SUMMARIES_PER_RUN, $provider->calls, 'the per-run ceiling did not hold');
@@ -401,7 +401,7 @@ $tests['a fixture carries its lead-in through the adapter'] = function () use ($
 
     foreach ($games as $game) {
         foreach (['home_rank', 'away_rank', 'home_record', 'away_record', 'venue', 'venue_city', 'broadcast'] as $key) {
-            ok(array_key_exists($key, $game), 'the adapter dropped ' . $key . ' from the fixture');
+            ok(array_key_exists($key, $game), 'the adapter dropped '.$key.' from the fixture');
         }
 
         // Whatever the feed said, a rank that reaches a row is a real one.
@@ -455,13 +455,13 @@ $tests['no console command narrows a helper the base class already has'] = funct
      * A static check rather than reflection, because loading these classes
      * needs Flarum itself and this suite deliberately does not.
      */
-    foreach (glob(__DIR__ . '/../src/Console/*.php') ?: [] as $file) {
+    foreach (glob(__DIR__.'/../src/Console/*.php') ?: [] as $file) {
         $source = (string) file_get_contents($file);
 
         foreach (['info', 'error'] as $helper) {
             ok(
-                preg_match('/private\s+(static\s+)?function\s+' . $helper . '\s*\(/', $source) !== 1,
-                basename($file) . ' declares ' . $helper . '() private, which the base class declares protected',
+                preg_match('/private\s+(static\s+)?function\s+'.$helper.'\s*\(/', $source) !== 1,
+                basename($file).' declares '.$helper.'() private, which the base class declares protected',
                 'a private override of a protected method is a fatal at class-load time, and it takes the whole console with it'
             );
         }
@@ -472,7 +472,7 @@ $tests['a league no provider covers is skipped, not thrown at'] = function () us
     $provider = $espn('espn-summary-nfl.json');
     $orphan = new League('orphan', 'Orphan', 'espn', '', 'gridiron', false);
 
-    ok(!$provider->supports($orphan), 'an ESPN league with no path claimed support');
+    ok(! $provider->supports($orphan), 'an ESPN league with no path claimed support');
     same([], $provider->games($orphan, 2026), 'it tried to sync anyway');
     same(null, $provider->boxScore($orphan, '1', 2026), 'it tried to fetch anyway');
 };
@@ -587,7 +587,7 @@ $tests['auto-unlock: a complete week opens the next, an unfinished one does not'
     same(null, CurrentWeek::weekToUnlock($season([['2026-10-03 16:00:00', true]], true), $sunday), 'it opened past a week already open');
 
     // An unannounced kickoff far ahead (the 04:00Z placeholder) is never "over".
-    ok(!CurrentWeek::gameIsDone('2026-10-11 04:00:00', false, $sunday), 'a future placeholder kickoff counted as done');
+    ok(! CurrentWeek::gameIsDone('2026-10-11 04:00:00', false, $sunday), 'a future placeholder kickoff counted as done');
 };
 
 $tests['auto-unlock: switched on mid-season, it opens the week being played'] = function () use ($at) {
@@ -621,7 +621,6 @@ $tests['auto-unlock and the board agree'] = function () use ($board, $at) {
     same(5, CurrentWeek::pick($board([5, true, $stuck], [6, true, $six]), $at('2026-10-05 03:00:00')), 'the board left a week still inside 36h');
     same(6, CurrentWeek::pick($board([5, true, $stuck], [6, true, $six]), $at('2026-10-05 05:00:00')), 'the board held a week past 36h');
 };
-
 
 /* ------------------------------------------------------- the Confidence contest */
 
@@ -681,7 +680,7 @@ $tests['confidence: inside a tier, the bigger broadcast then primetime break the
 
     // 🚨 The 04:00Z placeholder of an unannounced kickoff is midnight Eastern —
     // it must not count as primetime.
-    ok(!Selector::isPrimetime($cgame(9, ['match_date' => '2026-10-10 04:00:00', 'time_tbd' => true])), 'an unannounced kickoff counted as primetime');
+    ok(! Selector::isPrimetime($cgame(9, ['match_date' => '2026-10-10 04:00:00', 'time_tbd' => true])), 'an unannounced kickoff counted as primetime');
     same(0.5, Selector::winPct(null), 'a missing record was not neutral');
     same(0.8, Selector::winPct('4-1'), 'a 4-1 record was misread');
 };
@@ -860,7 +859,7 @@ $tests['confidence: a member\'s profile record'] = function () {
 $tests['where to watch: every listing, typed and marketed'] = function () {
     $events = [];
 
-    foreach (json_decode((string) file_get_contents(__DIR__ . '/fixtures/espn-broadcasts.json'), true) as $event) {
+    foreach (json_decode((string) file_get_contents(__DIR__.'/fixtures/espn-broadcasts.json'), true) as $event) {
         $events[$event['id']] = $event;
     }
 
@@ -931,7 +930,7 @@ $tests['where to watch: a watch link only from ESPN, only over https'] = functio
  * with the full-game package published last.
  */
 $tests['highlights: full package first, then plays in order, capped'] = function () {
-    $summary = json_decode((string) file_get_contents(__DIR__ . '/fixtures/espn-summary-cfb-videos.json'), true);
+    $summary = json_decode((string) file_get_contents(__DIR__.'/fixtures/espn-summary-cfb-videos.json'), true);
     $now = strtotime('2026-10-05T00:00:00Z');
 
     $clips = EspnProvider::parseHighlights($summary, 6, $now);
@@ -967,17 +966,17 @@ foreach ($tests as $name => $test) {
 
     if (count($failures) === $before) {
         $passed++;
-        echo "  ok   " . $name . "\n";
+        echo '  ok   '.$name."\n";
         continue;
     }
 
-    echo "  FAIL " . $name . "\n";
+    echo '  FAIL '.$name."\n";
 
     foreach (array_slice($failures, $before) as $failure) {
-        echo "       " . $failure . "\n";
+        echo '       '.$failure."\n";
     }
 }
 
-echo "\n" . $passed . '/' . count($tests) . " passed\n";
+echo "\n".$passed.'/'.count($tests)." passed\n";
 
 exit($failures === [] ? 0 : 1);

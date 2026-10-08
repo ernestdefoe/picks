@@ -38,24 +38,25 @@ class TeamSyncService
         // Filter to FBS only — CFBD /teams returns all classifications
         $apiTeams = array_filter($apiTeams, function (array $team) {
             $classification = strtolower((string) Arr::get($team, 'classification', ''));
+
             return $classification === self::FBS_CLASSIFICATION;
         });
 
         $created = 0;
         $updated = 0;
-        $logos   = 0;
-        $errors  = [];
+        $logos = 0;
+        $errors = [];
 
         foreach ($apiTeams as $apiTeam) {
-            $cfbdId     = Arr::get($apiTeam, 'id');
-            $name       = Arr::get($apiTeam, 'school');
-            $abbrev     = Arr::get($apiTeam, 'abbreviation');
+            $cfbdId = Arr::get($apiTeam, 'id');
+            $name = Arr::get($apiTeam, 'school');
+            $abbrev = Arr::get($apiTeam, 'abbreviation');
             $conference = Arr::get($apiTeam, 'conference');
 
             // CFBD returns logos as an array of URLs directly.
             // Index 0 = standard, index 1 = dark variant.
-            $logoUrls    = Arr::get($apiTeam, 'logos', []);
-            $logoUrl     = $logoUrls[0] ?? null;
+            $logoUrls = Arr::get($apiTeam, 'logos', []);
+            $logoUrl = $logoUrls[0] ?? null;
             $logoDarkUrl = $logoUrls[1] ?? null;
 
             // Extract the ESPN ID from the logo URL for storage reference.
@@ -77,14 +78,14 @@ class TeamSyncService
             $isNew = $team === null;
 
             if ($isNew) {
-                $team       = new Team();
+                $team = new Team();
                 $team->slug = $slug;
             }
 
-            $team->name         = $name;
+            $team->name = $name;
             $team->abbreviation = $abbrev;
-            $team->conference   = $conference;
-            $team->cfbd_id      = $cfbdId;
+            $team->conference = $conference;
+            $team->cfbd_id = $cfbdId;
 
             if ($espnId) {
                 $team->espn_id = $espnId;
@@ -129,7 +130,7 @@ class TeamSyncService
                         $logos++;
                     }
                 } catch (\Throwable $e) {
-                    $errors[] = "Logo download failed for {$name}: " . $e->getMessage();
+                    $errors[] = "Logo download failed for {$name}: ".$e->getMessage();
                 }
             }
         }
@@ -155,13 +156,13 @@ class TeamSyncService
             ->limit($batchSize)
             ->get();
 
-        $saved     = 0;
-        $failed    = 0;
+        $saved = 0;
+        $failed = 0;
 
         foreach ($teams as $team) {
             // Reconstruct the ESPN CDN URLs from the stored espn_id
-            $logoUrl     = 'https://a.espncdn.com/i/teamlogos/ncaa/500/' . $team->espn_id . '.png';
-            $logoDarkUrl = 'https://a.espncdn.com/i/teamlogos/ncaa/500-dark/' . $team->espn_id . '.png';
+            $logoUrl = 'https://a.espncdn.com/i/teamlogos/ncaa/500/'.$team->espn_id.'.png';
+            $logoDarkUrl = 'https://a.espncdn.com/i/teamlogos/ncaa/500-dark/'.$team->espn_id.'.png';
 
             try {
                 $paths = $this->logoService->downloadFromUrls($logoUrl, $logoDarkUrl, $team->slug);
@@ -206,8 +207,8 @@ class TeamSyncService
             return false;
         }
 
-        $logoUrl     = 'https://a.espncdn.com/i/teamlogos/ncaa/500/' . $team->espn_id . '.png';
-        $logoDarkUrl = 'https://a.espncdn.com/i/teamlogos/ncaa/500-dark/' . $team->espn_id . '.png';
+        $logoUrl = 'https://a.espncdn.com/i/teamlogos/ncaa/500/'.$team->espn_id.'.png';
+        $logoDarkUrl = 'https://a.espncdn.com/i/teamlogos/ncaa/500-dark/'.$team->espn_id.'.png';
 
         $paths = $this->logoService->downloadFromUrls($logoUrl, $logoDarkUrl, $team->slug);
 

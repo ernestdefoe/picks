@@ -17,11 +17,11 @@ class ListLeaderboardController implements RequestHandlerInterface
         $actor = RequestUtil::getActor($request);
         $actor->assertCan('picks.view');
 
-        $params   = $request->getQueryParams();
-        $scope    = Arr::get($params, 'scope', 'week'); // week | season | alltime
-        $weekId   = Arr::get($params, 'week_id');
+        $params = $request->getQueryParams();
+        $scope = Arr::get($params, 'scope', 'week'); // week | season | alltime
+        $weekId = Arr::get($params, 'week_id');
         $seasonId = Arr::get($params, 'season_id');
-        $limit    = min(50, max(1, (int) Arr::get($params, 'limit', 25)));
+        $limit = min(50, max(1, (int) Arr::get($params, 'limit', 25)));
 
         $query = UserScore::with('user')
             ->where('total_picks', '>', 0)
@@ -61,32 +61,32 @@ class ListLeaderboardController implements RequestHandlerInterface
         }
 
         $data = $scores->map(function (UserScore $score, int $index) use ($actor) {
-            $currentRank  = $index + 1;
+            $currentRank = $index + 1;
             $previousRank = $score->previous_rank;
-            $movement     = $previousRank !== null ? $previousRank - $currentRank : null;
+            $movement = $previousRank !== null ? $previousRank - $currentRank : null;
 
             return [
-                'rank'          => $currentRank,
+                'rank' => $currentRank,
                 'previous_rank' => $previousRank,
-                'movement'      => $movement, // positive = moved up, negative = moved down, 0 = no change
-                'user_id'       => $score->user_id,
-                'username'      => $score->user?->username,
-                'display_name'  => $score->user->display_name ?? $score->user?->username,
-                'avatar_url'    => $score->user?->avatarUrl,
-                'total_points'  => $score->total_points,
-                'total_picks'   => $score->total_picks,
+                'movement' => $movement, // positive = moved up, negative = moved down, 0 = no change
+                'user_id' => $score->user_id,
+                'username' => $score->user?->username,
+                'display_name' => $score->user->display_name ?? $score->user?->username,
+                'avatar_url' => $score->user?->avatarUrl,
+                'total_points' => $score->total_points,
+                'total_picks' => $score->total_picks,
                 'correct_picks' => $score->correct_picks,
-                'accuracy'      => $score->accuracy,
-                'is_me'         => $score->user_id === $actor->id,
+                'accuracy' => $score->accuracy,
+                'is_me' => $score->user_id === $actor->id,
             ];
         });
 
         return new JsonResponse([
-            'data'    => $data->values()->toArray(),
-            'meta'    => [
-                'scope'   => $scope,
+            'data' => $data->values()->toArray(),
+            'meta' => [
+                'scope' => $scope,
                 'my_rank' => $myRank,
-                'total'   => $scores->count(),
+                'total' => $scores->count(),
             ],
         ]);
     }

@@ -44,9 +44,9 @@ class HistoryController implements RequestHandlerInterface
         foreach ($seasons as $season) {
             $data[] = [
                 'season_id' => (int) $season->id,
-                'name'      => $season->name,
-                'year'      => (int) $season->year,
-                'standings' => $this->contest->standings('s' . $season->id, $actor, 50),
+                'name' => $season->name,
+                'year' => (int) $season->year,
+                'standings' => $this->contest->standings('s'.$season->id, $actor, 50),
             ];
         }
 

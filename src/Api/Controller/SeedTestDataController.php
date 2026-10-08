@@ -12,7 +12,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 use Resofire\Picks\Service\TestDataSeeder;
 
 /**
- * POST /picks/seed-test-data
+ * POST /picks/seed-test-data.
  *
  * Body: { "action": "seed2026" | "seedFake2025" | "cleanFake" | "wipeAll" }
  *
@@ -42,11 +42,11 @@ class SeedTestDataController implements RequestHandlerInterface
         $action = Arr::get($request->getParsedBody() ?? [], 'action', '');
 
         $result = match ($action) {
-            'seed2026'     => $this->seeder->seed2026(),
+            'seed2026' => $this->seeder->seed2026(),
             'seedFake2025' => $this->seeder->seedFake2025(),
-            'cleanFake'    => $this->seeder->cleanFake(),
-            'wipeAll'      => $this->seeder->wipeAll(),
-            default        => null,
+            'cleanFake' => $this->seeder->cleanFake(),
+            'wipeAll' => $this->seeder->wipeAll(),
+            default => null,
         };
 
         if ($result === null) {

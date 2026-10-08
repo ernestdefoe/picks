@@ -13,7 +13,7 @@ use Resofire\Picks\Service\CurrentSeasonService;
 use Resofire\Picks\UserScore;
 
 /**
- * GET /picks/user-scores?user_id=X
+ * GET /picks/user-scores?user_id=X.
  *
  * Returns the user's all-time, current-season, and current-week score blocks
  * (totals, accuracy, rank, and the player count for each scope), used by the
@@ -37,7 +37,7 @@ class UserScoresController implements RequestHandlerInterface
         $params = $request->getQueryParams();
         $userId = (int) Arr::get($params, 'user_id', 0);
 
-        if (!$userId) {
+        if (! $userId) {
             return new JsonResponse(['error' => 'user_id required'], 422);
         }
 
@@ -45,8 +45,8 @@ class UserScoresController implements RequestHandlerInterface
             // Current week (most recent season with an unfinished game, then the
             // earliest unfinished week within it). Shared across the picks
             // endpoints via CurrentSeasonService.
-            $currentWeek     = $this->currentSeason->getCurrentWeek();
-            $currentWeekId   = $currentWeek?->id;
+            $currentWeek = $this->currentSeason->getCurrentWeek();
+            $currentWeekId = $currentWeek?->id;
             $currentSeasonId = $currentWeek?->season_id;
             $currentWeekName = $currentWeek?->name;
 
@@ -80,15 +80,15 @@ class UserScoresController implements RequestHandlerInterface
                 ->whereNull('season_id')
                 ->first();
 
-            $alltimeRank  = null;
+            $alltimeRank = null;
             $totalAlltime = $alltimeScores->count();
             if ($alltime && $alltime->total_picks > 0) {
                 $alltimeRank = UserScore::rankIn($alltimeScores, $alltime->total_points);
             }
 
             // ── Season scores ─────────────────────────────────────────────────
-            $season      = null;
-            $seasonRank  = null;
+            $season = null;
+            $seasonRank = null;
             $totalSeason = $seasonScores->count();
 
             if ($currentSeasonId) {
@@ -104,8 +104,8 @@ class UserScoresController implements RequestHandlerInterface
             }
 
             // ── Week scores ───────────────────────────────────────────────────
-            $week      = null;
-            $weekRank  = null;
+            $week = null;
+            $weekRank = null;
             $totalWeek = $weekScores->count();
 
             if ($currentWeekId) {
@@ -122,27 +122,27 @@ class UserScoresController implements RequestHandlerInterface
             return new JsonResponse([
                 'current_week_name' => $currentWeekName,
                 'alltime' => $alltime ? [
-                    'total_picks'   => (int) $alltime->total_picks,
+                    'total_picks' => (int) $alltime->total_picks,
                     'correct_picks' => (int) $alltime->correct_picks,
-                    'total_points'  => (int) $alltime->total_points,
-                    'accuracy'      => (float) $alltime->accuracy,
-                    'rank'          => $alltimeRank,
+                    'total_points' => (int) $alltime->total_points,
+                    'accuracy' => (float) $alltime->accuracy,
+                    'rank' => $alltimeRank,
                     'total_players' => $totalAlltime,
                 ] : null,
                 'season' => $season ? [
-                    'total_picks'   => (int) $season->total_picks,
+                    'total_picks' => (int) $season->total_picks,
                     'correct_picks' => (int) $season->correct_picks,
-                    'total_points'  => (int) $season->total_points,
-                    'accuracy'      => (float) $season->accuracy,
-                    'rank'          => $seasonRank,
+                    'total_points' => (int) $season->total_points,
+                    'accuracy' => (float) $season->accuracy,
+                    'rank' => $seasonRank,
                     'total_players' => $totalSeason,
                 ] : null,
                 'week' => $week ? [
-                    'total_picks'   => (int) $week->total_picks,
+                    'total_picks' => (int) $week->total_picks,
                     'correct_picks' => (int) $week->correct_picks,
-                    'total_points'  => (int) $week->total_points,
-                    'accuracy'      => (float) $week->accuracy,
-                    'rank'          => $weekRank,
+                    'total_points' => (int) $week->total_points,
+                    'accuracy' => (float) $week->accuracy,
+                    'rank' => $weekRank,
                     'total_players' => $totalWeek,
                 ] : null,
             ]);
@@ -151,7 +151,7 @@ class UserScoresController implements RequestHandlerInterface
             // A query failure is a real error — return 500 so the client (and
             // operator) can tell it apart from the valid "user has no picks
             // yet" case, which is the empty-but-200 response built above.
-            $this->log->error('[Picks] UserScores failed: ' . $e->getMessage(), ['exception' => $e]);
+            $this->log->error('[Picks] UserScores failed: '.$e->getMessage(), ['exception' => $e]);
 
             return new JsonResponse(['error' => 'Failed to load user scores.'], 500);
         }

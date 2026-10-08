@@ -47,7 +47,7 @@ class EspnSyncService
 
         $summary = ['teams' => 0, 'weeks' => 0, 'created' => 0, 'updated' => 0, 'skipped' => 0];
 
-        if (!$this->espn->supports($league)) {
+        if (! $this->espn->supports($league)) {
             return $summary;
         }
 
@@ -184,7 +184,7 @@ class EspnSyncService
              * is the only way to keep a hand-picked one through a sync, and a
              * sync that ignored it would undo the same piece of work every hour.
              */
-            if ($crest['logo_path'] !== '' && !$team->logo_custom && (string) $team->logo_path === '') {
+            if ($crest['logo_path'] !== '' && ! $team->logo_custom && (string) $team->logo_path === '') {
                 $team->logo_path = $crest['logo_path'];
                 $team->espn_id = $crest['espn_id'];
                 $team->save();
@@ -263,7 +263,7 @@ class EspnSyncService
             ]);
         }
 
-        $key = $season->id . ':' . $type . ':' . $number;
+        $key = $season->id.':'.$type.':'.$number;
 
         if (isset($weeks[$key])) {
             return $weeks[$key];
@@ -374,7 +374,7 @@ class EspnSyncService
 
     protected function result(array $game): ?string
     {
-        if (!$game['completed'] || $game['home_score'] === null || $game['away_score'] === null) {
+        if (! $game['completed'] || $game['home_score'] === null || $game['away_score'] === null) {
             return null;
         }
 

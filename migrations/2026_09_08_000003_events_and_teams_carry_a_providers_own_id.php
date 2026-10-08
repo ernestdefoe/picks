@@ -1,7 +1,6 @@
 <?php
 
 use Flarum\Database\Migration;
-use Illuminate\Database\Schema\Blueprint;
 
 /*
  * 🚨 `cfbd_id` cannot carry an ESPN id, and the reason is not the type.

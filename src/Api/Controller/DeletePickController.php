@@ -29,7 +29,7 @@ class DeletePickController implements RequestHandlerInterface
 
         if (! $event->canPick()) {
             return new JsonResponse([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'This game is locked — pick cannot be removed.',
             ], 422);
         }

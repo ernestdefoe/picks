@@ -33,12 +33,14 @@ class PollLiveScoresCommand extends AbstractCommand
         // Check admin toggle unless forced
         if (! $force && ! $this->settings->get('ernestdefoe-picks.espn_polling_enabled', false)) {
             $this->info('ESPN score polling is disabled. Enable it in Picks Settings.');
+
             return 0;
         }
 
         // Only run if there are games today or in-progress games
         if (! $force && ! $this->hasActiveGamesToday()) {
             $this->info('No active games today. Skipping poll.');
+
             return 0;
         }
 
@@ -47,13 +49,14 @@ class PollLiveScoresCommand extends AbstractCommand
         try {
             $result = $this->syncScoresService->syncFromEspn();
         } catch (\RuntimeException $e) {
-            $this->output->writeln('<error>' . $e->getMessage() . '</error>');
+            $this->output->writeln('<error>'.$e->getMessage().'</error>');
+
             return 1;
         }
 
         $this->info(
-            "Done. Updated: {$result['updated']}, " .
-            "Newly finished: {$result['finished']}, " .
+            "Done. Updated: {$result['updated']}, ".
+            "Newly finished: {$result['finished']}, ".
             "Skipped: {$result['skipped']}."
         );
 
@@ -66,7 +69,7 @@ class PollLiveScoresCommand extends AbstractCommand
      */
     private function hasActiveGamesToday(): bool
     {
-        $now   = Carbon::now();
+        $now = Carbon::now();
         $today = $now->toDateString();
 
         return PickEvent::where(function ($q) use ($today) {

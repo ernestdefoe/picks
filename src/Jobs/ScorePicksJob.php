@@ -36,7 +36,7 @@ class ScorePicksJob extends AbstractJob
         try {
             $confidence->scoreEvent($event);
         } catch (\Throwable $e) {
-            resolve(\Psr\Log\LoggerInterface::class)->error('[picks] confidence scoring failed for event ' . $event->id . ': ' . $e->getMessage());
+            resolve(\Psr\Log\LoggerInterface::class)->error('[picks] confidence scoring failed for event '.$event->id.': '.$e->getMessage());
         }
 
         /*
@@ -56,7 +56,7 @@ class ScorePicksJob extends AbstractJob
             return;
         }
 
-        $confidenceMode    = (bool) $settings->get('ernestdefoe-picks.confidence_mode', false);
+        $confidenceMode = (bool) $settings->get('ernestdefoe-picks.confidence_mode', false);
         $confidencePenalty = $settings->get('ernestdefoe-picks.confidence_penalty', 'none');
 
         // Unique users affected — read before the batch update so we can bail
@@ -146,7 +146,7 @@ class ScorePicksJob extends AbstractJob
             $rows = [];
 
             foreach ($scores as $index => $score) {
-                $currentRank  = $index + 1;
+                $currentRank = $index + 1;
                 $previousRank = $score->current_rank !== null ? (int) $score->current_rank : $currentRank;
 
                 $unchanged = $score->current_rank !== null
@@ -159,10 +159,10 @@ class ScorePicksJob extends AbstractJob
                 }
 
                 $rows[] = [
-                    'id'            => $score->id,
-                    'user_id'       => $score->user_id,
+                    'id' => $score->id,
+                    'user_id' => $score->user_id,
                     'previous_rank' => $previousRank,
-                    'current_rank'  => $currentRank,
+                    'current_rank' => $currentRank,
                 ];
             }
 
