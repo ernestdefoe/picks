@@ -69,7 +69,8 @@ class ScoreAggregator
             $query->whereHas('event', fn ($q) => $q->where('week_id', $weekId));
         } elseif ($seasonId) {
             $query->whereHas('event', fn ($q) => $q->whereHas(
-                'week', fn ($w) => $w->where('season_id', $seasonId)
+                'week',
+                fn ($w) => $w->where('season_id', $seasonId)
             ));
         }
 
@@ -118,7 +119,14 @@ class ScoreAggregator
         // totals. The lock is the portable equivalent of a SELECT … FOR
         // UPDATE that also covers the not-yet-existing row.
         $this->withScopeLock($userId, $weekScope, $weekId, $seasonId, function () use (
-            $userId, $weekScope, $weekId, $seasonId, $totalPicks, $correctPicks, $totalPoints, $accuracy
+            $userId,
+            $weekScope,
+            $weekId,
+            $seasonId,
+            $totalPicks,
+            $correctPicks,
+            $totalPoints,
+            $accuracy
         ) {
             $scoreQuery = UserScore::where('user_id', $userId);
 

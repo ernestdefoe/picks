@@ -146,7 +146,6 @@ class UserScoresController implements RequestHandlerInterface
                     'total_players' => $totalWeek,
                 ] : null,
             ]);
-
         } catch (\Exception $e) {
             // A query failure is a real error — return 500 so the client (and
             // operator) can tell it apart from the valid "user has no picks

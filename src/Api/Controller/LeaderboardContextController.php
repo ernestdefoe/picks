@@ -115,7 +115,6 @@ class LeaderboardContextController implements RequestHandlerInterface
                 'last_season_id' => (int) $lastSeason->id,
                 'last_season_name' => $lastSeason->name,
             ]);
-
         } catch (\Exception $e) {
             // Unexpected failure → 500 (the detail is logged). The valid
             // "no completed seasons / off-season" states are returned with 200

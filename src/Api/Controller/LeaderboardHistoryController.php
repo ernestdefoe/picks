@@ -100,7 +100,6 @@ class LeaderboardHistoryController implements RequestHandlerInterface
             }
 
             return new JsonResponse(['seasons' => $seasonsData]);
-
         } catch (\Exception $e) {
             $this->log->error('[Picks] LeaderboardHistory failed: '.$e->getMessage(), ['exception' => $e]);
 

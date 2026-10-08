@@ -195,7 +195,7 @@ class EspnProvider implements Provider
         $text = '';
 
         foreach ((array) ($drives['previous'] ?? []) as $drive) {
-            foreach ((array) (($drive['plays'] ?? [])) as $play) {
+            foreach ((array) ($drive['plays'] ?? []) as $play) {
                 if ((string) ($play['id'] ?? '') === $best['play']) {
                     $text = trim((string) ($play['text'] ?? ''));
 

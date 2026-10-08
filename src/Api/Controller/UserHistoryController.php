@@ -114,7 +114,6 @@ class UserHistoryController implements RequestHandlerInterface
                     $currentWeekId
                 ),
             ]);
-
         } catch (\Exception $e) {
             $this->log->error('[Picks] UserHistory failed: '.$e->getMessage(), ['exception' => $e]);
 

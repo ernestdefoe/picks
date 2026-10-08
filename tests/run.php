@@ -832,8 +832,11 @@ $tests['confidence: a member\'s profile record'] = function () {
         22
     );
 
-    same(['total_points' => 80, 'total_picks' => 30, 'correct_picks' => 18, 'accuracy' => 60.0, 'rank' => 2, 'total_players' => 2],
-        $record['alltime'], 'the all-time line was not the member\'s summed seasons, ranked against everyone');
+    same(
+        ['total_points' => 80, 'total_picks' => 30, 'correct_picks' => 18, 'accuracy' => 60.0, 'rank' => 2, 'total_players' => 2],
+        $record['alltime'],
+        'the all-time line was not the member\'s summed seasons, ranked against everyone'
+    );
 
     same([2, 1], array_column($record['seasons'], 'season_id'), 'a season the member never played was listed, or the order was wrong');
     same(true, $record['seasons'][0]['is_current'], 'the current season was not marked');
