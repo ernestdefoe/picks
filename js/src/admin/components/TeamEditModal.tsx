@@ -18,7 +18,7 @@ export default class TeamEditModal extends Modal<TeamEditModalAttrs> {
   private logoPath: string = '';
   private logoDarkPath: string = '';
   private logoCustom: boolean = false;
-  private loading: boolean = false;
+  loading: boolean = false;
 
   oninit(vnode: Mithril.Vnode<TeamEditModalAttrs, this>) {
     super.oninit(vnode);

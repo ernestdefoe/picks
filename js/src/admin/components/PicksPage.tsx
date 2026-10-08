@@ -24,7 +24,7 @@ export default class PicksPage extends ExtensionPage {
     }
   }
 
-  content(): Mithril.Children {
+  content(): JSX.Element {
     return (
       <div className="ExtensionPage-settings">
         <div className="container">

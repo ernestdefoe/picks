@@ -10,5 +10,5 @@ export default class Week extends Model {
   seasonType = Model.attribute<string>('seasonType');
   startDate = Model.attribute<string | null>('startDate');
   endDate = Model.attribute<string | null>('endDate');
-  season = Model.hasOne<Season | false>('season');
+  season = Model.hasOne<Season>('season');
 }

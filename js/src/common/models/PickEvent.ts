@@ -20,7 +20,7 @@ export default class PickEvent extends Model {
   awayRank     = Model.attribute<number | null>('awayRank');
   canPick      = Model.attribute<boolean>('canPick');
 
-  week     = Model.hasOne<Week | false>('week');
-  homeTeam = Model.hasOne<Team | false>('homeTeam');
-  awayTeam = Model.hasOne<Team | false>('awayTeam');
+  week     = Model.hasOne<Week>('week');
+  homeTeam = Model.hasOne<Team>('homeTeam');
+  awayTeam = Model.hasOne<Team>('awayTeam');
 }

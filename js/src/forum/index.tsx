@@ -5,7 +5,7 @@ import IndexSidebar from 'flarum/forum/components/IndexSidebar';
 import UserPage from 'flarum/forum/components/UserPage';
 import registerBlocks from './blocks';
 
-export { default as extend } from './extend.tsx';
+export { default as extend } from './extend';
 
 app.initializers.add('ernestdefoe/picks', () => {
   // The standings, offered to Page Builder. Registration only.

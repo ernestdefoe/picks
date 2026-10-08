@@ -1,6 +1,6 @@
 {
   "extends": "flarum-tsconfig",
-  "include": ["src/**/*", "@types/**/*"],
+  "include": ["src/**/*", "@types/**/*", "../vendor/flarum/core/js/dist-typings/@types/**/*"],
   "compilerOptions": {
     "declarationDir": "./dist-typings",
     "paths": {

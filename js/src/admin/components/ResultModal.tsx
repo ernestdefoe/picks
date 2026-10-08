@@ -29,7 +29,7 @@ export default class ResultModal extends Modal<ResultModalAttrs> {
   private game!: Game;
   private homeScore: string = '';
   private awayScore: string = '';
-  private loading: boolean = false;
+  loading: boolean = false;
 
   oninit(vnode: Mithril.Vnode<ResultModalAttrs, this>) {
     super.oninit(vnode);

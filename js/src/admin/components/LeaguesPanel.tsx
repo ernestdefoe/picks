@@ -7,7 +7,7 @@ import Season from '../../common/models/Season';
 
 declare const m: any;
 
-const t = (k: string, p?: Record<string, unknown>) =>
+const t = (k: string, p: Record<string, unknown> = {}) =>
   app.translator.trans('ernestdefoe-picks.admin.leagues.' + k, p);
 
 interface LeagueDef {
