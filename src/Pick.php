@@ -3,6 +3,7 @@
 namespace Resofire\Picks;
 
 use Flarum\Database\AbstractModel;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Flarum\User\User;
 
 /**
@@ -34,12 +35,14 @@ class Pick extends AbstractModel
         'confidence' => 'integer',
     ];
 
-    public function user()
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function event()
+    /** @return BelongsTo<PickEvent, $this> */
+    public function event(): BelongsTo
     {
         return $this->belongsTo(PickEvent::class, 'event_id');
     }

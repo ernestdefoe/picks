@@ -162,7 +162,7 @@ class PublicStatsController implements RequestHandlerInterface
 
             // Resolve every referenced team in ONE query.
             $teamIds = $gameCounts
-                ->flatMap(fn ($row) => [$row->home_team_id, $row->away_team_id])
+                ->flatMap(fn ($row) => [$row->getAttribute('home_team_id'), $row->getAttribute('away_team_id')])
                 ->filter()
                 ->unique()
                 ->all();
@@ -185,9 +185,9 @@ class PublicStatsController implements RequestHandlerInterface
             foreach ($gameCounts as $row) {
                 $mostPickedGames[] = [
                     'event_id'    => $row->event_id,
-                    'total_picks' => (int) $row->total_picks,
-                    'home_team'   => $teamPayload($row->home_team_id),
-                    'away_team'   => $teamPayload($row->away_team_id),
+                    'total_picks' => (int) $row->getAttribute('total_picks'),
+                    'home_team'   => $teamPayload($row->getAttribute('home_team_id')),
+                    'away_team'   => $teamPayload($row->getAttribute('away_team_id')),
                 ];
             }
         }
@@ -228,14 +228,16 @@ class PublicStatsController implements RequestHandlerInterface
                 $teamsByAbbr = $teamRecords->keyBy('abbreviation');
 
                 foreach ($fanCounts as $row) {
-                    $team = $teamsBySlug->get($row->football_team)
-                        ?? $teamsByAbbr->get($row->football_team);
+                    // flarum-ext-team's column, read as an attribute.
+                    $footballTeam = $row->getAttribute('football_team');
+                    $team = $teamsBySlug->get($footballTeam)
+                        ?? $teamsByAbbr->get($footballTeam);
 
                     $mostFollowedTeams[] = [
-                        'football_team' => $row->football_team,
-                        'fan_count'     => (int) $row->fan_count,
-                        'name'          => $team?->name ?? $row->football_team,
-                        'abbreviation'  => $team?->abbreviation ?? $row->football_team,
+                        'football_team' => $footballTeam,
+                        'fan_count'     => (int) $row->getAttribute('fan_count'),
+                        'name'          => $team->name ?? $footballTeam,
+                        'abbreviation'  => $team->abbreviation ?? $footballTeam,
                         'logo_url'      => $team?->logo_url,
                         'logo_dark_url' => $team?->logo_dark_url,
                     ];

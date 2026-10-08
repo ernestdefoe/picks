@@ -43,13 +43,13 @@ class PickStatsService
         $topTeamId  = null;
         $topTeamCnt = 0;
 
-        if ($homeTop && $homeTop->cnt > $topTeamCnt) {
-            $topTeamId  = (int) $homeTop->team_id;
-            $topTeamCnt = (int) $homeTop->cnt;
+        if ($homeTop && $homeTop->getAttribute('cnt') > $topTeamCnt) {
+            $topTeamId  = (int) $homeTop->getAttribute('team_id');
+            $topTeamCnt = (int) $homeTop->getAttribute('cnt');
         }
-        if ($awayTop && $awayTop->cnt > $topTeamCnt) {
-            $topTeamId  = (int) $awayTop->team_id;
-            $topTeamCnt = (int) $awayTop->cnt;
+        if ($awayTop && $awayTop->getAttribute('cnt') > $topTeamCnt) {
+            $topTeamId  = (int) $awayTop->getAttribute('team_id');
+            $topTeamCnt = (int) $awayTop->getAttribute('cnt');
         }
 
         return [$topTeamId, $topTeamCnt];

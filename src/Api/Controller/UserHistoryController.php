@@ -183,8 +183,8 @@ class UserHistoryController implements RequestHandlerInterface
         }
 
         return [
-            'week_name'     => $bestWeekRow->week_name,
-            'season_year'   => (int) $bestWeekRow->season_year,
+            'week_name'     => $bestWeekRow->getAttribute('week_name'),
+            'season_year'   => (int) $bestWeekRow->getAttribute('season_year'),
             'accuracy'      => (float) $bestWeekRow->accuracy,
             'correct_picks' => (int) $bestWeekRow->correct_picks,
             'total_picks'   => (int) $bestWeekRow->total_picks,

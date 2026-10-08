@@ -108,7 +108,7 @@ class CurrentSeasonService
         return $picked;
     }
 
-    private static function utc($value): ?string
+    private static function utc(mixed $value): ?string
     {
         if ($value === null || $value === '') {
             return null;

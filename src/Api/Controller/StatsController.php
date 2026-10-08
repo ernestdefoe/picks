@@ -193,8 +193,8 @@ class StatsController implements RequestHandlerInterface
         $mostContested = array_map(function ($g) use ($teams) {
             return [
                 'event_id'  => $g['event_id'],
-                'home_team' => $teams->get($g['home_team_id'])?->abbreviation ?? '?',
-                'away_team' => $teams->get($g['away_team_id'])?->abbreviation ?? '?',
+                'home_team' => $teams->get($g['home_team_id'])->abbreviation ?? '?',
+                'away_team' => $teams->get($g['away_team_id'])->abbreviation ?? '?',
                 'home_pct'  => $g['home_pct'],
                 'away_pct'  => $g['away_pct'],
                 'total'     => $g['total'],

@@ -111,7 +111,7 @@ class LeaderboardContextController implements RequestHandlerInterface
                 'is_off_season'      => true,
                 'retention_expired'  => $retentionExpired,
                 'days_since_ended'   => $daysSinceEnded,
-                'last_week_id'       => $lastWeek?->id ?? null,
+                'last_week_id'       => $lastWeek->id ?? null,
                 'last_season_id'     => (int) $lastSeason->id,
                 'last_season_name'   => $lastSeason->name,
             ]);

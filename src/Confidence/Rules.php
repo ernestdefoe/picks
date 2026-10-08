@@ -116,7 +116,7 @@ final class Rules
     }
 
     /** A tiebreaker guess: a whole number of points, or null to clear it. */
-    public static function tiebreaker($value): array
+    public static function tiebreaker(mixed $value): array
     {
         if ($value === null || $value === '') {
             return ['error' => null, 'value' => null];

@@ -71,7 +71,7 @@ class ListLeaderboardController implements RequestHandlerInterface
                 'movement'      => $movement, // positive = moved up, negative = moved down, 0 = no change
                 'user_id'       => $score->user_id,
                 'username'      => $score->user?->username,
-                'display_name'  => $score->user?->display_name ?? $score->user?->username,
+                'display_name'  => $score->user->display_name ?? $score->user?->username,
                 'avatar_url'    => $score->user?->avatarUrl,
                 'total_points'  => $score->total_points,
                 'total_picks'   => $score->total_picks,

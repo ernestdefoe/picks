@@ -3,6 +3,8 @@
 namespace Resofire\Picks;
 
 use Flarum\Database\AbstractModel;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int         $id
@@ -15,6 +17,7 @@ use Flarum\Database\AbstractModel;
  * @property bool        $is_open
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
+ * @property-read Season|null $season
  */
 class Week extends AbstractModel
 {
@@ -38,17 +41,20 @@ class Week extends AbstractModel
         'week_number' => 'integer',
     ];
 
-    public function season()
+    /** @return BelongsTo<Season, $this> */
+    public function season(): BelongsTo
     {
         return $this->belongsTo(Season::class);
     }
 
-    public function events()
+    /** @return HasMany<PickEvent, $this> */
+    public function events(): HasMany
     {
         return $this->hasMany(PickEvent::class, 'week_id');
     }
 
-    public function userScores()
+    /** @return HasMany<UserScore, $this> */
+    public function userScores(): HasMany
     {
         return $this->hasMany(UserScore::class);
     }

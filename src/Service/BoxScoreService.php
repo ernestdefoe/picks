@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Service;
 
 use Flarum\Settings\SettingsRepositoryInterface;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Resofire\Picks\BoxScore;
 use Resofire\Picks\Service\Leagues\League;
@@ -233,7 +234,8 @@ class BoxScoreService
     }
 
     /** Weeks holding a finished game that still wants a box score. */
-    protected function weeksNeeding()
+    /** @return Collection<int, Week> */
+    protected function weeksNeeding(): Collection
     {
         $cutoff = Carbon::now()->subHours(self::KEEP_TRYING_HOURS);
 
@@ -260,7 +262,8 @@ class BoxScoreService
         return Week::query()->whereIn('id', $weekIds)->orderByDesc('week_number')->get();
     }
 
-    protected function finishedIn(Week $week)
+    /** @return Collection<int, PickEvent> */
+    protected function finishedIn(Week $week): Collection
     {
         return PickEvent::query()
             ->where('week_id', $week->id)
@@ -325,10 +328,6 @@ class BoxScoreService
 
         foreach ($playerSides as $side) {
             $where = ($side['homeAway'] ?? '') === 'away' ? 'away' : 'home';
-
-            if (!isset($document[$where])) {
-                continue;
-            }
 
             $document[$where]['leaders'] = $this->leaders($side['categories'] ?? [], $league->leaders);
             $document[$where]['performers'] = $this->performers($side['categories'] ?? []);
@@ -490,7 +489,7 @@ class BoxScoreService
      *
      * @return array<string, string>
      */
-    protected function teamStats($stats): array
+    protected function teamStats(mixed $stats): array
     {
         $out = [];
 
@@ -527,7 +526,7 @@ class BoxScoreService
      * @param array<string, string> $decidedBy group => the deciding figure
      * @return array<string, array{name: string, stats: array<string, string>}>
      */
-    protected function leaders($categories, array $decidedBy): array
+    protected function leaders(mixed $categories, array $decidedBy): array
     {
         $out = [];
 

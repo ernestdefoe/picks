@@ -200,7 +200,7 @@ class PostStandingsCommand extends AbstractCommand
 
             $rows[] = [
                 'place' => $place,
-                'name' => (string) ($score->user?->display_name ?? $score->user?->username ?? ''),
+                'name' => (string) ($score->user->display_name ?? $score->user->username ?? ''),
                 'points' => (int) $score->total_points,
                 'record' => $score->correct_picks . '-' . max(0, $score->total_picks - $score->correct_picks),
                 'accuracy' => (float) $score->accuracy,
@@ -274,7 +274,7 @@ class PostStandingsCommand extends AbstractCommand
             return null;
         }
 
-        $name = (string) ($top->user?->display_name ?? $top->user?->username ?? '');
+        $name = (string) ($top->user->display_name ?? $top->user->username ?? '');
 
         return $name === '' ? null : $this->trans('best', [
             'name'   => $name,

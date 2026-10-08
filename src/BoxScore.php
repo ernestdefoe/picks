@@ -3,6 +3,7 @@
 namespace Resofire\Picks;
 
 use Flarum\Database\AbstractModel;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * A finished game's box score, normalised.
@@ -22,7 +23,8 @@ class BoxScore extends AbstractModel
 
     protected $casts = ['fetched_at' => 'datetime'];
 
-    public function event()
+    /** @return BelongsTo<PickEvent, $this> */
+    public function event(): BelongsTo
     {
         return $this->belongsTo(PickEvent::class, 'event_id');
     }

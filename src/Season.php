@@ -3,6 +3,7 @@
 namespace Resofire\Picks;
 
 use Flarum\Database\AbstractModel;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int         $id
@@ -48,12 +49,14 @@ class Season extends AbstractModel
         return (new \Resofire\Picks\Service\Leagues\Leagues())->get($this->league);
     }
 
-    public function weeks()
+    /** @return HasMany<Week, $this> */
+    public function weeks(): HasMany
     {
         return $this->hasMany(Week::class);
     }
 
-    public function userScores()
+    /** @return HasMany<UserScore, $this> */
+    public function userScores(): HasMany
     {
         return $this->hasMany(UserScore::class);
     }

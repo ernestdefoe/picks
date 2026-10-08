@@ -33,27 +33,26 @@ class ResetDataController implements RequestHandlerInterface
 
         $counts = [];
 
-        if ($scope === 'schedule' || $scope === 'all') {
-            // Delete picks first (FK constraint on events)
-            $counts['picks'] = Pick::count();
-            Pick::query()->delete();
+        // Both scopes clear the schedule; 'all' clears the teams as well.
+        // Delete picks first (FK constraint on events)
+        $counts['picks'] = Pick::count();
+        Pick::query()->delete();
 
-            // Delete user scores
-            $counts['scores'] = UserScore::count();
-            UserScore::query()->delete();
+        // Delete user scores
+        $counts['scores'] = UserScore::count();
+        UserScore::query()->delete();
 
-            // Delete events (FK on weeks)
-            $counts['events'] = PickEvent::count();
-            PickEvent::query()->delete();
+        // Delete events (FK on weeks)
+        $counts['events'] = PickEvent::count();
+        PickEvent::query()->delete();
 
-            // Delete weeks (FK on seasons)
-            $counts['weeks'] = Week::count();
-            Week::query()->delete();
+        // Delete weeks (FK on seasons)
+        $counts['weeks'] = Week::count();
+        Week::query()->delete();
 
-            // Delete seasons
-            $counts['seasons'] = Season::count();
-            Season::query()->delete();
-        }
+        // Delete seasons
+        $counts['seasons'] = Season::count();
+        Season::query()->delete();
 
         if ($scope === 'all') {
             $counts['teams'] = Team::count();

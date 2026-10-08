@@ -3,6 +3,7 @@
 namespace Resofire\Picks;
 
 use Flarum\Database\AbstractModel;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Flarum\User\User;
 use Illuminate\Support\Collection;
 
@@ -19,6 +20,7 @@ use Illuminate\Support\Collection;
  * @property int|null    $current_rank
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
+ * @property-read \Flarum\User\User|null $user
  */
 class UserScore extends AbstractModel
 {
@@ -47,17 +49,20 @@ class UserScore extends AbstractModel
         'current_rank'  => 'integer',
     ];
 
-    public function user()
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function season()
+    /** @return BelongsTo<Season, $this> */
+    public function season(): BelongsTo
     {
         return $this->belongsTo(Season::class);
     }
 
-    public function week()
+    /** @return BelongsTo<Week, $this> */
+    public function week(): BelongsTo
     {
         return $this->belongsTo(Week::class);
     }
@@ -68,7 +73,7 @@ class UserScore extends AbstractModel
      * query per week / season / scope. Shared by the user-scores and
      * user-history controllers so tie-breaking stays defined in one place.
      */
-    public static function rankIn(Collection $scores, $points): int
+    public static function rankIn(Collection $scores, int|float $points): int
     {
         return $scores->where('total_points', '>', $points)->count() + 1;
     }

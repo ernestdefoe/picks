@@ -69,7 +69,7 @@ class PollLiveScoresCommand extends AbstractCommand
         $now   = Carbon::now();
         $today = $now->toDateString();
 
-        return PickEvent::where(function ($q) use ($today, $now) {
+        return PickEvent::where(function ($q) use ($today) {
             // Games scheduled for today
             $q->whereDate('match_date', $today)
               ->where('status', PickEvent::STATUS_SCHEDULED);

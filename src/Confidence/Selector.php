@@ -119,7 +119,7 @@ final class Selector
     }
 
     /** A poll rank, or null for unranked (0, null, or nonsense). */
-    public static function rank($value): ?int
+    public static function rank(mixed $value): ?int
     {
         $rank = (int) $value;
 

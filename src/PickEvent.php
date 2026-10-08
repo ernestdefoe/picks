@@ -4,6 +4,8 @@ namespace Resofire\Picks;
 
 use Carbon\Carbon;
 use Flarum\Database\AbstractModel;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int         $id
@@ -32,6 +34,17 @@ use Flarum\Database\AbstractModel;
  * @property \Carbon\Carbon|null $highlights_checked_at
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
+ * @property int $period
+ * @property string $clock
+ * @property string $clock_detail
+ * @property int $clock_at
+ * @property string $possession
+ * @property string $down_distance
+ * @property bool $red_zone
+ * @property string $ball_on
+ * @property-read Week|null $week
+ * @property-read Team|null $homeTeam
+ * @property-read Team|null $awayTeam
  */
 class PickEvent extends AbstractModel
 {
@@ -107,7 +120,7 @@ class PickEvent extends AbstractModel
      *
      * @return array{listings: list<array{name: string, type: string, market: string}>, watch: string, premium: bool}|null
      */
-    public function getBroadcastsAttribute($value): ?array
+    public function getBroadcastsAttribute(mixed $value): ?array
     {
         $decoded = is_string($value) && $value !== '' ? json_decode($value, true) : null;
 
@@ -125,7 +138,7 @@ class PickEvent extends AbstractModel
      *
      * An empty listing with no link stores NULL: nothing known is not a fact.
      */
-    public function setBroadcastsAttribute($value): void
+    public function setBroadcastsAttribute(mixed $value): void
     {
         $new = is_string($value) ? json_decode($value, true) : $value;
         $new = is_array($new) ? $new : [];
@@ -193,22 +206,26 @@ class PickEvent extends AbstractModel
         });
     }
 
-    public function week()
+    /** @return BelongsTo<Week, $this> */
+    public function week(): BelongsTo
     {
         return $this->belongsTo(Week::class);
     }
 
-    public function homeTeam()
+    /** @return BelongsTo<Team, $this> */
+    public function homeTeam(): BelongsTo
     {
         return $this->belongsTo(Team::class, 'home_team_id');
     }
 
-    public function awayTeam()
+    /** @return BelongsTo<Team, $this> */
+    public function awayTeam(): BelongsTo
     {
         return $this->belongsTo(Team::class, 'away_team_id');
     }
 
-    public function picks()
+    /** @return HasMany<Pick, $this> */
+    public function picks(): HasMany
     {
         return $this->hasMany(Pick::class, 'event_id');
     }

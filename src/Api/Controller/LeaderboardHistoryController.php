@@ -81,7 +81,7 @@ class LeaderboardHistoryController implements RequestHandlerInterface
                         'rank'          => $rank,
                         'user_id'       => (int) $score->user_id,
                         'username'      => $score->user?->username,
-                        'display_name'  => $score->user?->display_name ?? $score->user?->username,
+                        'display_name'  => $score->user->display_name ?? $score->user?->username,
                         'avatar_url'    => $score->user?->avatarUrl,
                         'total_picks'   => (int) $score->total_picks,
                         'correct_picks' => (int) $score->correct_picks,

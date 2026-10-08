@@ -3,10 +3,23 @@
 namespace Resofire\Picks\Confidence;
 
 use Flarum\Database\AbstractModel;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Flarum\User\User;
 use Resofire\Picks\PickEvent;
 use Resofire\Picks\Week;
 
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property int $week_id
+ * @property int $event_id
+ * @property string $selected_outcome
+ * @property int $confidence
+ * @property bool|null $is_correct
+ * @property \Carbon\Carbon|null $created_at
+ * @property \Carbon\Carbon|null $updated_at
+ * @property-read PickEvent|null $event
+ */
 class ConfidencePick extends AbstractModel
 {
     public $timestamps = true;
@@ -17,17 +30,20 @@ class ConfidencePick extends AbstractModel
 
     protected $casts = ['user_id' => 'integer', 'week_id' => 'integer', 'event_id' => 'integer', 'confidence' => 'integer', 'is_correct' => 'boolean'];
 
-    public function week()
+    /** @return BelongsTo<Week, $this> */
+    public function week(): BelongsTo
     {
         return $this->belongsTo(Week::class);
     }
 
-    public function user()
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function event()
+    /** @return BelongsTo<PickEvent, $this> */
+    public function event(): BelongsTo
     {
         return $this->belongsTo(PickEvent::class, 'event_id');
     }

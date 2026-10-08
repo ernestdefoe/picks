@@ -78,8 +78,10 @@ final class Scoring
     /**
      * Rows in standings order.
      *
-     * @param array<int, array{user_id:int, points:int, correct:int, diff:?int}> $rows
-     * @return array<int, array{user_id:int, points:int, correct:int, diff:?int}>
+     * @template T of array{user_id:int, points:int, correct:int, diff:?int}
+     *
+     * @param array<int, T> $rows
+     * @return array<int, T>
      */
     public static function rank(array $rows): array
     {
