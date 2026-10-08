@@ -46,14 +46,15 @@ export default class TeamEditModal extends Modal<TeamEditModalAttrs> {
     return (
       <div className="Modal-body">
         <div className="Form">
-
           <div className="Form-group">
             <label>{app.translator.trans('ernestdefoe-picks.admin.teams.fields.name')}</label>
             <input
               className="FormControl"
               type="text"
               value={this.name}
-              oninput={(e: InputEvent) => { this.name = (e.target as HTMLInputElement).value; }}
+              oninput={(e: InputEvent) => {
+                this.name = (e.target as HTMLInputElement).value;
+              }}
             />
           </div>
 
@@ -64,7 +65,9 @@ export default class TeamEditModal extends Modal<TeamEditModalAttrs> {
               type="text"
               maxlength="10"
               value={this.abbreviation}
-              oninput={(e: InputEvent) => { this.abbreviation = (e.target as HTMLInputElement).value; }}
+              oninput={(e: InputEvent) => {
+                this.abbreviation = (e.target as HTMLInputElement).value;
+              }}
             />
           </div>
 
@@ -74,7 +77,9 @@ export default class TeamEditModal extends Modal<TeamEditModalAttrs> {
               className="FormControl"
               type="text"
               value={this.conference}
-              oninput={(e: InputEvent) => { this.conference = (e.target as HTMLInputElement).value; }}
+              oninput={(e: InputEvent) => {
+                this.conference = (e.target as HTMLInputElement).value;
+              }}
             />
           </div>
 
@@ -90,7 +95,9 @@ export default class TeamEditModal extends Modal<TeamEditModalAttrs> {
               type="text"
               placeholder="https://..."
               value={this.logoPath}
-              oninput={(e: InputEvent) => { this.logoPath = (e.target as HTMLInputElement).value; }}
+              oninput={(e: InputEvent) => {
+                this.logoPath = (e.target as HTMLInputElement).value;
+              }}
             />
           </div>
 
@@ -106,7 +113,9 @@ export default class TeamEditModal extends Modal<TeamEditModalAttrs> {
               type="text"
               placeholder="https://..."
               value={this.logoDarkPath}
-              oninput={(e: InputEvent) => { this.logoDarkPath = (e.target as HTMLInputElement).value; }}
+              oninput={(e: InputEvent) => {
+                this.logoDarkPath = (e.target as HTMLInputElement).value;
+              }}
             />
           </div>
 
@@ -115,21 +124,17 @@ export default class TeamEditModal extends Modal<TeamEditModalAttrs> {
               <input
                 type="checkbox"
                 checked={this.logoCustom}
-                onchange={(e: InputEvent) => { this.logoCustom = (e.target as HTMLInputElement).checked; }}
+                onchange={(e: InputEvent) => {
+                  this.logoCustom = (e.target as HTMLInputElement).checked;
+                }}
               />
               {app.translator.trans('ernestdefoe-picks.admin.teams.fields.logo_custom')}
             </label>
-            <p className="helpText">
-              {app.translator.trans('ernestdefoe-picks.admin.teams.fields.logo_custom_help')}
-            </p>
+            <p className="helpText">{app.translator.trans('ernestdefoe-picks.admin.teams.fields.logo_custom_help')}</p>
           </div>
 
           <div className="Form-group">
-            <Button
-              className="Button Button--primary"
-              type="submit"
-              loading={this.loading}
-            >
+            <Button className="Button Button--primary" type="submit" loading={this.loading}>
               {app.translator.trans('ernestdefoe-picks.admin.common.save')}
             </Button>
           </div>

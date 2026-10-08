@@ -30,19 +30,17 @@ export default class PicksPage extends ExtensionPage {
         <div className="container">
           <div className="PicksAdminPage">
             <div className="PicksAdminPage-tabs">
-              {this.renderTab('teams',    'fas fa-users',        'ernestdefoe-picks.admin.nav.teams')}
-              {this.renderTab('sync',     'fas fa-sync',         'ernestdefoe-picks.admin.nav.sync')}
-              {this.renderTab('seasons',  'fas fa-calendar-alt', 'ernestdefoe-picks.admin.nav.seasons')}
-              {this.renderTab('games',    'fas fa-football',     'ernestdefoe-picks.admin.nav.games')}
+              {this.renderTab('teams', 'fas fa-users', 'ernestdefoe-picks.admin.nav.teams')}
+              {this.renderTab('sync', 'fas fa-sync', 'ernestdefoe-picks.admin.nav.sync')}
+              {this.renderTab('seasons', 'fas fa-calendar-alt', 'ernestdefoe-picks.admin.nav.seasons')}
+              {this.renderTab('games', 'fas fa-football', 'ernestdefoe-picks.admin.nav.games')}
               {this.renderTab('confidence', 'fas fa-sort-amount-down', 'ernestdefoe-picks.admin.nav.confidence')}
-              {this.renderTab('scores',   'fas fa-trophy',       'ernestdefoe-picks.admin.nav.scores')}
-              {this.renderTab('stats',    'fas fa-chart-bar',    'ernestdefoe-picks.admin.nav.stats')}
-              {this.renderTab('settings', 'fas fa-cog',          'ernestdefoe-picks.admin.nav.settings')}
+              {this.renderTab('scores', 'fas fa-trophy', 'ernestdefoe-picks.admin.nav.scores')}
+              {this.renderTab('stats', 'fas fa-chart-bar', 'ernestdefoe-picks.admin.nav.stats')}
+              {this.renderTab('settings', 'fas fa-cog', 'ernestdefoe-picks.admin.nav.settings')}
             </div>
 
-            <div className="PicksAdminPage-content">
-              {this.renderActiveTab()}
-            </div>
+            <div className="PicksAdminPage-content">{this.renderActiveTab()}</div>
           </div>
         </div>
       </div>
@@ -60,9 +58,7 @@ export default class PicksPage extends ExtensionPage {
           m.redraw();
         }}
       >
-        <i className={icon} />
-        {' '}
-        {app.translator.trans(translationKey)}
+        <i className={icon} /> {app.translator.trans(translationKey)}
       </button>
     );
   }

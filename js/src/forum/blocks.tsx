@@ -35,25 +35,32 @@ export default function registerBlocks(): void {
       return m('.PicksBoardBlock', [
         settings.title ? m('h3.PicksBoardBlock-title', settings.title) : null,
 
-        m('ol.PicksBoardBlock-list', rows.map((row: any) =>
-          m('li.PicksBoardBlock-row', { key: row.id, className: row.rank <= 3 ? 'PicksBoardBlock-row--podium' : '' }, [
-            // The medal is decoration; the number is the fact, and it is always
-            // there for anyone the emoji does not reach.
-            m('span.PicksBoardBlock-rank', row.rank),
+        m(
+          'ol.PicksBoardBlock-list',
+          rows.map((row: any) =>
+            m('li.PicksBoardBlock-row', { key: row.id, className: row.rank <= 3 ? 'PicksBoardBlock-row--podium' : '' }, [
+              // The medal is decoration; the number is the fact, and it is always
+              // there for anyone the emoji does not reach.
+              m('span.PicksBoardBlock-rank', row.rank),
 
-            m('a.PicksBoardBlock-who', { href: app.route('user', { username: row.username }), oncreate: m.route.Link }, [
-              row.avatarUrl
-                ? m('img.PicksBoardBlock-avatar', { src: row.avatarUrl, alt: '', loading: 'lazy' })
-                : m('span.PicksBoardBlock-avatar.PicksBoardBlock-avatar--initial',
-                    String(row.displayName || row.username || '?').charAt(0).toUpperCase()),
-              m('span.PicksBoardBlock-name', row.displayName),
-            ]),
+              m('a.PicksBoardBlock-who', { href: app.route('user', { username: row.username }), oncreate: m.route.Link }, [
+                row.avatarUrl
+                  ? m('img.PicksBoardBlock-avatar', { src: row.avatarUrl, alt: '', loading: 'lazy' })
+                  : m(
+                      'span.PicksBoardBlock-avatar.PicksBoardBlock-avatar--initial',
+                      String(row.displayName || row.username || '?')
+                        .charAt(0)
+                        .toUpperCase()
+                    ),
+                m('span.PicksBoardBlock-name', row.displayName),
+              ]),
 
-            m('span.PicksBoardBlock-record', row.correct + '–' + Math.max(0, row.total - row.correct)),
-            m('span.PicksBoardBlock-acc', Math.round(row.accuracy) + '%'),
-            m('span.PicksBoardBlock-pts', row.points),
-          ])
-        )),
+              m('span.PicksBoardBlock-record', row.correct + '–' + Math.max(0, row.total - row.correct)),
+              m('span.PicksBoardBlock-acc', Math.round(row.accuracy) + '%'),
+              m('span.PicksBoardBlock-pts', row.points),
+            ])
+          )
+        ),
       ]);
     },
   };

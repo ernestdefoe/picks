@@ -13,8 +13,7 @@ interface TabAttrs extends ComponentAttrs {
   state: PicksState;
 }
 
-const t = (key: string, params?: Record<string, unknown>) =>
-  app.translator.trans('ernestdefoe-picks.forum.confidence.' + key, params as any);
+const t = (key: string, params?: Record<string, unknown>) => app.translator.trans('ernestdefoe-picks.forum.confidence.' + key, params as any);
 
 /** For attributes, which need a plain string. */
 const ts = (key: string, params?: Record<string, unknown>) => extractText(t(key, params));
@@ -70,8 +69,7 @@ export default class ConfidenceTab extends Component<TabAttrs> {
     return (
       <div>
         <p className="C10-intro">
-          {t('intro', { count: n })}{' '}
-          {board.penalty === 'half' && t('penalty_half')}
+          {t('intro', { count: n })} {board.penalty === 'half' && t('penalty_half')}
           {board.penalty === 'full' && t('penalty_full')}
         </p>
 
@@ -90,12 +88,26 @@ export default class ConfidenceTab extends Component<TabAttrs> {
             </span>
           )}
           <span className="C10-saveState">
-            {c10.saving ? t('saving') : c10.error ? <span className="C10-error" role="alert">{t('errors.' + (ERRORS.includes(c10.error) ? c10.error : 'generic'))}</span> : c10.saved ? t('saved') : ''}
+            {c10.saving ? (
+              t('saving')
+            ) : c10.error ? (
+              <span className="C10-error" role="alert">
+                {t('errors.' + (ERRORS.includes(c10.error) ? c10.error : 'generic'))}
+              </span>
+            ) : c10.saved ? (
+              t('saved')
+            ) : (
+              ''
+            )}
           </span>
         </div>
 
         {!playing && <div className="PicksWeekLocked">{t(app.session.user ? 'no_permission' : 'log_in')}</div>}
-        {!board.week_open && <div className="PicksWeekLocked"><i className="fas fa-lock" /> {t('week_closed')}</div>}
+        {!board.week_open && (
+          <div className="PicksWeekLocked">
+            <i className="fas fa-lock" /> {t('week_closed')}
+          </div>
+        )}
 
         {c10.order.length > 0 && (
           <div>
@@ -125,8 +137,8 @@ export default class ConfidenceTab extends Component<TabAttrs> {
     const state = this.attrs.state;
     const c10 = state.c10;
     const playing = c10.canPlay() && !locked;
-    const value = locked ? game.my_pick?.confidence ?? null : c10.values[game.id];
-    const outcome = locked ? game.my_pick?.selected_outcome ?? null : c10.outcomes[game.id];
+    const value = locked ? (game.my_pick?.confidence ?? null) : c10.values[game.id];
+    const outcome = locked ? (game.my_pick?.selected_outcome ?? null) : c10.outcomes[game.id];
     const result = game.my_pick?.is_correct;
     const penalty = c10.board!.penalty;
 
@@ -186,7 +198,9 @@ export default class ConfidenceTab extends Component<TabAttrs> {
           <div className="C10Row-teams" role="group" aria-label={label}>
             {this.team(game, 'home', outcome, playing)}
             <span className={`C10Row-vs ${game.status === 'finished' && game.home_score !== null ? 'C10Row-vs--score' : ''}`}>
-              {game.home_score !== null && game.status === 'finished' ? `${game.home_score}–${game.away_score}` : app.translator.trans('ernestdefoe-picks.lib.common.vs')}
+              {game.home_score !== null && game.status === 'finished'
+                ? `${game.home_score}–${game.away_score}`
+                : app.translator.trans('ernestdefoe-picks.lib.common.vs')}
             </span>
             {this.team(game, 'away', outcome, playing)}
           </div>

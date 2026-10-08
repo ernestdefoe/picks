@@ -61,12 +61,8 @@ export default class HistoryTab extends Component<TabAttrs> {
                       </div>
                     </div>
                     <div className="PicksHistory-seasonRight">
-                      {season.standings.length > 0 && (
-                        <span className="PicksHistory-winner">🥇 {season.standings[0].display_name}</span>
-                      )}
-                      <span className={`PicksHistory-chevron ${isExpanded ? 'PicksHistory-chevron--open' : ''}`}>
-                        &#8964;
-                      </span>
+                      {season.standings.length > 0 && <span className="PicksHistory-winner">🥇 {season.standings[0].display_name}</span>}
+                      <span className={`PicksHistory-chevron ${isExpanded ? 'PicksHistory-chevron--open' : ''}`}>&#8964;</span>
                     </div>
                   </div>
 
@@ -94,24 +90,14 @@ export default class HistoryTab extends Component<TabAttrs> {
                               `}
                               key={String(entry.user_id)}
                             >
-                              <div
-                                className={`PicksLeaderboard-rank ${entry.rank === 1 ? 'PicksLeaderboard-rank--gold' : ''}`}
-                              >
-                                {entry.rank === 1
-                                  ? '🥇'
-                                  : entry.rank === 2
-                                    ? '🥈'
-                                    : entry.rank === 3
-                                      ? '🥉'
-                                      : entry.rank}
+                              <div className={`PicksLeaderboard-rank ${entry.rank === 1 ? 'PicksLeaderboard-rank--gold' : ''}`}>
+                                {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : entry.rank}
                               </div>
                               <div className="PicksLeaderboard-user">
                                 {entry.avatar_url ? (
                                   <img src={entry.avatar_url} alt={entry.display_name} className="PicksAvatar" />
                                 ) : (
-                                  <div className="PicksAvatar PicksAvatar--initials">
-                                    {(entry.display_name || '?').charAt(0)}
-                                  </div>
+                                  <div className="PicksAvatar PicksAvatar--initials">{(entry.display_name || '?').charAt(0)}</div>
                                 )}
                                 <span>{entry.display_name}</span>
                               </div>
@@ -119,9 +105,7 @@ export default class HistoryTab extends Component<TabAttrs> {
                               <div className="PicksLeaderboard-right PicksLeaderboard-wl">
                                 {entry.correct_picks}–{entry.total_picks - entry.correct_picks}
                               </div>
-                              <div className="PicksLeaderboard-right PicksLeaderboard-acc">
-                                {entry.accuracy.toFixed(0)}%
-                              </div>
+                              <div className="PicksLeaderboard-right PicksLeaderboard-acc">{entry.accuracy.toFixed(0)}%</div>
                             </div>
                           ))}
                         </div>

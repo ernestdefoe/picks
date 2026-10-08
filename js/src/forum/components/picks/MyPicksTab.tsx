@@ -33,12 +33,7 @@ export default class MyPicksTab extends Component<TabAttrs> {
                 {app.translator.trans('ernestdefoe-picks.lib.nav.this_week')}
               </Button>
             )}
-            <Button
-              className="Button Button--icon"
-              icon="fas fa-chevron-left"
-              disabled={idx <= 0}
-              onclick={() => state.prevWeek()}
-            />
+            <Button className="Button Button--icon" icon="fas fa-chevron-left" disabled={idx <= 0} onclick={() => state.prevWeek()} />
             <Button
               className="Button Button--icon"
               icon="fas fa-chevron-right"
@@ -141,7 +136,11 @@ export default class MyPicksTab extends Component<TabAttrs> {
                       {app.translator.trans('ernestdefoe-picks.forum.my_picks.points', { count: game.my_pick!.confidence ?? 1 })}
                     </span>
                   )}
-                  {isIncorrect && <span className="PicksTag PicksTag--incorrect">{app.translator.trans('ernestdefoe-picks.forum.my_picks.points', { count: 0 })}</span>}
+                  {isIncorrect && (
+                    <span className="PicksTag PicksTag--incorrect">
+                      {app.translator.trans('ernestdefoe-picks.forum.my_picks.points', { count: 0 })}
+                    </span>
+                  )}
                   {!isCorrect && !isIncorrect && (
                     <span className="PicksTag PicksTag--pending">
                       {app.forum.attribute('picksConfidenceMode') && game.my_pick!.confidence

@@ -120,7 +120,11 @@ export default class ConfidenceState {
 
   /** Values an unlocked game may take: everything a locked pick does not hold. */
   freeValues(): number[] {
-    const held = new Set(this.lockedGames().filter((g) => g.my_pick).map((g) => g.my_pick!.confidence));
+    const held = new Set(
+      this.lockedGames()
+        .filter((g) => g.my_pick)
+        .map((g) => g.my_pick!.confidence)
+    );
     const out: number[] = [];
     for (let v = this.board?.size || 0; v >= 1; v--) if (!held.has(v)) out.push(v);
     return out;

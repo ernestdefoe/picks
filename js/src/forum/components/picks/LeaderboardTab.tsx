@@ -10,8 +10,7 @@ interface TabAttrs extends ComponentAttrs {
   state: PicksState;
 }
 
-const t = (key: string, params?: Record<string, unknown>) =>
-  app.translator.trans('ernestdefoe-picks.forum.leaderboard.' + key, params as any);
+const t = (key: string, params?: Record<string, unknown>) => app.translator.trans('ernestdefoe-picks.forum.leaderboard.' + key, params as any);
 
 export default class LeaderboardTab extends Component<TabAttrs> {
   view(): Mithril.Children {
@@ -40,9 +39,7 @@ export default class LeaderboardTab extends Component<TabAttrs> {
     // During off-season retention, label the scope buttons to clarify they show final standings
     const scopeLabel = (key: string) => {
       if (isOffSeason && !retentionExpired && key !== 'alltime') {
-        return key === 'week'
-          ? t('final_week')
-          : (lastSeasonName ?? app.translator.trans('ernestdefoe-picks.lib.common.season'));
+        return key === 'week' ? t('final_week') : (lastSeasonName ?? app.translator.trans('ernestdefoe-picks.lib.common.season'));
       }
       return key === 'week'
         ? app.translator.trans('ernestdefoe-picks.lib.common.week')
@@ -132,9 +129,7 @@ export default class LeaderboardTab extends Component<TabAttrs> {
                   )}
                   <span>{entry.display_name}</span>
                   {entry.movement !== null && entry.movement !== 0 && (
-                    <span
-                      className={`PicksMovement ${entry.movement > 0 ? 'PicksMovement--up' : 'PicksMovement--down'}`}
-                    >
+                    <span className={`PicksMovement ${entry.movement > 0 ? 'PicksMovement--up' : 'PicksMovement--down'}`}>
                       {entry.movement > 0 ? `↑${entry.movement}` : `↓${Math.abs(entry.movement)}`}
                     </span>
                   )}
@@ -180,7 +175,9 @@ export default class LeaderboardTab extends Component<TabAttrs> {
                 state.loadLeaderboard();
               }}
             >
-              {key === 'alltime' ? app.translator.trans('ernestdefoe-picks.forum.leaderboard.all_time') : app.translator.trans('ernestdefoe-picks.lib.common.' + key)}
+              {key === 'alltime'
+                ? app.translator.trans('ernestdefoe-picks.forum.leaderboard.all_time')
+                : app.translator.trans('ernestdefoe-picks.lib.common.' + key)}
             </button>
           ))}
         </div>

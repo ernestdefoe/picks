@@ -3,9 +3,7 @@ import Week from '../common/models/Week';
 import Season from '../common/models/Season';
 
 export default [
-  new Extend.Store()
-    .add('picks-weeks', Week)
-    .add('picks-seasons', Season),
+  new Extend.Store().add('picks-weeks', Week).add('picks-seasons', Season),
 
   new Extend.Routes()
     // Code-split: the pick'em pages load when someone opens them, not with

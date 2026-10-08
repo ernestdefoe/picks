@@ -1,12 +1,5 @@
 import app from 'flarum/forum/app';
-import type {
-  Game,
-  WeekInfo,
-  WeeksMeta,
-  LeaderboardEntry,
-  LeaderboardHistorySeason,
-  LeaderboardContext,
-} from './types';
+import type { Game, WeekInfo, WeeksMeta, LeaderboardEntry, LeaderboardHistorySeason, LeaderboardContext } from './types';
 import ConfidenceState from './ConfidenceState';
 
 /**
@@ -293,10 +286,7 @@ export default class PicksState {
        * exactly as long as it is wanted.
        */
       try {
-        sessionStorage.setItem(
-          PicksState.PENDING,
-          JSON.stringify({ game: game.id, outcome, week: this.currentWeekId })
-        );
+        sessionStorage.setItem(PicksState.PENDING, JSON.stringify({ game: game.id, outcome, week: this.currentWeekId }));
       } catch (e) {
         // A browser refusing storage is not a reason to refuse the sign-up.
       }

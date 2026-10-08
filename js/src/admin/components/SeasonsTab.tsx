@@ -8,8 +8,7 @@ import Week from '../../common/models/Week';
 import LeaguesPanel from './LeaguesPanel';
 import extractText from 'flarum/common/utils/extractText';
 
-const t = (key: string, params?: Record<string, unknown>) =>
-  app.translator.trans('ernestdefoe-picks.admin.seasons.' + key, params as any);
+const t = (key: string, params?: Record<string, unknown>) => app.translator.trans('ernestdefoe-picks.admin.seasons.' + key, params as any);
 
 export default class SeasonsTab extends Component {
   private seasons: Season[] = [];
@@ -46,12 +45,10 @@ export default class SeasonsTab extends Component {
     // Load seasons and all weeks together, then filter client-side.
     // Flarum 2.x does not support filter[] params on resource endpoints
     // without a registered model searcher — we avoid that by filtering in JS.
-    Promise.all([
-      app.store.find<Season[]>('picks-seasons'),
-      app.store.find<Week[]>('picks-weeks'),
-    ]).then(([seasons, _weeks]) => {
+    Promise.all([app.store.find<Season[]>('picks-seasons'), app.store.find<Week[]>('picks-weeks')])
+      .then(([seasons, _weeks]) => {
         this.seasons = seasons.sort((a, b) => (b.year() || 0) - (a.year() || 0));
-        if (this.seasons.length > 0 && ! this.selectedSeasonId) {
+        if (this.seasons.length > 0 && !this.selectedSeasonId) {
           this.selectedSeasonId = String(this.seasons[0].id());
         }
         this.filterAndSortWeeks();
@@ -67,7 +64,7 @@ export default class SeasonsTab extends Component {
   private filterAndSortWeeks() {
     const allWeeks = app.store.all<Week>('picks-weeks');
     this.weeks = allWeeks
-      .filter(w => String(w.seasonId()) === this.selectedSeasonId)
+      .filter((w) => String(w.seasonId()) === this.selectedSeasonId)
       .sort((a, b) => {
         // Regular season before postseason
         if (a.seasonType() !== b.seasonType()) {
@@ -126,19 +123,22 @@ export default class SeasonsTab extends Component {
     this.togglingWeekId = String(week.id());
     m.redraw();
 
-    app.request<{ status: string; week_id: number; is_open: boolean }>({
-      method: 'POST',
-      url: `${app.forum.attribute('apiUrl')}/picks/weeks/${week.id()}/open`,
-      body: { is_open: newState },
-    }).then((r) => {
-      // Update the store model directly
-      (week as any).data.attributes.isOpen = r.is_open;
-      this.togglingWeekId = null;
-      m.redraw();
-    }).catch(() => {
-      this.togglingWeekId = null;
-      m.redraw();
-    });
+    app
+      .request<{ status: string; week_id: number; is_open: boolean }>({
+        method: 'POST',
+        url: `${app.forum.attribute('apiUrl')}/picks/weeks/${week.id()}/open`,
+        body: { is_open: newState },
+      })
+      .then((r) => {
+        // Update the store model directly
+        (week as any).data.attributes.isOpen = r.is_open;
+        this.togglingWeekId = null;
+        m.redraw();
+      })
+      .catch(() => {
+        this.togglingWeekId = null;
+        m.redraw();
+      });
   }
 
   private saveWeekName(week: Week) {
@@ -168,31 +168,26 @@ export default class SeasonsTab extends Component {
         <div className="PicksTab-header">
           <div>
             <h3>
-              <i className="fas fa-calendar-alt" />
-              {' '}{app.translator.trans('ernestdefoe-picks.admin.nav.seasons')}
+              <i className="fas fa-calendar-alt" /> {app.translator.trans('ernestdefoe-picks.admin.nav.seasons')}
             </h3>
             <p className="PicksTab-meta">
               {this.seasons.length} {app.translator.trans('ernestdefoe-picks.admin.seasons.seasons_label')}
               {this.lastSync && (
-                <span>{' · '}{app.translator.trans('ernestdefoe-picks.admin.common.last_sync')}: {new Date(this.lastSync).toLocaleString()}</span>
+                <span>
+                  {' · '}
+                  {app.translator.trans('ernestdefoe-picks.admin.common.last_sync')}: {new Date(this.lastSync).toLocaleString()}
+                </span>
               )}
             </p>
           </div>
           <div className="PicksTab-actions">
-            <Button
-              className="Button Button--primary"
-              icon="fas fa-sync"
-              loading={this.syncing}
-              onclick={() => this.syncSchedule()}
-            >
+            <Button className="Button Button--primary" icon="fas fa-sync" loading={this.syncing} onclick={() => this.syncSchedule()}>
               {app.translator.trans('ernestdefoe-picks.admin.seasons.sync_button')}
             </Button>
           </div>
         </div>
 
-        {this.syncResult && (
-          <div className="PicksAlert PicksAlert--info">{this.syncResult}</div>
-        )}
+        {this.syncResult && <div className="PicksAlert PicksAlert--info">{this.syncResult}</div>}
 
         {this.seasons.length > 1 && (
           <div className="PicksTab-filters">
@@ -205,7 +200,7 @@ export default class SeasonsTab extends Component {
                 m.redraw();
               }}
             >
-              {this.seasons.map(s => (
+              {this.seasons.map((s) => (
                 <option key={String(s.id())} value={String(s.id())}>
                   {s.name()}
                 </option>
@@ -217,9 +212,7 @@ export default class SeasonsTab extends Component {
         {this.loading ? (
           <LoadingIndicator />
         ) : this.weeks.length === 0 ? (
-          <div className="PicksEmptyState">
-            {app.translator.trans('ernestdefoe-picks.admin.seasons.no_weeks')}
-          </div>
+          <div className="PicksEmptyState">{app.translator.trans('ernestdefoe-picks.admin.seasons.no_weeks')}</div>
         ) : (
           <div className="PicksCardList">
             <div className="PicksCardList-header PicksCardList-header--seasons">
@@ -246,9 +239,7 @@ export default class SeasonsTab extends Component {
                   </div>
 
                   <div className="PicksCardList-cell PicksCardList-cell--muted">
-                    {week.startDate() && week.endDate()
-                      ? `${week.startDate()} – ${week.endDate()}`
-                      : week.startDate() || '—'}
+                    {week.startDate() && week.endDate() ? `${week.startDate()} – ${week.endDate()}` : week.startDate() || '—'}
                   </div>
 
                   <div className="PicksCardList-cell">
@@ -262,7 +253,10 @@ export default class SeasonsTab extends Component {
                         }}
                         onkeydown={(e: KeyboardEvent) => {
                           if (e.key === 'Enter') this.saveWeekName(week);
-                          if (e.key === 'Escape') { this.editingWeekId = null; m.redraw(); }
+                          if (e.key === 'Escape') {
+                            this.editingWeekId = null;
+                            m.redraw();
+                          }
                         }}
                       />
                     ) : (
@@ -293,7 +287,10 @@ export default class SeasonsTab extends Component {
                           className="Button Button--icon"
                           icon="fas fa-times"
                           aria-label={extractText(t('cancel_edit'))}
-                          onclick={() => { this.editingWeekId = null; m.redraw(); }}
+                          onclick={() => {
+                            this.editingWeekId = null;
+                            m.redraw();
+                          }}
                         />
                       </>
                     ) : (

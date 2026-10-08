@@ -7,8 +7,7 @@ import Season from '../../common/models/Season';
 
 declare const m: any;
 
-const t = (k: string, p: Record<string, unknown> = {}) =>
-  app.translator.trans('ernestdefoe-picks.admin.leagues.' + k, p);
+const t = (k: string, p: Record<string, unknown> = {}) => app.translator.trans('ernestdefoe-picks.admin.leagues.' + k, p);
 
 interface LeagueDef {
   name: string;
@@ -72,29 +71,31 @@ export default class LeaguesPanel extends Component<Attrs> {
       <div className="PicksLeagues">
         <div className="PicksTab-header">
           <div>
-            <h3><i className="fas fa-trophy" /> {t('title')}</h3>
+            <h3>
+              <i className="fas fa-trophy" /> {t('title')}
+            </h3>
             <p className="PicksTab-meta">{t('description')}</p>
           </div>
           <div className="PicksTab-actions">
             <Button
               className="Button"
               icon={this.adding ? 'fas fa-times' : 'fas fa-plus'}
-              onclick={() => { this.adding = !this.adding; this.message = null; m.redraw(); }}
+              onclick={() => {
+                this.adding = !this.adding;
+                this.message = null;
+                m.redraw();
+              }}
             >
               {this.adding ? t('cancel') : t('add')}
             </Button>
           </div>
         </div>
 
-        {this.message ? (
-          <div className={`PicksAlert PicksAlert--${this.error ? 'error' : 'info'}`}>{this.message}</div>
-        ) : null}
+        {this.message ? <div className={`PicksAlert PicksAlert--${this.error ? 'error' : 'info'}`}>{this.message}</div> : null}
 
         {/* An empty registry means the payload never arrived — said out loud,
             because an empty dropdown is indistinguishable from "no leagues". */}
-        {Object.keys(registry).length === 0 ? (
-          <div className="PicksAlert PicksAlert--error">{t('registry_missing')}</div>
-        ) : null}
+        {Object.keys(registry).length === 0 ? <div className="PicksAlert PicksAlert--error">{t('registry_missing')}</div> : null}
 
         {this.adding ? this.form(registry) : null}
 
@@ -135,7 +136,9 @@ export default class LeaguesPanel extends Component<Attrs> {
             onchange={(e: Event) => this.setLeague(season, (e.target as HTMLSelectElement).value)}
           >
             {Object.keys(registry).map((k) => (
-              <option key={k} value={k}>{registry[k].name}</option>
+              <option key={k} value={k}>
+                {registry[k].name}
+              </option>
             ))}
           </select>
         </div>
@@ -180,7 +183,9 @@ export default class LeaguesPanel extends Component<Attrs> {
             type="text"
             placeholder={t('name_placeholder') as unknown as string}
             value={this.draft.name}
-            oninput={(e: InputEvent) => { this.draft.name = (e.target as HTMLInputElement).value; }}
+            oninput={(e: InputEvent) => {
+              this.draft.name = (e.target as HTMLInputElement).value;
+            }}
           />
         </div>
 
@@ -190,7 +195,9 @@ export default class LeaguesPanel extends Component<Attrs> {
             className="FormControl"
             type="number"
             value={this.draft.year}
-            oninput={(e: InputEvent) => { this.draft.year = parseInt((e.target as HTMLInputElement).value, 10) || 0; }}
+            oninput={(e: InputEvent) => {
+              this.draft.year = parseInt((e.target as HTMLInputElement).value, 10) || 0;
+            }}
           />
         </div>
 
@@ -199,10 +206,14 @@ export default class LeaguesPanel extends Component<Attrs> {
           <select
             className="FormControl"
             value={this.draft.league}
-            onchange={(e: Event) => { this.draft.league = (e.target as HTMLSelectElement).value; }}
+            onchange={(e: Event) => {
+              this.draft.league = (e.target as HTMLSelectElement).value;
+            }}
           >
             {Object.keys(registry).map((k) => (
-              <option key={k} value={k}>{registry[k].name}</option>
+              <option key={k} value={k}>
+                {registry[k].name}
+              </option>
             ))}
           </select>
         </div>
@@ -226,8 +237,14 @@ export default class LeaguesPanel extends Component<Attrs> {
 
     season
       .save({ league })
-      .then(() => { this.busyId = null; this.say(t('league_saved', { season: season.name() }) as unknown as string, false); })
-      .catch(() => { this.busyId = null; this.say(t('save_failed') as unknown as string, true); });
+      .then(() => {
+        this.busyId = null;
+        this.say(t('league_saved', { season: season.name() }) as unknown as string, false);
+      })
+      .catch(() => {
+        this.busyId = null;
+        this.say(t('save_failed') as unknown as string, true);
+      });
   }
 
   private create() {
@@ -243,7 +260,10 @@ export default class LeaguesPanel extends Component<Attrs> {
         name,
         // Derived rather than asked for: a slug field on a form is one more
         // thing to get wrong, and nothing here needs it to be chosen.
-        slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+        slug: name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, ''),
         year: this.draft.year,
         league: this.draft.league,
       })

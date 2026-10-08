@@ -9,8 +9,7 @@ import crestUrl from '../../common/crest';
 
 type LogoStatus = 'both' | 'standard' | 'custom' | 'missing';
 
-const t = (key: string, params?: Record<string, unknown>) =>
-  app.translator.trans('ernestdefoe-picks.admin.teams.' + key, params as any);
+const t = (key: string, params?: Record<string, unknown>) => app.translator.trans('ernestdefoe-picks.admin.teams.' + key, params as any);
 
 export default class TeamsTab extends Component {
   private teams: Team[] = [];
@@ -135,8 +134,14 @@ export default class TeamsTab extends Component {
     app
       .request({ method: 'POST', url: `${app.forum.attribute('apiUrl')}/picks/teams/${id}/refresh-logo` })
       .then(() => app.store.find<Team>('picks-teams', String(id)))
-      .then(() => { this.refreshingId = null; m.redraw(); })
-      .catch(() => { this.refreshingId = null; m.redraw(); });
+      .then(() => {
+        this.refreshingId = null;
+        m.redraw();
+      })
+      .catch(() => {
+        this.refreshingId = null;
+        m.redraw();
+      });
   }
 
   private logoStatus(team: Team): LogoStatus {
@@ -152,7 +157,10 @@ export default class TeamsTab extends Component {
 
   private conferences(): string[] {
     const set = new Set<string>();
-    this.teams.forEach((t) => { const c = t.conference(); if (c) set.add(c); });
+    this.teams.forEach((t) => {
+      const c = t.conference();
+      if (c) set.add(c);
+    });
     return Array.from(set).sort();
   }
 
@@ -176,7 +184,7 @@ export default class TeamsTab extends Component {
   }
 
   private missingLogoCount(): number {
-    return this.teams.filter(t => !t.logoPath() && !t.logoCustom()).length;
+    return this.teams.filter((t) => !t.logoPath() && !t.logoCustom()).length;
   }
 
   view() {
@@ -189,13 +197,15 @@ export default class TeamsTab extends Component {
         <div className="PicksTab-header">
           <div>
             <h3>
-              <i className="fas fa-users" />
-              {' '}{app.translator.trans('ernestdefoe-picks.admin.nav.teams')}
+              <i className="fas fa-users" /> {app.translator.trans('ernestdefoe-picks.admin.nav.teams')}
             </h3>
             <p className="PicksTab-meta">
               {this.teams.length} {app.translator.trans('ernestdefoe-picks.admin.teams.total_label')}
               {this.lastSync && (
-                <span>{' · '}{app.translator.trans('ernestdefoe-picks.admin.common.last_sync')}: {new Date(this.lastSync).toLocaleString()}</span>
+                <span>
+                  {' · '}
+                  {app.translator.trans('ernestdefoe-picks.admin.common.last_sync')}: {new Date(this.lastSync).toLocaleString()}
+                </span>
               )}
             </p>
           </div>
@@ -217,8 +227,8 @@ export default class TeamsTab extends Component {
           <div className="PicksAlert PicksAlert--info">
             {this.syncingLogos && this.logoProgress !== null ? (
               <span>
-                <i className="fas fa-spinner fa-spin" />
-                {' '}{t('logos_running', { saved: this.logoProgress.saved, remaining: this.logoProgress.remaining })}
+                <i className="fas fa-spinner fa-spin" />{' '}
+                {t('logos_running', { saved: this.logoProgress.saved, remaining: this.logoProgress.remaining })}
               </span>
             ) : (
               this.logoSyncResult
@@ -232,13 +242,31 @@ export default class TeamsTab extends Component {
             type="text"
             placeholder={app.translator.trans('ernestdefoe-picks.admin.teams.search_placeholder')}
             value={this.search}
-            oninput={(e: InputEvent) => { this.search = (e.target as HTMLInputElement).value; }}
+            oninput={(e: InputEvent) => {
+              this.search = (e.target as HTMLInputElement).value;
+            }}
           />
-          <select className="FormControl" value={this.filterConference} onchange={(e: Event) => { this.filterConference = (e.target as HTMLSelectElement).value; }}>
+          <select
+            className="FormControl"
+            value={this.filterConference}
+            onchange={(e: Event) => {
+              this.filterConference = (e.target as HTMLSelectElement).value;
+            }}
+          >
             <option value="all">{app.translator.trans('ernestdefoe-picks.admin.teams.all_conferences')}</option>
-            {conferences.map((c) => <option key={c} value={c}>{c}</option>)}
+            {conferences.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
           </select>
-          <select className="FormControl" value={this.filterLogo} onchange={(e: Event) => { this.filterLogo = (e.target as HTMLSelectElement).value; }}>
+          <select
+            className="FormControl"
+            value={this.filterLogo}
+            onchange={(e: Event) => {
+              this.filterLogo = (e.target as HTMLSelectElement).value;
+            }}
+          >
             <option value="all">{app.translator.trans('ernestdefoe-picks.admin.teams.logo_filter_all')}</option>
             <option value="has">{app.translator.trans('ernestdefoe-picks.admin.teams.logo_filter_has')}</option>
             <option value="missing">{app.translator.trans('ernestdefoe-picks.admin.teams.logo_filter_missing')}</option>
@@ -265,7 +293,7 @@ export default class TeamsTab extends Component {
               filtered.map((team) => {
                 const id = parseInt(String(team.id()));
                 const status = this.logoStatus(team);
-                const logoUrl     = team.logoUrl();
+                const logoUrl = team.logoUrl();
                 const logoDarkUrl = team.logoDarkUrl() || logoUrl;
 
                 return (
@@ -273,13 +301,23 @@ export default class TeamsTab extends Component {
                     <div className="PicksCardList-cell">
                       {logoUrl ? (
                         <>
-                          <img src={crestUrl(logoUrl, 36)} alt={team.name() || ''} className="PicksTeamLogo PicksTeamLogo--light" loading="lazy" decoding="async" />
-                          <img src={crestUrl(logoDarkUrl!, 36)} alt={team.name() || ''} className="PicksTeamLogo PicksTeamLogo--dark" loading="lazy" decoding="async" />
+                          <img
+                            src={crestUrl(logoUrl, 36)}
+                            alt={team.name() || ''}
+                            className="PicksTeamLogo PicksTeamLogo--light"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                          <img
+                            src={crestUrl(logoDarkUrl!, 36)}
+                            alt={team.name() || ''}
+                            className="PicksTeamLogo PicksTeamLogo--dark"
+                            loading="lazy"
+                            decoding="async"
+                          />
                         </>
                       ) : (
-                        <div className="PicksTeamLogo PicksTeamLogo--placeholder">
-                          {(team.abbreviation() || team.name() || '?').charAt(0)}
-                        </div>
+                        <div className="PicksTeamLogo PicksTeamLogo--placeholder">{(team.abbreviation() || team.name() || '?').charAt(0)}</div>
                       )}
                     </div>
                     <div className="PicksCardList-cell PicksCardList-cell--primary">{team.name()}</div>

@@ -5,8 +5,7 @@ import Button from 'flarum/common/components/Button';
 import type Mithril from 'mithril';
 import Week from '../../common/models/Week';
 
-const t = (key: string, params?: Record<string, unknown>) =>
-  app.translator.trans('ernestdefoe-picks.admin.stats.' + key, params as any);
+const t = (key: string, params?: Record<string, unknown>) => app.translator.trans('ernestdefoe-picks.admin.stats.' + key, params as any);
 
 interface MostPickedTeam {
   name: string;
@@ -90,19 +89,22 @@ export default class StatsTab extends Component {
     const params: Record<string, any> = {};
     if (this.selectedWeekId) params.week_id = this.selectedWeekId;
 
-    app.request<StatsData>({
-      method: 'GET',
-      url: app.forum.attribute('apiUrl') + '/picks/stats',
-      params,
-    }).then((r) => {
-      this.stats = r;
-      this.loading = false;
-      m.redraw();
-    }).catch(() => {
-      this.error = t('load_failed');
-      this.loading = false;
-      m.redraw();
-    });
+    app
+      .request<StatsData>({
+        method: 'GET',
+        url: app.forum.attribute('apiUrl') + '/picks/stats',
+        params,
+      })
+      .then((r) => {
+        this.stats = r;
+        this.loading = false;
+        m.redraw();
+      })
+      .catch(() => {
+        this.error = t('load_failed');
+        this.loading = false;
+        m.redraw();
+      });
   }
 
   private sortedWeeks(): Week[] {
@@ -137,8 +139,7 @@ export default class StatsTab extends Component {
         <div className="PicksTab-header">
           <div>
             <h3>
-              <i className="fas fa-chart-bar" />
-              {' '}{t('title')}
+              <i className="fas fa-chart-bar" /> {t('title')}
             </h3>
             <p className="PicksTab-meta">{t('intro')}</p>
           </div>
@@ -151,16 +152,13 @@ export default class StatsTab extends Component {
                 this.load();
               }}
             >
-              {weeks.map(w => (
-                <option key={String(w.id())} value={String(w.id())}>{w.name()}</option>
+              {weeks.map((w) => (
+                <option key={String(w.id())} value={String(w.id())}>
+                  {w.name()}
+                </option>
               ))}
             </select>
-            <Button
-              className="Button"
-              icon="fas fa-sync"
-              loading={this.loading}
-              onclick={() => this.load()}
-            >
+            <Button className="Button" icon="fas fa-sync" loading={this.loading} onclick={() => this.load()}>
               {t('refresh')}
             </Button>
           </div>
@@ -171,9 +169,7 @@ export default class StatsTab extends Component {
         {this.loading ? (
           <LoadingIndicator />
         ) : !this.selectedWeekId ? (
-          <div className="PicksEmptyState">
-            {app.translator.trans('ernestdefoe-picks.admin.common.no_schedule')}
-          </div>
+          <div className="PicksEmptyState">{app.translator.trans('ernestdefoe-picks.admin.common.no_schedule')}</div>
         ) : !s ? null : (
           <>
             {/* Participation */}
@@ -202,8 +198,8 @@ export default class StatsTab extends Component {
               </div>
               {s.accuracy.most_picked_team && (
                 <p className="PicksStats-footnote">
-                  <i className="fas fa-football" />
-                  {' '}{t('most_picked_note', { team: s.accuracy.most_picked_team.name, count: s.accuracy.most_picked_team.picks })}
+                  <i className="fas fa-football" />{' '}
+                  {t('most_picked_note', { team: s.accuracy.most_picked_team.name, count: s.accuracy.most_picked_team.picks })}
                 </p>
               )}
             </div>
@@ -229,14 +225,8 @@ export default class StatsTab extends Component {
                         {g.home_team} {app.translator.trans('ernestdefoe-picks.lib.common.vs')} {g.away_team}
                       </span>
                       <div className="PicksStats-contestedBar">
-                        <div
-                          className="PicksStats-contestedFill PicksStats-contestedFill--home"
-                          style={`width: ${g.home_pct}%`}
-                        />
-                        <div
-                          className="PicksStats-contestedFill PicksStats-contestedFill--away"
-                          style={`width: ${g.away_pct}%`}
-                        />
+                        <div className="PicksStats-contestedFill PicksStats-contestedFill--home" style={`width: ${g.home_pct}%`} />
+                        <div className="PicksStats-contestedFill PicksStats-contestedFill--away" style={`width: ${g.away_pct}%`} />
                       </div>
                       <span className="PicksStats-contestedSplit">
                         {g.home_pct}% / {g.away_pct}%

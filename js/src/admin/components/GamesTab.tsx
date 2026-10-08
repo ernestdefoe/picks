@@ -7,8 +7,7 @@ import Week from '../../common/models/Week';
 import ResultModal from './ResultModal';
 import crestUrl from '../../common/crest';
 
-const t = (key: string, params?: Record<string, unknown>) =>
-  app.translator.trans('ernestdefoe-picks.admin.games.' + key, params as any);
+const t = (key: string, params?: Record<string, unknown>) => app.translator.trans('ernestdefoe-picks.admin.games.' + key, params as any);
 
 interface GameTeam {
   id: number;
@@ -167,11 +166,7 @@ export default class GamesTab extends Component {
       );
     }
 
-    return (
-      <div className="PicksTeamLogo PicksTeamLogo--placeholder PicksTeamLogo--small">
-        {(team.abbreviation || team.name || '?').charAt(0)}
-      </div>
-    );
+    return <div className="PicksTeamLogo PicksTeamLogo--placeholder PicksTeamLogo--small">{(team.abbreviation || team.name || '?').charAt(0)}</div>;
   }
 
   private formatDate(dateStr: string | null): string {
@@ -274,12 +269,7 @@ export default class GamesTab extends Component {
             </p>
           </div>
           <div className="PicksTab-actions">
-            <Button
-              className="Button Button--primary"
-              icon="fas fa-sync"
-              loading={this.syncing}
-              onclick={() => this.syncScores()}
-            >
+            <Button className="Button Button--primary" icon="fas fa-sync" loading={this.syncing} onclick={() => this.syncScores()}>
               {app.translator.trans('ernestdefoe-picks.admin.games.sync_scores_button')}
             </Button>
           </div>
@@ -373,9 +363,7 @@ export default class GamesTab extends Component {
                   <div className="PicksCardList-cell">{this.statusBadge(game.status)}</div>
 
                   <div className="PicksCardList-cell">
-                    {game.home_score !== null && game.away_score !== null
-                      ? `${game.home_score} – ${game.away_score}`
-                      : '—'}
+                    {game.home_score !== null && game.away_score !== null ? `${game.home_score} – ${game.away_score}` : '—'}
                   </div>
 
                   <div className="PicksCardList-cell PicksCardList-cell--actions">

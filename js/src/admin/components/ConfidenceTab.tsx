@@ -40,8 +40,7 @@ interface View {
   candidates: Game[];
 }
 
-const t = (key: string, params?: Record<string, unknown>) =>
-  app.translator.trans('ernestdefoe-picks.admin.confidence.' + key, params as any);
+const t = (key: string, params?: Record<string, unknown>) => app.translator.trans('ernestdefoe-picks.admin.confidence.' + key, params as any);
 
 /**
  * A week's Confidence games, for the admin: the automatic choice, and the
@@ -74,7 +73,11 @@ export default class ConfidenceTab extends Component {
     };
 
     if (app.store.all<Week>('picks-weeks').length) pick();
-    else app.store.find<Week[]>('picks-weeks').then(pick).catch(() => {});
+    else
+      app.store
+        .find<Week[]>('picks-weeks')
+        .then(pick)
+        .catch(() => {});
   }
 
   private weeks(): Week[] {
@@ -151,7 +154,8 @@ export default class ConfidenceTab extends Component {
         <div className="PicksTab-header">
           <div>
             <h3>
-              <i className="fas fa-sort-amount-down" /> {t('title', { count: v?.size ?? app.data.settings['ernestdefoe-picks.confidence10_games'] ?? 10 })}
+              <i className="fas fa-sort-amount-down" />{' '}
+              {t('title', { count: v?.size ?? app.data.settings['ernestdefoe-picks.confidence10_games'] ?? 10 })}
             </h3>
             <p className="PicksTab-meta">{t('intro')}</p>
           </div>
@@ -182,9 +186,7 @@ export default class ConfidenceTab extends Component {
   private body(v: View): Mithril.Children {
     const full = v.selection.length >= v.size;
     const needle = this.filter.trim().toLowerCase();
-    const candidates = v.candidates.filter(
-      (g) => !needle || `${g.home_team?.name ?? ''} ${g.away_team?.name ?? ''}`.toLowerCase().includes(needle)
-    );
+    const candidates = v.candidates.filter((g) => !needle || `${g.home_team?.name ?? ''} ${g.away_team?.name ?? ''}`.toLowerCase().includes(needle));
 
     return (
       <div>
@@ -305,7 +307,9 @@ export default class ConfidenceTab extends Component {
   private game(g: Game): Mithril.Children {
     const side = (team: Team | null, rank: number | null, record: string | null) => (
       <span className="PicksC10Admin-team">
-        {team?.logo_url ? <img src={crestUrl(team.logo_url, 24)} alt="" className="PicksTeamLogo PicksTeamLogo--small" loading="lazy" decoding="async" /> : null}
+        {team?.logo_url ? (
+          <img src={crestUrl(team.logo_url, 24)} alt="" className="PicksTeamLogo PicksTeamLogo--small" loading="lazy" decoding="async" />
+        ) : null}
         {rank ? <strong className="PicksC10Admin-rank">#{rank}</strong> : null}
         <span>{team?.name ?? '—'}</span>
         {record ? <span className="PicksC10Admin-record">({record})</span> : null}

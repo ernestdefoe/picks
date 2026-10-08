@@ -62,7 +62,12 @@ export function measure(surface: string) {
 
 export default class PicksSkeleton extends Component {
   view(vnode: any) {
-    const { surface, fallback, rows = 4, variant = '' } = vnode.attrs as {
+    const {
+      surface,
+      fallback,
+      rows = 4,
+      variant = '',
+    } = vnode.attrs as {
       surface: string;
       fallback: number;
       rows?: number;

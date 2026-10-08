@@ -4,8 +4,7 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import type Mithril from 'mithril';
 import Week from '../../common/models/Week';
 
-const t = (key: string, params?: Record<string, unknown>) =>
-  app.translator.trans('ernestdefoe-picks.admin.' + key, params as any);
+const t = (key: string, params?: Record<string, unknown>) => app.translator.trans('ernestdefoe-picks.admin.' + key, params as any);
 
 interface LeaderboardEntry {
   rank: number;
@@ -38,13 +37,16 @@ export default class LeaderboardTab extends Component {
       this.initFromWeeks();
       this.load();
     } else {
-      app.store.find<Week[]>('picks-weeks').then(() => {
-        this.initFromWeeks();
-        this.load();
-      }).catch(() => {
-        this.error = t('leaderboard.weeks_failed');
-        m.redraw();
-      });
+      app.store
+        .find<Week[]>('picks-weeks')
+        .then(() => {
+          this.initFromWeeks();
+          this.load();
+        })
+        .catch(() => {
+          this.error = t('leaderboard.weeks_failed');
+          m.redraw();
+        });
     }
   }
 
@@ -73,22 +75,25 @@ export default class LeaderboardTab extends Component {
     m.redraw();
 
     const params: Record<string, any> = { scope: this.scope, limit: 50 };
-    if (this.scope === 'week')   params.week_id   = this.selectedWeekId;
+    if (this.scope === 'week') params.week_id = this.selectedWeekId;
     if (this.scope === 'season') params.season_id = this.seasonId;
 
-    app.request<{ data: LeaderboardEntry[]; meta: any }>({
-      method: 'GET',
-      url: app.forum.attribute('apiUrl') + '/picks/leaderboard',
-      params,
-    }).then((r) => {
-      this.entries = r.data || [];
-      this.loading = false;
-      m.redraw();
-    }).catch(() => {
-      this.error = t('leaderboard.load_failed');
-      this.loading = false;
-      m.redraw();
-    });
+    app
+      .request<{ data: LeaderboardEntry[]; meta: any }>({
+        method: 'GET',
+        url: app.forum.attribute('apiUrl') + '/picks/leaderboard',
+        params,
+      })
+      .then((r) => {
+        this.entries = r.data || [];
+        this.loading = false;
+        m.redraw();
+      })
+      .catch(() => {
+        this.error = t('leaderboard.load_failed');
+        this.loading = false;
+        m.redraw();
+      });
   }
 
   private rankMedal(rank: number): Mithril.Children {
@@ -123,8 +128,7 @@ export default class LeaderboardTab extends Component {
         <div className="PicksTab-header">
           <div>
             <h3>
-              <i className="fas fa-trophy" />
-              {' '}{app.translator.trans('ernestdefoe-picks.admin.nav.scores')}
+              <i className="fas fa-trophy" /> {app.translator.trans('ernestdefoe-picks.admin.nav.scores')}
             </h3>
           </div>
         </div>
@@ -152,8 +156,10 @@ export default class LeaderboardTab extends Component {
                 this.load();
               }}
             >
-              {weeks.map(w => (
-                <option key={String(w.id())} value={String(w.id())}>{w.name()}</option>
+              {weeks.map((w) => (
+                <option key={String(w.id())} value={String(w.id())}>
+                  {w.name()}
+                </option>
               ))}
             </select>
           )}
@@ -164,11 +170,7 @@ export default class LeaderboardTab extends Component {
         {this.loading ? (
           <LoadingIndicator />
         ) : this.entries.length === 0 ? (
-          <div className="PicksEmptyState">
-            {!this.selectedWeekId && this.scope === 'week'
-              ? t('common.no_schedule')
-              : t('leaderboard.empty')}
-          </div>
+          <div className="PicksEmptyState">{!this.selectedWeekId && this.scope === 'week' ? t('common.no_schedule') : t('leaderboard.empty')}</div>
         ) : (
           <div className="PicksAdminLeaderboard">
             <div className="PicksAdminLeaderboard-head">
@@ -190,14 +192,13 @@ export default class LeaderboardTab extends Component {
                   ${entry.rank === 3 ? 'PicksAdminLeaderboard-row--bronze' : ''}
                 `}
               >
-                <div className="PicksAdminLeaderboard-rank">
-                  {this.rankMedal(entry.rank)}
-                </div>
+                <div className="PicksAdminLeaderboard-rank">{this.rankMedal(entry.rank)}</div>
                 <div className="PicksAdminLeaderboard-user">
-                  {entry.avatar_url
-                    ? <img src={entry.avatar_url} alt={entry.display_name} className="PicksAdminAvatar" />
-                    : <div className="PicksAdminAvatar PicksAdminAvatar--initials">{(entry.display_name || '?').charAt(0)}</div>
-                  }
+                  {entry.avatar_url ? (
+                    <img src={entry.avatar_url} alt={entry.display_name} className="PicksAdminAvatar" />
+                  ) : (
+                    <div className="PicksAdminAvatar PicksAdminAvatar--initials">{(entry.display_name || '?').charAt(0)}</div>
+                  )}
                   <span className="PicksAdminLeaderboard-name">{entry.display_name}</span>
                   {this.movement(entry)}
                 </div>

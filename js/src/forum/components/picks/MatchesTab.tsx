@@ -7,8 +7,7 @@ import type { Game } from './types';
 import WeekNav from './WeekNav';
 import crestUrl from '../../../common/crest';
 
-const t = (key: string, params?: Record<string, unknown>) =>
-  app.translator.trans('ernestdefoe-picks.forum.games.' + key, params as any);
+const t = (key: string, params?: Record<string, unknown>) => app.translator.trans('ernestdefoe-picks.forum.games.' + key, params as any);
 
 interface TabAttrs extends ComponentAttrs {
   state: PicksState;
@@ -93,8 +92,7 @@ export default class MatchesTab extends Component<TabAttrs> {
     const cutoff = new Date(game.cutoff_date);
     if (!game.time_tbd && cutoff.getTime() === new Date(game.match_date).getTime()) return null;
     try {
-      const sameDay = cutoff.toDateString() === new Date().toDateString()
-        || cutoff.toDateString() === new Date(game.match_date).toDateString();
+      const sameDay = cutoff.toDateString() === new Date().toDateString() || cutoff.toDateString() === new Date(game.match_date).toDateString();
       const when = sameDay
         ? this.formatTime(game.cutoff_date)
         : cutoff.toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' });
@@ -206,18 +204,10 @@ export default class MatchesTab extends Component<TabAttrs> {
 
         {(game.my_pick || (!game.can_pick && game.status === 'scheduled')) && (
           <div className="PicksGameCard-result">
-            {isCorrect && (
-              <span className="PicksTag PicksTag--correct">
-                ✓ {t('correct', { count: game.my_pick?.confidence ?? 1 })}
-              </span>
-            )}
+            {isCorrect && <span className="PicksTag PicksTag--correct">✓ {t('correct', { count: game.my_pick?.confidence ?? 1 })}</span>}
             {isIncorrect && <span className="PicksTag PicksTag--incorrect">✗ {t('incorrect')}</span>}
-            {game.my_pick && !isFinished && (
-              <span className="PicksTag PicksTag--pending">{t('pending')}</span>
-            )}
-            {!game.can_pick && game.status === 'scheduled' && !game.my_pick && (
-              <span className="PicksTag PicksTag--locked">{t('no_pick')}</span>
-            )}
+            {game.my_pick && !isFinished && <span className="PicksTag PicksTag--pending">{t('pending')}</span>}
+            {!game.can_pick && game.status === 'scheduled' && !game.my_pick && <span className="PicksTag PicksTag--locked">{t('no_pick')}</span>}
           </div>
         )}
 

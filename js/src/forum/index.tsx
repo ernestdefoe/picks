@@ -30,17 +30,14 @@ app.initializers.add('ernestdefoe/picks', () => {
     if (!profileUser) return;
 
     const isOwnProfile = app.session.user?.id?.() === profileUser.id?.();
-    const isAdmin      = app.session.user?.isAdmin?.();
-    const canView      = app.forum.attribute<boolean>('picksCanViewHistory');
+    const isAdmin = app.session.user?.isAdmin?.();
+    const canView = app.forum.attribute<boolean>('picksCanViewHistory');
 
     if (!isOwnProfile && !isAdmin && !canView) return;
 
     items.add(
       'picks-history',
-      <LinkButton
-        href={app.route('user.picks-history', { username: profileUser.username?.() })}
-        icon="fas fa-football"
-      >
+      <LinkButton href={app.route('user.picks-history', { username: profileUser.username?.() })} icon="fas fa-football">
         {app.translator.trans('ernestdefoe-picks.forum.nav.profile_history')}
       </LinkButton>,
       75
