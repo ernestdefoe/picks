@@ -28,6 +28,17 @@ export default class SeasonsTab extends Component {
     this.loadSeasons();
   }
 
+  /**
+   * Drops the seasons and weeks already in the store, so ones deleted on the
+   * server disappear when the lists are fetched again. It used to replace the
+   * store's model classes with `{}`, which made the next new season or week
+   * fail to load ("not a constructor") until the page was reloaded.
+   */
+  private forgetSeasons() {
+    app.store.all('picks-seasons').forEach((model) => app.store.remove(model));
+    app.store.all('picks-weeks').forEach((model) => app.store.remove(model));
+  }
+
   private loadSeasons() {
     this.loading = true;
     m.redraw();
@@ -95,8 +106,7 @@ export default class SeasonsTab extends Component {
           });
           this.lastSync = new Date().toISOString();
           // Clear store cache and reload
-          app.store.models['picks-seasons'] = {};
-          app.store.models['picks-weeks'] = {};
+          this.forgetSeasons();
           this.loadSeasons();
         }
         this.syncing = false;
@@ -150,8 +160,7 @@ export default class SeasonsTab extends Component {
           seasons={this.seasons}
           loading={this.loading}
           onchange={() => {
-            app.store.models['picks-seasons'] = {};
-            app.store.models['picks-weeks'] = {};
+            this.forgetSeasons();
             this.loadSeasons();
           }}
         />
