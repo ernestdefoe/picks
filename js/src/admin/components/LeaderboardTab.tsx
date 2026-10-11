@@ -25,6 +25,8 @@ export default class LeaderboardTab extends Component {
   private entries: LeaderboardEntry[] = [];
   private loading: boolean = false;
   private scope: string = 'week';
+  /** Which contest: the full board, or the Confidence contest when it runs. */
+  private contest: 'main' | 'c10' = 'main';
   private selectedWeekId: string = '';
   private seasonId: string = '';
   private error: Mithril.Children = null;
@@ -78,10 +80,13 @@ export default class LeaderboardTab extends Component {
     if (this.scope === 'week') params.week_id = this.selectedWeekId;
     if (this.scope === 'season') params.season_id = this.seasonId;
 
+    // The Confidence contest keeps its own standings, in the same shape.
+    const path = this.contest === 'c10' ? '/picks/confidence/leaderboard' : '/picks/leaderboard';
+
     app
       .request<{ data: LeaderboardEntry[]; meta: any }>({
         method: 'GET',
-        url: app.forum.attribute('apiUrl') + '/picks/leaderboard',
+        url: app.forum.attribute('apiUrl') + path,
         params,
       })
       .then((r) => {
@@ -113,6 +118,14 @@ export default class LeaderboardTab extends Component {
     );
   }
 
+  private c10Enabled(): boolean {
+    return app.data.settings['ernestdefoe-picks.confidence10_enabled'] === '1';
+  }
+
+  private c10Games(): number {
+    return Number(app.data.settings['ernestdefoe-picks.confidence10_games']) || 10;
+  }
+
   private sortedWeeks(): Week[] {
     return app.store.all<Week>('picks-weeks').sort((a, b) => {
       if (a.seasonType() !== b.seasonType()) return a.seasonType() === 'regular' ? -1 : 1;
@@ -134,6 +147,20 @@ export default class LeaderboardTab extends Component {
         </div>
 
         <div className="PicksTab-filters">
+          {this.c10Enabled() && (
+            <select
+              className="FormControl"
+              value={this.contest}
+              onchange={(e: Event) => {
+                this.contest = (e.target as HTMLSelectElement).value as 'main' | 'c10';
+                this.load();
+              }}
+            >
+              <option value="main">{t('leaderboard.contest_main')}</option>
+              <option value="c10">{t('leaderboard.contest_c10', { count: this.c10Games() })}</option>
+            </select>
+          )}
+
           <select
             className="FormControl"
             value={this.scope}

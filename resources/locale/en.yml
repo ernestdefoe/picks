@@ -246,6 +246,8 @@ ernestdefoe-picks:
       load_failed: The leaderboard could not be loaded.
       weeks_failed: The weeks could not be loaded.
       empty: No scores yet for this period.
+      contest_main: Full board
+      contest_c10: "Confidence {count}"
 
     stats:
       title: Stats
