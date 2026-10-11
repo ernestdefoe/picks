@@ -419,6 +419,12 @@
     &--bronze { background: rgba(205, 127, 50, 0.08); }
   }
 
+  // A Confidence week adds the tiebreaker gap as an eighth column.
+  &--tb &-head,
+  &--tb &-row {
+    grid-template-columns: 48px 1fr 52px 44px 44px 52px 56px 64px;
+  }
+
   &-rank { display: flex; align-items: center; }
 
   &-user {
@@ -598,6 +604,16 @@
       > :nth-child(4),
       > :nth-child(5),
       > :nth-child(6) { display: none; }
+    }
+  }
+
+  // On a phone a Confidence week keeps the tiebreaker and drops accuracy.
+  .PicksAdminLeaderboard--tb {
+    .PicksAdminLeaderboard-head,
+    .PicksAdminLeaderboard-row {
+      grid-template-columns: 40px 1fr 48px 56px;
+
+      > :nth-child(7) { display: none; }
     }
   }
 

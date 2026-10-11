@@ -248,6 +248,8 @@ ernestdefoe-picks:
       empty: No scores yet for this period.
       contest_main: Full board
       contest_c10: "Confidence {count}"
+      col_tiebreaker: Tiebreaker
+      col_tiebreaker_title: How far the tiebreaker guess was from the real total
 
     stats:
       title: Stats

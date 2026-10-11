@@ -1,6 +1,7 @@
 import app from 'flarum/admin/app';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
+import extractText from 'flarum/common/utils/extractText';
 import type Mithril from 'mithril';
 import Week from '../../common/models/Week';
 
@@ -18,6 +19,8 @@ interface LeaderboardEntry {
   total_picks: number;
   correct_picks: number;
   accuracy: number;
+  /** Confidence contest only: how far the tiebreaker guess was from the real total. */
+  tiebreak_diff?: number | null;
   is_me: boolean;
 }
 
@@ -118,6 +121,11 @@ export default class LeaderboardTab extends Component {
     );
   }
 
+  /** The tiebreaker settles a Confidence week, so that view shows how far each guess was. */
+  private showsTiebreaker(): boolean {
+    return this.contest === 'c10' && this.scope === 'week';
+  }
+
   private c10Enabled(): boolean {
     return app.data.settings['ernestdefoe-picks.confidence10_enabled'] === '1';
   }
@@ -199,7 +207,7 @@ export default class LeaderboardTab extends Component {
         ) : this.entries.length === 0 ? (
           <div className="PicksEmptyState">{!this.selectedWeekId && this.scope === 'week' ? t('common.no_schedule') : t('leaderboard.empty')}</div>
         ) : (
-          <div className="PicksAdminLeaderboard">
+          <div className={`PicksAdminLeaderboard ${this.showsTiebreaker() ? 'PicksAdminLeaderboard--tb' : ''}`}>
             <div className="PicksAdminLeaderboard-head">
               <div>#</div>
               <div>{t('common.col_player')}</div>
@@ -208,6 +216,11 @@ export default class LeaderboardTab extends Component {
               <div className="PicksAdminLeaderboard-right">{t('common.col_lost')}</div>
               <div className="PicksAdminLeaderboard-right">{t('common.col_picks')}</div>
               <div className="PicksAdminLeaderboard-right">{t('common.col_accuracy')}</div>
+              {this.showsTiebreaker() && (
+                <div className="PicksAdminLeaderboard-right" title={extractText(t('leaderboard.col_tiebreaker_title'))}>
+                  {t('leaderboard.col_tiebreaker')}
+                </div>
+              )}
             </div>
 
             {this.entries.map((entry) => (
@@ -234,6 +247,11 @@ export default class LeaderboardTab extends Component {
                 <div className="PicksAdminLeaderboard-right">{entry.total_picks - entry.correct_picks}</div>
                 <div className="PicksAdminLeaderboard-right">{entry.total_picks}</div>
                 <div className="PicksAdminLeaderboard-right">{entry.accuracy.toFixed(1)}%</div>
+                {this.showsTiebreaker() && (
+                  <div className="PicksAdminLeaderboard-right">
+                    {entry.tiebreak_diff === null || entry.tiebreak_diff === undefined ? '–' : `±${entry.tiebreak_diff}`}
+                  </div>
+                )}
               </div>
             ))}
           </div>
