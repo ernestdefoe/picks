@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -12,6 +13,11 @@ use Resofire\Picks\Week;
 
 class WeekOpenController implements RequestHandlerInterface
 {
+    public function __construct(
+        protected TranslatorInterface $translator
+    ) {
+    }
+
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         RequestUtil::getActor($request)->assertCan('picks.manage');
@@ -20,7 +26,7 @@ class WeekOpenController implements RequestHandlerInterface
         $week = Week::find($weekId);
 
         if (! $week) {
-            return new JsonResponse(['status' => 'error', 'message' => 'Week not found.'], 404);
+            return new JsonResponse(['status' => 'error', 'message' => $this->translator->trans('ernestdefoe-picks.api.errors.week_not_found')], 404);
         }
 
         $body = $request->getParsedBody() ?? [];

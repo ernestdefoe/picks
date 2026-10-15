@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -13,6 +14,11 @@ use Resofire\Picks\PickEvent;
 
 class DeletePickController implements RequestHandlerInterface
 {
+    public function __construct(
+        protected TranslatorInterface $translator
+    ) {
+    }
+
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $actor = RequestUtil::getActor($request);
@@ -24,13 +30,13 @@ class DeletePickController implements RequestHandlerInterface
         $event = PickEvent::find($eventId);
 
         if (! $event) {
-            return new JsonResponse(['status' => 'error', 'message' => 'Game not found.'], 404);
+            return new JsonResponse(['status' => 'error', 'message' => $this->translator->trans('ernestdefoe-picks.api.errors.game_not_found')], 404);
         }
 
         if (! $event->canPick()) {
             return new JsonResponse([
                 'status' => 'error',
-                'message' => 'This game is locked — pick cannot be removed.',
+                'message' => $this->translator->trans('ernestdefoe-picks.api.errors.game_locked_remove'),
             ], 422);
         }
 
@@ -39,7 +45,7 @@ class DeletePickController implements RequestHandlerInterface
             ->first();
 
         if (! $pick) {
-            return new JsonResponse(['status' => 'error', 'message' => 'No pick found.'], 404);
+            return new JsonResponse(['status' => 'error', 'message' => $this->translator->trans('ernestdefoe-picks.api.errors.no_pick')], 404);
         }
 
         $pick->delete();

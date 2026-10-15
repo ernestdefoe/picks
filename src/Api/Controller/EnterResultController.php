@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -17,7 +18,8 @@ class EnterResultController implements RequestHandlerInterface
 {
     public function __construct(
         protected Queue $queue,
-        protected SyncScoresService $syncScoresService
+        protected SyncScoresService $syncScoresService,
+        protected TranslatorInterface $translator
     ) {
     }
 
@@ -35,7 +37,7 @@ class EnterResultController implements RequestHandlerInterface
         if ($homeScore === null || $awayScore === null) {
             return new JsonResponse([
                 'status' => 'error',
-                'message' => 'homeScore and awayScore are required.',
+                'message' => $this->translator->trans('ernestdefoe-picks.api.errors.scores_required'),
             ], 422);
         }
 

@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -15,7 +16,8 @@ use Resofire\Picks\PickEvent;
 class ListPicksController implements RequestHandlerInterface
 {
     public function __construct(
-        protected SettingsRepositoryInterface $settings
+        protected SettingsRepositoryInterface $settings,
+        protected TranslatorInterface $translator
     ) {
     }
 
@@ -28,7 +30,7 @@ class ListPicksController implements RequestHandlerInterface
         $weekId = Arr::get($params, 'week_id');
 
         if (! $weekId) {
-            return new JsonResponse(['status' => 'error', 'message' => 'week_id is required.'], 422);
+            return new JsonResponse(['status' => 'error', 'message' => $this->translator->trans('ernestdefoe-picks.api.errors.week_id_required')], 422);
         }
 
         // All events for this week with home/away teams

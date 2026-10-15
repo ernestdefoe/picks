@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -28,7 +29,8 @@ class SyncEspnController implements RequestHandlerInterface
     public function __construct(
         protected EspnSyncService $sync,
         protected Leagues $leagues,
-        protected LoggerInterface $logger
+        protected LoggerInterface $logger,
+        protected TranslatorInterface $translator
     ) {
     }
 
@@ -40,7 +42,7 @@ class SyncEspnController implements RequestHandlerInterface
         $season = $id > 0 ? Season::query()->find($id) : null;
 
         if ($season === null) {
-            return new JsonResponse(['status' => 'error', 'message' => 'No such season.'], 404);
+            return new JsonResponse(['status' => 'error', 'message' => $this->translator->trans('ernestdefoe-picks.api.errors.no_such_season')], 404);
         }
 
         $league = $this->leagues->get($season->league);
@@ -55,7 +57,7 @@ class SyncEspnController implements RequestHandlerInterface
         if ($league->provider !== 'espn') {
             return new JsonResponse([
                 'status' => 'error',
-                'message' => $league->name.' is not synced from ESPN — use the schedule sync.',
+                'message' => $this->translator->trans('ernestdefoe-picks.api.errors.not_espn_synced', ['league' => Leagues::label($league, $this->translator)]),
             ], 422);
         }
 

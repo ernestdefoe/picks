@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -17,6 +18,11 @@ use Resofire\Picks\Week;
 
 class ResetDataController implements RequestHandlerInterface
 {
+    public function __construct(
+        protected TranslatorInterface $translator
+    ) {
+    }
+
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         RequestUtil::getActor($request)->assertAdmin();
@@ -27,7 +33,7 @@ class ResetDataController implements RequestHandlerInterface
         if (! in_array($scope, ['schedule', 'all'], true)) {
             return new JsonResponse([
                 'status' => 'error',
-                'message' => 'Invalid scope. Must be "schedule" or "all".',
+                'message' => $this->translator->trans('ernestdefoe-picks.api.errors.reset_invalid_scope'),
             ], 422);
         }
 

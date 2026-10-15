@@ -2,6 +2,7 @@
 
 namespace Resofire\Picks\Service;
 
+use Flarum\Locale\TranslatorInterface;
 use Flarum\Settings\SettingsRepositoryInterface;
 use GuzzleHttp\Client as HttpClient;
 use RuntimeException;
@@ -13,7 +14,8 @@ class CfbdService
 
     public function __construct(
         protected SettingsRepositoryInterface $settings,
-        protected HttpClient $http
+        protected HttpClient $http,
+        protected TranslatorInterface $translator
     ) {
     }
 
@@ -27,7 +29,7 @@ class CfbdService
         $apiKey = $this->settings->get('ernestdefoe-picks.cfbd_api_key');
 
         if (empty($apiKey)) {
-            throw new RuntimeException('CFBD API key is not configured.');
+            throw new RuntimeException($this->translator->trans('ernestdefoe-picks.api.errors.cfbd_no_key'));
         }
 
         $params = ['classification' => 'fbs'];
@@ -50,7 +52,7 @@ class CfbdService
         $apiKey = $this->settings->get('ernestdefoe-picks.cfbd_api_key');
 
         if (empty($apiKey)) {
-            throw new RuntimeException('CFBD API key is not configured.');
+            throw new RuntimeException($this->translator->trans('ernestdefoe-picks.api.errors.cfbd_no_key'));
         }
 
         $params = [
@@ -80,7 +82,7 @@ class CfbdService
         $apiKey = $this->settings->get('ernestdefoe-picks.cfbd_api_key');
 
         if (empty($apiKey)) {
-            throw new RuntimeException('CFBD API key is not configured.');
+            throw new RuntimeException($this->translator->trans('ernestdefoe-picks.api.errors.cfbd_no_key'));
         }
 
         return $this->request('/calendar', ['year' => $year], $apiKey);
@@ -122,7 +124,7 @@ class CfbdService
         $apiKey = $this->settings->get('ernestdefoe-picks.cfbd_api_key');
 
         if (empty($apiKey)) {
-            throw new RuntimeException('CFBD API key is not configured.');
+            throw new RuntimeException($this->translator->trans('ernestdefoe-picks.api.errors.cfbd_no_key'));
         }
 
         $rows = $this->request($endpoint, [
@@ -177,19 +179,19 @@ class CfbdService
                 'http_errors' => false,
             ]);
         } catch (\Throwable $e) {
-            throw new RuntimeException('CFBD request failed: '.$e->getMessage(), 0, $e);
+            throw new RuntimeException($this->translator->trans('ernestdefoe-picks.api.errors.cfbd_request_failed', ['error' => $e->getMessage()]), 0, $e);
         }
 
         $status = $response->getStatusCode();
 
         if ($status < 200 || $status >= 300) {
-            throw new RuntimeException('CFBD API returned HTTP '.$status.' for '.$endpoint);
+            throw new RuntimeException($this->translator->trans('ernestdefoe-picks.api.errors.cfbd_http', ['status' => $status, 'endpoint' => $endpoint]));
         }
 
         $decoded = json_decode((string) $response->getBody(), true);
 
         if (! is_array($decoded)) {
-            throw new RuntimeException('CFBD response was not valid JSON.');
+            throw new RuntimeException($this->translator->trans('ernestdefoe-picks.api.errors.cfbd_bad_json'));
         }
 
         return $decoded;

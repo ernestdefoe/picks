@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Service;
 
 use Carbon\Carbon;
+use Flarum\Locale\TranslatorInterface;
 use Flarum\Settings\SettingsRepositoryInterface;
 use GuzzleHttp\Client as HttpClient;
 use Illuminate\Contracts\Queue\Queue;
@@ -25,7 +26,8 @@ class SyncScoresService
         protected CfbdService $cfbd,
         protected SettingsRepositoryInterface $settings,
         protected Queue $queue,
-        protected HttpClient $http
+        protected HttpClient $http,
+        protected TranslatorInterface $translator
     ) {
     }
 
@@ -178,7 +180,7 @@ class SyncScoresService
         $response = $this->fetchJson($url);
 
         if ($response === null) {
-            throw new \RuntimeException('Failed to fetch ESPN scoreboard: '.($this->lastError ?? 'no detail'));
+            throw new \RuntimeException($this->translator->trans('ernestdefoe-picks.api.errors.espn_scoreboard_failed', ['error' => $this->lastError ?? $this->translator->trans('ernestdefoe-picks.api.errors.no_detail')]));
         }
 
         $events = $response['events'] ?? [];

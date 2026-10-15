@@ -5,6 +5,7 @@ namespace Resofire\Picks;
 use Flarum\Api\Resource;
 use Flarum\Extend;
 use Flarum\Frontend\Document;
+use Flarum\Locale\TranslatorInterface;
 use Resofire\Picks\Api\Controller\Confidence;
 use Resofire\Picks\Api\Controller\DeletePickController;
 use Resofire\Picks\Api\Controller\EnterResultController;
@@ -77,7 +78,7 @@ $extenders = [
          * that runs and reports nothing changed.
          */
         ->content(function (Document $document): void {
-            $document->payload['picksLeagues'] = (new Leagues())->manifest();
+            $document->payload['picksLeagues'] = (new Leagues())->manifest(resolve(TranslatorInterface::class));
         }),
 
     new Extend\Locales(__DIR__.'/resources/locale'),

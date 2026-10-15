@@ -367,6 +367,14 @@ ernestdefoe-picks:
       delete_confirm: Are you sure?
       login_required: Please log in to participate.
 
+    leagues:
+      cfb: College football
+      nfl: NFL
+      nba: NBA
+      cbb: College basketball
+      mlb: MLB
+      nhl: NHL
+
   forum:
     nav:
       profile_history: Picks History
@@ -508,3 +516,35 @@ ernestdefoe-picks:
       best: "Best of the week: {name}, {record}."
       open: "Picks for the next round are open — {url}"
       outro: Argue with the table below.
+    errors:
+      game_not_found: Game not found.
+      game_locked_remove: This game is locked — pick cannot be removed.
+      no_pick: No pick found.
+      scores_required: homeScore and awayScore are required.
+      leaderboard_context_failed: Failed to load leaderboard context.
+      leaderboard_history_failed: Failed to load leaderboard history.
+      week_scope_required: week_id required for week scope.
+      season_scope_required: season_id required for season scope.
+      invalid_scope: Invalid scope.
+      week_id_required: week_id is required.
+      custom_logo: Team has a custom logo set. Re-download is disabled.
+      no_espn_id: Team has no ESPN ID. Cannot download logo.
+      logo_download_failed: Logo download failed.
+      reset_invalid_scope: 'Invalid scope. Must be "schedule" or "all".'
+      pick_required: event_id and selected_outcome (home or away) are required.
+      confidence_range: Confidence must be between 1 and 10.
+      game_closed: This game is no longer open for picks.
+      no_such_season: No such season.
+      not_espn_synced: "{league} is not synced from ESPN — use the schedule sync."
+      user_id_required: user_id required
+      history_failed: Failed to load history.
+      user_scores_failed: Failed to load user scores.
+      week_not_found: Week not found.
+      cfbd_no_key: CFBD API key is not configured.
+      cfbd_request_failed: "CFBD request failed: {error}"
+      cfbd_http: "CFBD API returned HTTP {status} for {endpoint}"
+      cfbd_bad_json: CFBD response was not valid JSON.
+      espn_http: "ESPN returned {status} for {path}"
+      espn_bad_json: "ESPN returned something that is not JSON for {path}"
+      espn_scoreboard_failed: "Failed to fetch ESPN scoreboard: {error}"
+      no_detail: no detail

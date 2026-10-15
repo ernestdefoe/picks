@@ -3,6 +3,7 @@
 namespace Resofire\Picks;
 
 use Flarum\Foundation\AbstractServiceProvider;
+use Flarum\Locale\TranslatorInterface;
 use Flarum\Settings\SettingsRepositoryInterface;
 use GuzzleHttp\Client as HttpClient;
 use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
@@ -30,7 +31,8 @@ class PicksServiceProvider extends AbstractServiceProvider
                 $container->make(CfbdService::class),
                 $container->make(SettingsRepositoryInterface::class),
                 $container->make(Queue::class),
-                $container->make(HttpClient::class)
+                $container->make(HttpClient::class),
+                $container->make(TranslatorInterface::class)
             );
         });
 

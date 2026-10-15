@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -15,7 +16,8 @@ use Resofire\Picks\PickEvent;
 class SubmitPickController implements RequestHandlerInterface
 {
     public function __construct(
-        protected SettingsRepositoryInterface $settings
+        protected SettingsRepositoryInterface $settings,
+        protected TranslatorInterface $translator
     ) {
     }
 
@@ -33,7 +35,7 @@ class SubmitPickController implements RequestHandlerInterface
         if (! $eventId || ! in_array($outcome, ['home', 'away'], true)) {
             return new JsonResponse([
                 'status' => 'error',
-                'message' => 'event_id and selected_outcome (home or away) are required.',
+                'message' => $this->translator->trans('ernestdefoe-picks.api.errors.pick_required'),
             ], 422);
         }
 
@@ -49,7 +51,7 @@ class SubmitPickController implements RequestHandlerInterface
             if ($confidence < 1 || $confidence > 10) {
                 return new JsonResponse([
                     'status' => 'error',
-                    'message' => 'Confidence must be between 1 and 10.',
+                    'message' => $this->translator->trans('ernestdefoe-picks.api.errors.confidence_range'),
                 ], 422);
             }
         }
@@ -57,13 +59,13 @@ class SubmitPickController implements RequestHandlerInterface
         $event = PickEvent::find($eventId);
 
         if (! $event) {
-            return new JsonResponse(['status' => 'error', 'message' => 'Game not found.'], 404);
+            return new JsonResponse(['status' => 'error', 'message' => $this->translator->trans('ernestdefoe-picks.api.errors.game_not_found')], 404);
         }
 
         if (! $event->canPick()) {
             return new JsonResponse([
                 'status' => 'error',
-                'message' => 'This game is no longer open for picks.',
+                'message' => $this->translator->trans('ernestdefoe-picks.api.errors.game_closed'),
             ], 422);
         }
 

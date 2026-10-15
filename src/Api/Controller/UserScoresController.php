@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -25,7 +26,8 @@ class UserScoresController implements RequestHandlerInterface
 {
     public function __construct(
         protected CurrentSeasonService $currentSeason,
-        protected LoggerInterface $log
+        protected LoggerInterface $log,
+        protected TranslatorInterface $translator
     ) {
     }
 
@@ -38,7 +40,7 @@ class UserScoresController implements RequestHandlerInterface
         $userId = (int) Arr::get($params, 'user_id', 0);
 
         if (! $userId) {
-            return new JsonResponse(['error' => 'user_id required'], 422);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-picks.api.errors.user_id_required')], 422);
         }
 
         try {
@@ -152,7 +154,7 @@ class UserScoresController implements RequestHandlerInterface
             // yet" case, which is the empty-but-200 response built above.
             $this->log->error('[Picks] UserScores failed: '.$e->getMessage(), ['exception' => $e]);
 
-            return new JsonResponse(['error' => 'Failed to load user scores.'], 500);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-picks.api.errors.user_scores_failed')], 500);
         }
     }
 }

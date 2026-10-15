@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -28,7 +29,8 @@ class LeaderboardHistoryController implements RequestHandlerInterface
 {
     public function __construct(
         protected CurrentSeasonService $currentSeason,
-        protected LoggerInterface $log
+        protected LoggerInterface $log,
+        protected TranslatorInterface $translator
     ) {
     }
 
@@ -103,7 +105,7 @@ class LeaderboardHistoryController implements RequestHandlerInterface
         } catch (\Exception $e) {
             $this->log->error('[Picks] LeaderboardHistory failed: '.$e->getMessage(), ['exception' => $e]);
 
-            return new JsonResponse(['error' => 'Failed to load leaderboard history.'], 500);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-picks.api.errors.leaderboard_history_failed')], 500);
         }
     }
 }

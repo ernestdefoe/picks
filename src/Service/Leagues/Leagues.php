@@ -2,6 +2,8 @@
 
 namespace Resofire\Picks\Service\Leagues;
 
+use Flarum\Locale\TranslatorInterface;
+
 /**
  * The competitions this install knows about.
  *
@@ -129,18 +131,27 @@ class Leagues
      *
      * @return array<string, array<string, mixed>>
      */
-    public function manifest(): array
+    public function manifest(?TranslatorInterface $translator = null): array
     {
         $out = [];
 
         foreach ($this->leagues as $key => $league) {
             $out[$key] = [
-                'name' => $league->name,
+                'name' => $translator ? self::label($league, $translator) : $league->name,
                 'provider' => $league->provider,
                 'sport' => $league->sport,
             ];
         }
 
         return $out;
+    }
+
+    /** The league's name in the forum's language; a league another extension registered without a translation keeps its own name. */
+    public static function label(League $league, TranslatorInterface $translator): string
+    {
+        $key = 'ernestdefoe-picks.lib.leagues.'.$league->key;
+        $name = $translator->trans($key);
+
+        return $name === $key ? $league->name : $name;
     }
 }

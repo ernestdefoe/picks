@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -31,7 +32,8 @@ class UserHistoryController implements RequestHandlerInterface
 {
     public function __construct(
         protected CurrentSeasonService $currentSeason,
-        protected LoggerInterface $log
+        protected LoggerInterface $log,
+        protected TranslatorInterface $translator
     ) {
     }
 
@@ -42,7 +44,7 @@ class UserHistoryController implements RequestHandlerInterface
         $userId = (int) Arr::get($params, 'user_id', 0);
 
         if (! $userId) {
-            return new JsonResponse(['error' => 'user_id required'], 422);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-picks.api.errors.user_id_required')], 422);
         }
 
         // Own history requires picks.view; another user's history requires picks.viewHistory
@@ -117,7 +119,7 @@ class UserHistoryController implements RequestHandlerInterface
         } catch (\Exception $e) {
             $this->log->error('[Picks] UserHistory failed: '.$e->getMessage(), ['exception' => $e]);
 
-            return new JsonResponse(['error' => 'Failed to load history.'], 500);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-picks.api.errors.history_failed')], 500);
         }
     }
 

@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -12,6 +13,11 @@ use Resofire\Picks\UserScore;
 
 class ListLeaderboardController implements RequestHandlerInterface
 {
+    public function __construct(
+        protected TranslatorInterface $translator
+    ) {
+    }
+
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $actor = RequestUtil::getActor($request);
@@ -32,14 +38,14 @@ class ListLeaderboardController implements RequestHandlerInterface
         switch ($scope) {
             case 'week':
                 if (! $weekId) {
-                    return new JsonResponse(['status' => 'error', 'message' => 'week_id required for week scope.'], 422);
+                    return new JsonResponse(['status' => 'error', 'message' => $this->translator->trans('ernestdefoe-picks.api.errors.week_scope_required')], 422);
                 }
                 $query->where('week_id', (int) $weekId);
                 break;
 
             case 'season':
                 if (! $seasonId) {
-                    return new JsonResponse(['status' => 'error', 'message' => 'season_id required for season scope.'], 422);
+                    return new JsonResponse(['status' => 'error', 'message' => $this->translator->trans('ernestdefoe-picks.api.errors.season_scope_required')], 422);
                 }
                 $query->whereNull('week_id')->where('season_id', (int) $seasonId);
                 break;
@@ -49,7 +55,7 @@ class ListLeaderboardController implements RequestHandlerInterface
                 break;
 
             default:
-                return new JsonResponse(['status' => 'error', 'message' => 'Invalid scope.'], 422);
+                return new JsonResponse(['status' => 'error', 'message' => $this->translator->trans('ernestdefoe-picks.api.errors.invalid_scope')], 422);
         }
 
         $scores = $query->get();

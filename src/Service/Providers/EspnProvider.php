@@ -2,6 +2,7 @@
 
 namespace Resofire\Picks\Service\Providers;
 
+use Flarum\Locale\TranslatorInterface;
 use GuzzleHttp\Client as HttpClient;
 use Resofire\Picks\Service\Leagues\League;
 use RuntimeException;
@@ -46,7 +47,7 @@ class EspnProvider implements Provider
 
     protected int $fetched = 0;
 
-    public function __construct(protected HttpClient $http)
+    public function __construct(protected HttpClient $http, protected TranslatorInterface $translator)
     {
     }
 
@@ -1139,13 +1140,13 @@ class EspnProvider implements Provider
         ]);
 
         if ($response->getStatusCode() !== 200) {
-            throw new RuntimeException('ESPN returned '.$response->getStatusCode().' for '.$path);
+            throw new RuntimeException($this->translator->trans('ernestdefoe-picks.api.errors.espn_http', ['status' => $response->getStatusCode(), 'path' => $path]));
         }
 
         $decoded = json_decode((string) $response->getBody(), true);
 
         if (! is_array($decoded)) {
-            throw new RuntimeException('ESPN returned something that is not JSON for '.$path);
+            throw new RuntimeException($this->translator->trans('ernestdefoe-picks.api.errors.espn_bad_json', ['path' => $path]));
         }
 
         return $decoded;

@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Api\Controller;
 
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -14,7 +15,8 @@ use Resofire\Picks\Team;
 class RefreshTeamLogoController implements RequestHandlerInterface
 {
     public function __construct(
-        protected TeamSyncService $teamSyncService
+        protected TeamSyncService $teamSyncService,
+        protected TranslatorInterface $translator
     ) {
     }
 
@@ -28,14 +30,14 @@ class RefreshTeamLogoController implements RequestHandlerInterface
         if ($team->logo_custom) {
             return new JsonResponse([
                 'status' => 'skipped',
-                'message' => 'Team has a custom logo set. Re-download is disabled.',
+                'message' => $this->translator->trans('ernestdefoe-picks.api.errors.custom_logo'),
             ]);
         }
 
         if (! $team->espn_id) {
             return new JsonResponse([
                 'status' => 'error',
-                'message' => 'Team has no ESPN ID. Cannot download logo.',
+                'message' => $this->translator->trans('ernestdefoe-picks.api.errors.no_espn_id'),
             ], 422);
         }
 
@@ -53,7 +55,7 @@ class RefreshTeamLogoController implements RequestHandlerInterface
 
         return new JsonResponse([
             'status' => 'error',
-            'message' => 'Logo download failed.',
+            'message' => $this->translator->trans('ernestdefoe-picks.api.errors.logo_download_failed'),
         ], 422);
     }
 }

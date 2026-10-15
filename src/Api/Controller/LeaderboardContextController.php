@@ -4,6 +4,7 @@ namespace Resofire\Picks\Api\Controller;
 
 use Carbon\Carbon;
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -34,7 +35,8 @@ class LeaderboardContextController implements RequestHandlerInterface
 
     public function __construct(
         protected CurrentSeasonService $currentSeason,
-        protected LoggerInterface $log
+        protected LoggerInterface $log,
+        protected TranslatorInterface $translator
     ) {
     }
 
@@ -121,7 +123,7 @@ class LeaderboardContextController implements RequestHandlerInterface
             // from the normal path above.
             $this->log->error('[Picks] LeaderboardContext failed: '.$e->getMessage(), ['exception' => $e]);
 
-            return new JsonResponse(['error' => 'Failed to load leaderboard context.'], 500);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-picks.api.errors.leaderboard_context_failed')], 500);
         }
     }
 }
