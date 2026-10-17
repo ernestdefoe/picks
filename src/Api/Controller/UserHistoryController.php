@@ -263,7 +263,9 @@ class UserHistoryController implements RequestHandlerInterface
                     'total_picks' => $totalPicks,
                     'correct_picks' => (int) ($userWeek->correct_picks ?? 0),
                     'total_points' => $totalPoints,
-                    'accuracy' => (float) ($userWeek->accuracy ?? 0.0),
+                    // Nothing decided yet (an unplayed week): no accuracy at
+                    // all, rather than a 0% that reads as every pick lost.
+                    'accuracy' => $totalPicks > 0 ? (float) $userWeek->accuracy : null,
                     'rank' => $weekRank,
                 ];
             }

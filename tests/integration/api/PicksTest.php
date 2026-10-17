@@ -140,6 +140,23 @@ class PicksTest extends TestCase
     }
 
     #[Test]
+    public function a_week_with_nothing_decided_has_no_accuracy_in_the_history()
+    {
+        // Week 1 half played (one decided pick of one), week 2 not played at
+        // all; a stored zero row for it must not read as 0%.
+        $this->prepareDatabase(['picks_user_scores' => [
+            ['user_id' => 2, 'season_id' => 1, 'week_id' => 1, 'total_points' => 1, 'total_picks' => 1, 'correct_picks' => 1, 'accuracy' => 100],
+            ['user_id' => 2, 'season_id' => 1, 'week_id' => 2, 'total_points' => 0, 'total_picks' => 0, 'correct_picks' => 0, 'accuracy' => 0],
+        ]]);
+
+        $response = $this->call('GET', '/api/picks/user-history', 2, null, ['user_id' => '2']);
+
+        $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+        $weeks = array_column($this->body($response)['seasons'][0]['weeks'], 'accuracy', 'week_id');
+        $this->assertSame([2 => null, 1 => 100], $weeks, 'Decided picks only; nothing decided = no accuracy');
+    }
+
+    #[Test]
     public function a_week_costs_the_same_queries_however_many_games_it_holds()
     {
         $week = fn () => $this->call('GET', '/api/picks/my-picks', 2, null, ['week_id' => '1']);

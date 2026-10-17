@@ -44,7 +44,8 @@ interface WeekHistory {
   total_picks: number;
   correct_picks: number;
   total_points: number;
-  accuracy: number;
+  /** Null until a pick that week is decided. */
+  accuracy: number | null;
   rank: number | null;
 }
 
@@ -609,9 +610,13 @@ export default class UserPicksPage extends UserPage {
                         </td>
                         <td className="Picks-week-table-r">{week.correct_picks}</td>
                         <td className="Picks-week-table-r">{week.total_picks - week.correct_picks}</td>
-                        <td className="Picks-week-table-r">
-                          <span className={`Picks-profile-accPill ${accClass(week.accuracy)}`}>{week.accuracy.toFixed(0)}%</span>
-                        </td>
+                        {week.accuracy != null ? (
+                          <td className="Picks-week-table-r">
+                            <span className={`Picks-profile-accPill ${accClass(week.accuracy)}`}>{week.accuracy.toFixed(0)}%</span>
+                          </td>
+                        ) : (
+                          <td className="Picks-week-table-r Picks-week-rank">—</td>
+                        )}
                         <td className="Picks-week-table-r">
                           <strong>{week.total_points}</strong>
                         </td>
