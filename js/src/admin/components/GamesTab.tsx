@@ -6,6 +6,7 @@ import type Mithril from 'mithril';
 import Week from '../../common/models/Week';
 import ResultModal from './ResultModal';
 import crestUrl from '../../common/crest';
+import { score, sides } from '../../common/matchup';
 
 const t = (key: string, params?: Record<string, unknown>) => app.translator.trans('ernestdefoe-picks.admin.games.' + key, params as any);
 
@@ -338,8 +339,13 @@ export default class GamesTab extends Component {
           <>
             <div className="PicksCardList">
               <div className="PicksCardList-header PicksCardList-header--games">
-                <div>{app.translator.trans('ernestdefoe-picks.admin.games.col_home')}</div>
-                <div>{app.translator.trans('ernestdefoe-picks.admin.games.col_away')}</div>
+                {sides().map((side) => (
+                  <div>
+                    {side === 'home'
+                      ? app.translator.trans('ernestdefoe-picks.admin.games.col_home')
+                      : app.translator.trans('ernestdefoe-picks.admin.games.col_away')}
+                  </div>
+                ))}
                 <div>{app.translator.trans('ernestdefoe-picks.admin.games.col_date')}</div>
                 <div>{app.translator.trans('ernestdefoe-picks.admin.games.col_status')}</div>
                 <div>{app.translator.trans('ernestdefoe-picks.admin.games.col_score')}</div>
@@ -348,22 +354,23 @@ export default class GamesTab extends Component {
 
               {this.games.map((game) => (
                 <div key={String(game.id)} className="PicksCardList-row PicksCardList-row--games">
-                  <div className="PicksCardList-cell PicksTeamCell">
-                    {this.renderTeamLogo(game.home_team)}
-                    <span>{game.home_team?.name ?? '—'}</span>
-                  </div>
+                  {sides().map((side) => {
+                    const team = side === 'home' ? game.home_team : game.away_team;
 
-                  <div className="PicksCardList-cell PicksTeamCell">
-                    {this.renderTeamLogo(game.away_team)}
-                    <span>{game.away_team?.name ?? '—'}</span>
-                  </div>
+                    return (
+                      <div className="PicksCardList-cell PicksTeamCell">
+                        {this.renderTeamLogo(team)}
+                        <span>{team?.name ?? '—'}</span>
+                      </div>
+                    );
+                  })}
 
                   <div className="PicksCardList-cell PicksCardList-cell--muted">{this.formatDate(game.match_date)}</div>
 
                   <div className="PicksCardList-cell">{this.statusBadge(game.status)}</div>
 
                   <div className="PicksCardList-cell">
-                    {game.home_score !== null && game.away_score !== null ? `${game.home_score} – ${game.away_score}` : '—'}
+                    {game.home_score !== null && game.away_score !== null ? score(game.home_score, game.away_score, ' – ') : '—'}
                   </div>
 
                   <div className="PicksCardList-cell PicksCardList-cell--actions">

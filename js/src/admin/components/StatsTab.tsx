@@ -4,6 +4,7 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Button from 'flarum/common/components/Button';
 import type Mithril from 'mithril';
 import Week from '../../common/models/Week';
+import { awayFirst, matchupText } from '../../common/matchup';
 
 const t = (key: string, params?: Record<string, unknown>) => app.translator.trans('ernestdefoe-picks.admin.stats.' + key, params as any);
 
@@ -17,6 +18,7 @@ interface ContestledGame {
   event_id: number;
   home_team: string;
   away_team: string;
+  neutral_site?: boolean;
   home_pct: number;
   away_pct: number;
   total: number;
@@ -112,6 +114,10 @@ export default class StatsTab extends Component {
       if (a.seasonType() !== b.seasonType()) return a.seasonType() === 'regular' ? -1 : 1;
       return (a.weekNumber() || 0) - (b.weekNumber() || 0);
     });
+  }
+
+  private contestedFill(side: 'home' | 'away', pct: number): Mithril.Children {
+    return <div className={`PicksStats-contestedFill PicksStats-contestedFill--${side}`} style={`width: ${pct}%`} />;
   }
 
   private statCard(icon: string, labelKey: string, value: string | number | null, suffix: string = ''): Mithril.Children {
@@ -221,15 +227,14 @@ export default class StatsTab extends Component {
                   <div className="PicksStats-contestedTitle">{t('most_contested')}</div>
                   {s.coverage.most_contested.map((g) => (
                     <div className="PicksStats-contestedRow" key={String(g.event_id)}>
-                      <span className="PicksStats-contestedMatchup">
-                        {g.home_team} {app.translator.trans('ernestdefoe-picks.lib.common.vs')} {g.away_team}
-                      </span>
+                      <span className="PicksStats-contestedMatchup">{matchupText(g.home_team, g.away_team, g.neutral_site)}</span>
                       <div className="PicksStats-contestedBar">
-                        <div className="PicksStats-contestedFill PicksStats-contestedFill--home" style={`width: ${g.home_pct}%`} />
-                        <div className="PicksStats-contestedFill PicksStats-contestedFill--away" style={`width: ${g.away_pct}%`} />
+                        {awayFirst()
+                          ? [this.contestedFill('away', g.away_pct), this.contestedFill('home', g.home_pct)]
+                          : [this.contestedFill('home', g.home_pct), this.contestedFill('away', g.away_pct)]}
                       </div>
                       <span className="PicksStats-contestedSplit">
-                        {g.home_pct}% / {g.away_pct}%
+                        {awayFirst() ? `${g.away_pct}% / ${g.home_pct}%` : `${g.home_pct}% / ${g.away_pct}%`}
                       </span>
                       <span className="PicksStats-contestedTotal">{t('picks_count', { count: g.total })}</span>
                     </div>

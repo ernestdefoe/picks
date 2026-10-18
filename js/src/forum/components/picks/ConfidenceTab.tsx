@@ -8,6 +8,7 @@ import PicksSkeleton from '../PicksSkeleton';
 import { startDrag } from '../../../common/sortable';
 import extractText from 'flarum/common/utils/extractText';
 import crestUrl from '../../../common/crest';
+import { matchupText, score, separator, sides } from '../../../common/matchup';
 
 interface TabAttrs extends ComponentAttrs {
   state: PicksState;
@@ -149,6 +150,7 @@ export default class ConfidenceTab extends Component<TabAttrs> {
     if (locked) cls += ' C10Row--locked';
 
     const label = this.matchup(game);
+    const [first, second] = sides();
 
     return (
       <li className={cls} key={String(game.id)} data-c10-row={String(game.id)}>
@@ -196,13 +198,11 @@ export default class ConfidenceTab extends Component<TabAttrs> {
             {game.is_tiebreaker && <span className="C10Row-tb">{t('tiebreaker_tag')}</span>}
           </div>
           <div className="C10Row-teams" role="group" aria-label={label}>
-            {this.team(game, 'home', outcome, playing)}
+            {this.team(game, first, outcome, playing)}
             <span className={`C10Row-vs ${game.status === 'finished' && game.home_score !== null ? 'C10Row-vs--score' : ''}`}>
-              {game.home_score !== null && game.status === 'finished'
-                ? `${game.home_score}–${game.away_score}`
-                : app.translator.trans('ernestdefoe-picks.lib.common.vs')}
+              {game.home_score !== null && game.status === 'finished' ? score(game.home_score, game.away_score) : separator(game.neutral_site)}
             </span>
-            {this.team(game, 'away', outcome, playing)}
+            {this.team(game, second, outcome, playing)}
           </div>
           {locked && !game.my_pick && <span className="PicksTag PicksTag--locked">{t('no_pick')}</span>}
           {result === true && <span className="PicksTag PicksTag--correct">{t('correct', { points: value })}</span>}
@@ -307,7 +307,7 @@ export default class ConfidenceTab extends Component<TabAttrs> {
   }
 
   private matchup(game: C10Game): string {
-    return `${game.home_team?.name ?? '?'} ${app.translator.trans('ernestdefoe-picks.lib.common.vs')} ${game.away_team?.name ?? '?'}`;
+    return matchupText(game.home_team?.name ?? '?', game.away_team?.name ?? '?', game.neutral_site);
   }
 
   private when(game: C10Game): string {

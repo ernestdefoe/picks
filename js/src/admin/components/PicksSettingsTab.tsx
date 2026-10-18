@@ -12,6 +12,7 @@ export default class PicksSettingsTab extends Component {
   private picksLockOffsetMinutes: string = '0';
   private espnPollingEnabled: boolean = false;
   private defaultWeekView: string = 'current';
+  private matchupFormat: string = 'home_vs_away';
   private confidenceMode: boolean = false;
   private confidencePenalty: string = 'none';
   private navLabel: string = '';
@@ -28,6 +29,7 @@ export default class PicksSettingsTab extends Component {
     this.picksLockOffsetMinutes = s['ernestdefoe-picks.picks_lock_offset_minutes'] || '0';
     this.espnPollingEnabled = s['ernestdefoe-picks.espn_polling_enabled'] === '1';
     this.defaultWeekView = s['ernestdefoe-picks.default_week_view'] || 'current';
+    this.matchupFormat = s['ernestdefoe-picks.matchup_format'] || 'home_vs_away';
     this.confidenceMode = s['ernestdefoe-picks.confidence_mode'] === '1';
     this.confidencePenalty = s['ernestdefoe-picks.confidence_penalty'] || 'none';
     this.navLabel = s['ernestdefoe-picks.nav_label'] || '';
@@ -39,6 +41,7 @@ export default class PicksSettingsTab extends Component {
       picksLockOffsetMinutes: this.picksLockOffsetMinutes,
       espnPollingEnabled: this.espnPollingEnabled,
       defaultWeekView: this.defaultWeekView,
+      matchupFormat: this.matchupFormat,
       confidenceMode: this.confidenceMode,
       confidencePenalty: this.confidencePenalty,
       navLabel: this.navLabel,
@@ -55,6 +58,7 @@ export default class PicksSettingsTab extends Component {
       this.picksLockOffsetMinutes !== this._orig.picksLockOffsetMinutes ||
       this.espnPollingEnabled !== this._orig.espnPollingEnabled ||
       this.defaultWeekView !== this._orig.defaultWeekView ||
+      this.matchupFormat !== this._orig.matchupFormat ||
       this.confidenceMode !== this._orig.confidenceMode ||
       this.confidencePenalty !== this._orig.confidencePenalty ||
       this.navLabel !== this._orig.navLabel ||
@@ -84,6 +88,7 @@ export default class PicksSettingsTab extends Component {
           'ernestdefoe-picks.picks_lock_offset_minutes': this.picksLockOffsetMinutes,
           'ernestdefoe-picks.espn_polling_enabled': this.espnPollingEnabled ? '1' : '0',
           'ernestdefoe-picks.default_week_view': this.defaultWeekView,
+          'ernestdefoe-picks.matchup_format': this.matchupFormat,
           'ernestdefoe-picks.confidence_mode': this.confidenceMode ? '1' : '0',
           'ernestdefoe-picks.confidence_penalty': this.confidencePenalty,
           'ernestdefoe-picks.nav_label': this.navLabel,
@@ -97,6 +102,7 @@ export default class PicksSettingsTab extends Component {
         app.data.settings['ernestdefoe-picks.picks_lock_offset_minutes'] = this.picksLockOffsetMinutes;
         app.data.settings['ernestdefoe-picks.espn_polling_enabled'] = this.espnPollingEnabled ? '1' : '0';
         app.data.settings['ernestdefoe-picks.default_week_view'] = this.defaultWeekView;
+        app.data.settings['ernestdefoe-picks.matchup_format'] = this.matchupFormat;
         app.data.settings['ernestdefoe-picks.confidence_mode'] = this.confidenceMode ? '1' : '0';
         app.data.settings['ernestdefoe-picks.confidence_penalty'] = this.confidencePenalty;
         app.data.settings['ernestdefoe-picks.nav_label'] = this.navLabel;
@@ -111,6 +117,7 @@ export default class PicksSettingsTab extends Component {
           picksLockOffsetMinutes: this.picksLockOffsetMinutes,
           espnPollingEnabled: this.espnPollingEnabled,
           defaultWeekView: this.defaultWeekView,
+          matchupFormat: this.matchupFormat,
           confidenceMode: this.confidenceMode,
           confidencePenalty: this.confidencePenalty,
           navLabel: this.navLabel,
@@ -217,6 +224,23 @@ export default class PicksSettingsTab extends Component {
               <option value="first">{app.translator.trans('ernestdefoe-picks.admin.settings.week_view_first')}</option>
             </select>
             <p className="helpText">{app.translator.trans('ernestdefoe-picks.admin.settings.default_week_view_help')}</p>
+          </div>
+
+          <div className="Form-group">
+            <label for="picks-matchup-format">{app.translator.trans('ernestdefoe-picks.admin.settings.matchup_format')}</label>
+            <select
+              id="picks-matchup-format"
+              className="FormControl"
+              value={this.matchupFormat}
+              onchange={(e: Event) => {
+                this.matchupFormat = (e.target as HTMLSelectElement).value;
+                this.checkDirty();
+              }}
+            >
+              <option value="home_vs_away">{app.translator.trans('ernestdefoe-picks.admin.settings.matchup_home_vs_away')}</option>
+              <option value="away_at_home">{app.translator.trans('ernestdefoe-picks.admin.settings.matchup_away_at_home')}</option>
+            </select>
+            <p className="helpText">{app.translator.trans('ernestdefoe-picks.admin.settings.matchup_format_help')}</p>
           </div>
         </div>
 

@@ -183,6 +183,10 @@ ernestdefoe-picks:
       week_view_current: Current week (auto-detect)
       week_view_first: Always show Week 1
       default_week_view_help: What week users see when they first open the Picks page.
+      matchup_format: Matchup order
+      matchup_home_vs_away: Home vs Away
+      matchup_away_at_home: Away @ Home
+      matchup_format_help: "How every game is written on the Picks pages, My Picks, the Confidence contest and the admin lists. \"Away @ Home\" is the American style; a neutral-site game keeps \"vs\" since neither side is at home."
       confidence_title: Confidence Mode
       confidence_enabled: Enable confidence ratings (1–10 per pick)
       confidence_help: When enabled, users rate their confidence in each pick from 1 to 10. Correct picks score their confidence value as points instead of 1 point each.
@@ -338,6 +342,7 @@ ernestdefoe-picks:
       home: Home
       away: Away
       vs: vs
+      at: "@"
       season: Season
       week: Week
       team: Player

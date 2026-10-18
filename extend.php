@@ -118,7 +118,11 @@ $extenders = [
         ->default('ernestdefoe-picks.espn_polling_enabled', false)
         ->default('ernestdefoe-picks.espn_poll_interval_minutes', 5)
         ->default('ernestdefoe-picks.nav_label', '')
+        // 'home_vs_away' is how every forum read a matchup before this setting
+        // existed, so it stays the default and nobody's board changes on update.
+        ->default('ernestdefoe-picks.matchup_format', 'home_vs_away')
         ->serializeToForum('picksNavLabel', 'ernestdefoe-picks.nav_label')
+        ->serializeToForum('picksMatchupFormat', 'ernestdefoe-picks.matchup_format')
         // 🚨 Saved in the admin since the fork and read by nothing: the board
         // ignored "Always show Week 1" and "Current week (auto-detect)" alike.
         ->serializeToForum('picksDefaultWeekView', 'ernestdefoe-picks.default_week_view'),

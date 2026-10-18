@@ -7,6 +7,7 @@ import type Mithril from 'mithril';
 import Week from '../../common/models/Week';
 import { startDrag, moveItem } from '../../common/sortable';
 import crestUrl from '../../common/crest';
+import { awayFirst, matchupText, separator } from '../../common/matchup';
 
 interface Team {
   name: string;
@@ -25,6 +26,7 @@ interface Game {
   home_record: string | null;
   away_record: string | null;
   broadcast: string | null;
+  neutral_site?: boolean;
   home_team: Team | null;
   away_team: Team | null;
 }
@@ -319,9 +321,9 @@ export default class ConfidenceTab extends Component {
     return (
       <span className="PicksC10Admin-game">
         <span className="PicksC10Admin-teams">
-          {side(g.home_team, g.home_rank, g.home_record)}
-          <span className="PicksC10Admin-vs">{app.translator.trans('ernestdefoe-picks.lib.common.vs')}</span>
-          {side(g.away_team, g.away_rank, g.away_record)}
+          {awayFirst() ? side(g.away_team, g.away_rank, g.away_record) : side(g.home_team, g.home_rank, g.home_record)}
+          <span className="PicksC10Admin-vs">{separator(g.neutral_site)}</span>
+          {awayFirst() ? side(g.home_team, g.home_rank, g.home_record) : side(g.away_team, g.away_rank, g.away_record)}
         </span>
         <span className="PicksC10Admin-when">
           {this.when(g)}
@@ -332,7 +334,7 @@ export default class ConfidenceTab extends Component {
   }
 
   private matchup(g: Game): string {
-    return `${g.home_team?.name ?? '?'} ${extractText(app.translator.trans('ernestdefoe-picks.lib.common.vs'))} ${g.away_team?.name ?? '?'}`;
+    return matchupText(g.home_team?.name ?? '?', g.away_team?.name ?? '?', g.neutral_site);
   }
 
   private when(g: Game): string {

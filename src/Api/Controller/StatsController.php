@@ -150,7 +150,7 @@ class StatsController implements RequestHandlerInterface
         $consensusCount = 0;
         $contested = [];
 
-        $eventsWithPicks = PickEvent::query()->has('picks')->get(['id', 'home_team_id', 'away_team_id']);
+        $eventsWithPicks = PickEvent::query()->has('picks')->get(['id', 'home_team_id', 'away_team_id', 'neutral_site']);
 
         foreach ($eventsWithPicks as $event) {
             [$home, $away] = $this->outcomeCounts($pickCountsByEvent, $event->id);
@@ -168,6 +168,7 @@ class StatsController implements RequestHandlerInterface
                 'event_id' => $event->id,
                 'home_team_id' => $event->home_team_id,
                 'away_team_id' => $event->away_team_id,
+                'neutral_site' => (bool) $event->neutral_site,
                 'home_pct' => round($homePct * 100, 1),
                 'away_pct' => round((1 - $homePct) * 100, 1),
                 'total' => $total,
@@ -195,6 +196,7 @@ class StatsController implements RequestHandlerInterface
                 'event_id' => $g['event_id'],
                 'home_team' => $teams->get($g['home_team_id'])->abbreviation ?? '?',
                 'away_team' => $teams->get($g['away_team_id'])->abbreviation ?? '?',
+                'neutral_site' => $g['neutral_site'],
                 'home_pct' => $g['home_pct'],
                 'away_pct' => $g['away_pct'],
                 'total' => $g['total'],

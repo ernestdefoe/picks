@@ -6,6 +6,7 @@ import type PicksState from './PicksState';
 import type { Game } from './types';
 import WeekNav from './WeekNav';
 import crestUrl from '../../../common/crest';
+import { score, separator, sides } from '../../../common/matchup';
 
 const t = (key: string, params?: Record<string, unknown>) => app.translator.trans('ernestdefoe-picks.forum.games.' + key, params as any);
 
@@ -170,6 +171,7 @@ export default class MatchesTab extends Component<TabAttrs> {
     const isFinished = game.status === 'finished';
     const isCorrect = game.my_pick?.is_correct === true;
     const isIncorrect = game.my_pick?.is_correct === false;
+    const [first, second] = sides();
 
     let cardCls = 'PicksGameCard';
     if (isCorrect) cardCls += ' PicksGameCard--correct';
@@ -187,19 +189,17 @@ export default class MatchesTab extends Component<TabAttrs> {
         </div>
 
         <div className="PicksGameCard-teams">
-          {this.renderTeamButton(game, 'home')}
+          {this.renderTeamButton(game, first)}
 
           <div className="PicksGameCard-vs">
             {isFinished && game.home_score !== null ? (
-              <span className="PicksGameCard-score">
-                {game.home_score}–{game.away_score}
-              </span>
+              <span className="PicksGameCard-score">{score(game.home_score, game.away_score)}</span>
             ) : (
-              <span>{app.translator.trans('ernestdefoe-picks.lib.common.vs')}</span>
+              <span>{separator(game.neutral_site)}</span>
             )}
           </div>
 
-          {this.renderTeamButton(game, 'away')}
+          {this.renderTeamButton(game, second)}
         </div>
 
         {(game.my_pick || (!game.can_pick && game.status === 'scheduled')) && (

@@ -5,6 +5,7 @@ import type Mithril from 'mithril';
 import type PicksState from './PicksState';
 import PicksSkeleton from '../PicksSkeleton';
 import crestUrl from '../../../common/crest';
+import { awayFirst, score, separator } from '../../../common/matchup';
 
 interface TabAttrs extends ComponentAttrs {
   state: PicksState;
@@ -69,6 +70,10 @@ export default class MyPicksTab extends Component<TabAttrs> {
             const side = game.my_pick!.selected_outcome;
             const team = side === 'home' ? game.home_team : game.away_team;
             const oppTeam = side === 'home' ? game.away_team : game.home_team;
+            // By default the row leads with the team that was picked; "Away @ Home"
+            // fixes the order instead, since the "@" only reads true one way round.
+            const [first, second] = awayFirst() ? [game.away_team, game.home_team] : [team, oppTeam];
+            const sep = separator(game.neutral_site);
             const isCorrect = game.my_pick!.is_correct === true;
             const isIncorrect = game.my_pick!.is_correct === false;
 
@@ -78,37 +83,37 @@ export default class MyPicksTab extends Component<TabAttrs> {
                 key={String(game.id)}
               >
                 <div className="PicksMyPickRow-logos">
-                  {team?.logo_url && (
+                  {first?.logo_url && (
                     <>
                       <img
-                        src={crestUrl(team.logo_url, 36)}
-                        alt={team.name}
+                        src={crestUrl(first.logo_url, 36)}
+                        alt={first.name}
                         className="PicksMyPickRow-logo PicksMyPickRow-logo--light"
                         loading="lazy"
                         decoding="async"
                       />
                       <img
-                        src={crestUrl(team.logo_dark_url || team.logo_url, 36)}
-                        alt={team.name}
+                        src={crestUrl(first.logo_dark_url || first.logo_url, 36)}
+                        alt={first.name}
                         className="PicksMyPickRow-logo PicksMyPickRow-logo--dark"
                         loading="lazy"
                         decoding="async"
                       />
                     </>
                   )}
-                  <span className="PicksMyPickRow-sep">{app.translator.trans('ernestdefoe-picks.lib.common.vs')}</span>
-                  {oppTeam?.logo_url && (
+                  <span className="PicksMyPickRow-sep">{sep}</span>
+                  {second?.logo_url && (
                     <>
                       <img
-                        src={crestUrl(oppTeam.logo_url, 36)}
-                        alt={oppTeam.name}
+                        src={crestUrl(second.logo_url, 36)}
+                        alt={second.name}
                         className="PicksMyPickRow-logo PicksMyPickRow-logo--light"
                         loading="lazy"
                         decoding="async"
                       />
                       <img
-                        src={crestUrl(oppTeam.logo_dark_url || oppTeam.logo_url, 36)}
-                        alt={oppTeam.name}
+                        src={crestUrl(second.logo_dark_url || second.logo_url, 36)}
+                        alt={second.name}
                         className="PicksMyPickRow-logo PicksMyPickRow-logo--dark"
                         loading="lazy"
                         decoding="async"
@@ -118,16 +123,11 @@ export default class MyPicksTab extends Component<TabAttrs> {
                 </div>
                 <div className="PicksMyPickRow-info">
                   <div className="PicksMyPickRow-matchup">
-                    {team?.name} {app.translator.trans('ernestdefoe-picks.lib.common.vs')} {oppTeam?.name}
+                    {first?.name} {sep} {second?.name}
                   </div>
                   <div className="PicksMyPickRow-pick">
                     {app.translator.trans('ernestdefoe-picks.lib.common.picked')}: <strong>{team?.name}</strong>
-                    {game.status === 'finished' && game.home_score !== null && (
-                      <span>
-                        {' '}
-                        · {game.home_score}–{game.away_score}
-                      </span>
-                    )}
+                    {game.status === 'finished' && game.home_score !== null && <span> · {score(game.home_score, game.away_score)}</span>}
                   </div>
                 </div>
                 <div className="PicksMyPickRow-status">
