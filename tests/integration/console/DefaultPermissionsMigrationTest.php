@@ -60,6 +60,9 @@ class DefaultPermissionsMigrationTest extends ConsoleTestCase
         $this->assertSame([[Group::MODERATOR_ID, 'picks.manage']], $this->grants());
         $this->assertNull($this->database()->table('settings')->where('key', 'ernestdefoe-picks.seeded_permissions')->value('value'));
 
+        // migrate:reset runs DDL, which commits the test transaction on MySQL,
+        // so leave nothing behind for the next test.
+        $this->database()->table('group_permission')->where('permission', 'like', 'picks.%')->delete();
         $this->migrate(false);
     }
 
@@ -67,6 +70,7 @@ class DefaultPermissionsMigrationTest extends ConsoleTestCase
     public function a_permission_another_group_holds_is_left_alone()
     {
         $this->runCommand(['command' => 'migrate:reset', '--extension' => 'ernestdefoe-picks']);
+        $this->database()->table('group_permission')->where('permission', 'like', 'picks.%')->delete();
         $this->database()->table('group_permission')->insert(['group_id' => Group::MODERATOR_ID, 'permission' => 'picks.view']);
 
         $this->migrate(false);
