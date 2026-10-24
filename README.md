@@ -58,14 +58,17 @@ Then enable **Picks** in the admin panel under Extensions.
    conference filter).
 3. **Sync Teams**, then **Sync Schedule** to pull the season's games.
 4. **Open** the week(s) you want members to pick.
-5. Grant the picks permissions to the appropriate groups (see below).
+5. Check the picks permissions (see below). A fresh install lets Members view
+   Picks and make picks; grant `picks.view` to Guests for a public pick'em.
 
 To keep live scores updating, make sure Flarum's scheduler is running (see
 **Scheduler** below) and enable **ESPN polling** in the settings.
 
 ## Permissions
 
-Set these under **Admin → Permissions**:
+Set these under **Admin → Permissions**. A fresh install grants `picks.view` and
+`picks.makePicks` to Members (unless a group already has them); updating an
+existing forum never changes what it has set.
 
 | Ability | Lets a user… |
 |---|---|
