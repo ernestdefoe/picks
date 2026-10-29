@@ -3,6 +3,7 @@
 namespace Resofire\Picks\Service;
 
 use Flarum\Settings\SettingsRepositoryInterface;
+use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Resofire\Picks\BoxScore;
@@ -41,11 +42,20 @@ class BoxScoreService
     /** Weeks fetched in one pass, so a backfill cannot run long. */
     private const WEEKS_PER_PASS = 2;
 
+    /**
+     * 🚨 Hours between two CFBD asks about the same week. Hourly, a week with
+     * one game CFBD never covers was asked about 48 times in its two days, two
+     * calls each: most of the free plan's month in one weekend. Every six
+     * hours is at most eight asks a week, and box scores are not live data.
+     */
+    private const CFBD_RETRY_HOURS = 6;
+
     public function __construct(
         protected CfbdService $cfbd,
         protected SettingsRepositoryInterface $settings,
         protected \Resofire\Picks\Service\Providers\EspnProvider $espn,
-        protected Leagues $leagues = new Leagues()
+        protected Leagues $leagues = new Leagues(),
+        protected ?Cache $cache = null
     ) {
     }
 
@@ -67,6 +77,9 @@ class BoxScoreService
         foreach ($weeks->take(self::WEEKS_PER_PASS) as $week) {
             try {
                 $fetched += $this->fetchWeek($week);
+            } catch (CfbdPausedException) {
+                // Already logged when CFBD first said 429; waiting is not a failure.
+                return ['fetched' => $fetched, 'weeks' => $weeks->count(), 'error' => 'paused'];
             } catch (\Throwable $e) {
                 /*
                  * 🚨 Stops at the first refusal rather than working through the
@@ -137,6 +150,12 @@ class BoxScoreService
 
         $type = (string) ($week->season_type ?: 'regular');
         $number = (int) $week->week_number;
+
+        $asked = 'picks.box.cfbd.week.'.$week->id;
+        if ($this->cache?->has($asked)) {
+            return 0;
+        }
+        $this->cache?->put($asked, 1, self::CFBD_RETRY_HOURS * 3600);
 
         $teams = $this->cfbd->fetchTeamBoxScores($year, $type, $number);
 

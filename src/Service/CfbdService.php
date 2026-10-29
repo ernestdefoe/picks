@@ -5,6 +5,7 @@ namespace Resofire\Picks\Service;
 use Flarum\Locale\TranslatorInterface;
 use Flarum\Settings\SettingsRepositoryInterface;
 use GuzzleHttp\Client as HttpClient;
+use Illuminate\Contracts\Cache\Repository as Cache;
 use RuntimeException;
 
 class CfbdService
@@ -12,10 +13,16 @@ class CfbdService
     protected const BASE_URL = 'https://api.collegefootballdata.com';
     protected const TIMEOUT = 30;
 
+    /** How long every CFBD call waits after a 429 that names no Retry-After. */
+    protected const PAUSE_SECONDS = 21600;
+
+    protected const PAUSE_KEY = 'picks.cfbd.paused_until';
+
     public function __construct(
         protected SettingsRepositoryInterface $settings,
         protected HttpClient $http,
-        protected TranslatorInterface $translator
+        protected TranslatorInterface $translator,
+        protected ?Cache $cache = null
     ) {
     }
 
@@ -168,6 +175,16 @@ class CfbdService
      */
     private function request(string $endpoint, array $params, string $apiKey): array
     {
+        /*
+         * 🚨 After a 429, nothing is asked until the pause is over. The free
+         * plan is about a thousand calls a month: asking again every hour while
+         * refused only spends what is left the moment the window reopens.
+         */
+        $until = (int) ($this->cache?->get(self::PAUSE_KEY) ?? 0);
+        if ($until > time()) {
+            throw new CfbdPausedException($this->translator->trans('ernestdefoe-picks.api.errors.cfbd_paused', ['endpoint' => $endpoint, 'minutes' => (int) ceil(($until - time()) / 60)]));
+        }
+
         try {
             $response = $this->http->request('GET', self::BASE_URL.$endpoint, [
                 'headers' => [
@@ -183,6 +200,12 @@ class CfbdService
         }
 
         $status = $response->getStatusCode();
+
+        if ($status === 429) {
+            $wait = (int) $response->getHeaderLine('Retry-After');
+            $wait = $wait > 0 && $wait <= 7 * 86400 ? $wait : self::PAUSE_SECONDS;
+            $this->cache?->put(self::PAUSE_KEY, time() + $wait, $wait);
+        }
 
         if ($status < 200 || $status >= 300) {
             throw new RuntimeException($this->translator->trans('ernestdefoe-picks.api.errors.cfbd_http', ['status' => $status, 'endpoint' => $endpoint]));

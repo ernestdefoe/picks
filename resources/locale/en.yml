@@ -549,6 +549,7 @@ ernestdefoe-picks:
       cfbd_request_failed: "CFBD request failed: {error}"
       cfbd_http: "CFBD API returned HTTP {status} for {endpoint}"
       cfbd_bad_json: CFBD response was not valid JSON.
+      cfbd_paused: "CFBD asked us to slow down; not asking for {endpoint} for another {minutes} minutes."
       espn_http: "ESPN returned {status} for {path}"
       espn_bad_json: "ESPN returned something that is not JSON for {path}"
       espn_scoreboard_failed: "Failed to fetch ESPN scoreboard: {error}"

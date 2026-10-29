@@ -32,6 +32,12 @@ class SyncBoxScoresCommand extends Command
             return self::SUCCESS;
         }
 
+        if ($result['error'] === 'paused') {
+            $this->line('CFBD asked us to slow down earlier; waiting before asking again.');
+
+            return self::SUCCESS;
+        }
+
         if ($result['error'] !== '') {
             /*
              * 🚨 Logged, not only printed. The scheduler sends this command's
