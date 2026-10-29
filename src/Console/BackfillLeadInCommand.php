@@ -83,6 +83,13 @@ class BackfillLeadInCommand extends AbstractCommand
         $weeks = $this->weeks($year, $postseason, $upcoming);
 
         if ($weeks === []) {
+            // On the schedule, no unplayed fixtures is nothing to do, not a failure.
+            if ($upcoming) {
+                $this->info('No upcoming fixtures for '.$year.'.');
+
+                return 0;
+            }
+
             $this->error('No weeks with fixtures for '.$year.'. Sync the schedule first.');
 
             return 1;
