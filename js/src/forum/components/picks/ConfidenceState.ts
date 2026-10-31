@@ -43,6 +43,11 @@ export default class ConfidenceState {
   load(weekId: number | null): void {
     if (!weekId) return;
 
+    // 🚨 A change still waiting to save belongs to the board on screen. Send it
+    // before that board is replaced, or the waiting save would send the next
+    // week's board instead and the change would be lost.
+    if (this.timer) this.save();
+
     this.weekId = weekId;
     this.loading = true;
     m.redraw();
@@ -178,6 +183,8 @@ export default class ConfidenceState {
   }
 
   save(): void {
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = null;
     if (!this.board || !this.canPlay()) return;
 
     const weekId = this.board.week_id;
@@ -207,8 +214,9 @@ export default class ConfidenceState {
       .then((r) => {
         this.saving = false;
         this.saved = true;
-        // Keep the member's layout; take only what the server counts.
-        if (this.board && r.data) {
+        // Keep the member's layout; take only what the server counts — and
+        // only for the week it was saved for, if the member has moved on.
+        if (this.board && r.data && this.board.week_id === weekId) {
           this.board.my_score = r.data.my_score;
           this.board.picked = r.data.picked;
           this.board.frozen = r.data.frozen;
