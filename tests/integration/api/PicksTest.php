@@ -157,6 +157,41 @@ class PicksTest extends TestCase
     }
 
     #[Test]
+    public function the_history_counts_the_longest_run_of_correct_picks_in_match_order()
+    {
+        // By id the run is 2 then 3; by match date it is 5 then 1 (the
+        // undecided pick is skipped, not a break). The streak follows dates.
+        $events = [];
+        $picks = [];
+        foreach ([[10, 1, true], [11, 2, true], [12, 6, false], [13, 3, true], [14, 4, true], [15, 5, true], [16, 7, null], [17, 8, true]] as [$id, $day, $correct]) {
+            $events[] = ['id' => $id, 'week_id' => 2, 'home_team_id' => 1, 'away_team_id' => 2, 'match_date' => Carbon::create(2026, 9, $day), 'cutoff_date' => Carbon::create(2026, 9, $day), 'status' => 'finished'];
+            $picks[] = ['user_id' => 2, 'event_id' => $id, 'selected_outcome' => 'home', 'is_correct' => $correct];
+        }
+
+        $this->prepareDatabase([
+            'picks_events' => $events,
+            'picks_picks' => $picks,
+            'picks_user_scores' => [
+                ['user_id' => 2, 'season_id' => null, 'week_id' => null, 'total_points' => 5, 'total_picks' => 7, 'correct_picks' => 5, 'accuracy' => 71],
+            ],
+        ]);
+
+        $response = $this->call('GET', '/api/picks/user-history', 2, null, ['user_id' => '2']);
+
+        $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+        $this->assertSame(5, $this->body($response)['alltime']['longest_streak']);
+    }
+
+    #[Test]
+    public function saving_settings_with_auto_unlock_on_still_saves()
+    {
+        $response = $this->call('POST', '/api/settings', 1, ['ernestdefoe-picks.auto_unlock_weeks' => '1']);
+
+        $this->assertSame(204, $response->getStatusCode(), (string) $response->getBody());
+        $this->assertSame('1', $this->database()->table('settings')->where('key', 'ernestdefoe-picks.auto_unlock_weeks')->value('value'));
+    }
+
+    #[Test]
     public function a_week_costs_the_same_queries_however_many_games_it_holds()
     {
         $week = fn () => $this->call('GET', '/api/picks/my-picks', 2, null, ['week_id' => '1']);

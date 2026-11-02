@@ -104,7 +104,7 @@ class LeaderboardContextController implements RequestHandlerInterface
             $lastWeek = Week::query()
                 ->where('season_id', $lastSeason->id)
                 ->whereHas('events', fn ($q) => $q->where('status', 'finished'))
-                ->orderByRaw("CASE season_type WHEN 'postseason' THEN 0 ELSE 1 END")
+                ->orderByRaw(Week::seasonTypeOrder('postseason'))
                 ->orderBy('week_number', 'desc')
                 ->first();
 

@@ -480,7 +480,7 @@ class SyncScoresService
     {
         $weeks = Week::query()
             ->where('season_id', $seasonId)
-            ->orderByRaw("CASE season_type WHEN 'regular' THEN 0 ELSE 1 END")
+            ->orderByRaw(Week::seasonTypeOrder('regular'))
             ->orderBy('week_number')
             ->orderBy('id')
             ->get(['id', 'is_open']);

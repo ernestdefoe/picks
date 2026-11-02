@@ -217,7 +217,7 @@ class UserHistoryController implements RequestHandlerInterface
         // leftJoin that fired once for every season.
         $weeksBySeason = Week::query()
             ->whereIn('season_id', $seasonIds)
-            ->orderByRaw("CASE season_type WHEN 'regular' THEN 0 ELSE 1 END")
+            ->orderByRaw(Week::seasonTypeOrder('regular'))
             ->orderByDesc('week_number')
             ->get()
             ->groupBy('season_id');
@@ -291,57 +291,33 @@ class UserHistoryController implements RequestHandlerInterface
     }
 
     /**
-     * Calculate the longest consecutive correct picks streak for a user,
-     * entirely in SQL via the "gaps and islands" technique so no pick rows are
-     * loaded into PHP regardless of how many seasons the user has played.
+     * The longest run of consecutive correct picks for a user.
      *
-     * Each scored pick is numbered chronologically (rn_all) and, separately,
-     * within its is_correct value (rn_by_correct). Across a run of consecutive
-     * correct picks both counters advance in lockstep, so their difference is
-     * constant for that run and changes the moment the streak breaks. Grouping
-     * the correct picks by that difference yields one group per streak; the
-     * longest streak is the largest group size.
-     *
-     * Uses window functions (MySQL 8.0+ / MariaDB 10.2+, per Flarum 2 reqs).
+     * Walks the user's scored picks in match order, reading only the one
+     * is_correct column. A window-function query (ROW_NUMBER() OVER) did this
+     * in SQL, but Flarum 2 still supports MySQL 5.7.8, which has no window
+     * functions, so the profile history 500'd there. One user's scored picks
+     * are bounded (a few hundred a season), so the PHP pass is cheap and runs
+     * the same on MySQL, MariaDB, PostgreSQL and SQLite.
      */
     private function buildStreakStat(int $userId): int
     {
-        $connection = (new Pick())->getConnection();
-
-        /*
-         * 🚨 raw() is passed through VERBATIM — the query builder prefixes only
-         * the identifiers it wraps itself, so the join and wheres below resolve
-         * while the tables named inside this window expression do not. Left
-         * unprefixed the streak stat 500s on any forum with a table prefix.
-         */
-        $p = $connection->getTablePrefix();
-
-        $sequenced = Pick::query()
+        $results = Pick::query()
             ->join('picks_events', 'picks_picks.event_id', '=', 'picks_events.id')
             ->where('picks_picks.user_id', $userId)
             ->whereNotNull('picks_picks.is_correct')
-            ->select([
-                'picks_picks.is_correct as is_correct',
-                $connection->raw(
-                    "ROW_NUMBER() OVER (ORDER BY {$p}picks_events.match_date, {$p}picks_events.id)"
-                    .' - ROW_NUMBER() OVER ('
-                    ."PARTITION BY {$p}picks_picks.is_correct"
-                    ." ORDER BY {$p}picks_events.match_date, {$p}picks_events.id) AS grp"
-                ),
-            ]);
+            ->orderBy('picks_events.match_date')
+            ->orderBy('picks_events.id')
+            ->toBase()
+            ->pluck('picks_picks.is_correct');
 
-        $runs = $connection->query()
-            ->fromSub($sequenced, 'seq')
-            // Compare against a real boolean, not the integer 1 — `= 1` against a
-            // boolean column errors on PostgreSQL.
-            ->where('seq.is_correct', true)
-            ->groupBy('seq.grp')
-            ->selectRaw('COUNT(*) AS run_len');
+        $longest = $run = 0;
 
-        $longest = $connection->query()
-            ->fromSub($runs, 'runs')
-            ->max('run_len');
+        foreach ($results as $correct) {
+            $run = $correct ? $run + 1 : 0;
+            $longest = max($longest, $run);
+        }
 
-        return (int) $longest;
+        return $longest;
     }
 }

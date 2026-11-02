@@ -42,6 +42,7 @@ use Resofire\Picks\Console\SyncEspnCommand;
 use Resofire\Picks\Console\SyncTeamsCommand;
 use Resofire\Picks\Console\UnlockWeeksCommand;
 use Resofire\Picks\Frontend\PicksPageContent;
+use Resofire\Picks\Listener;
 use Resofire\Picks\Service\Leagues\Leagues;
 
 $extenders = [
@@ -182,26 +183,13 @@ $extenders = [
         ->post('/picks/confidence/weeks/{id}', 'picks.confidence.week.save', Confidence\SelectionController::class)
         ->post('/picks/confidence/weeks/{id}/auto', 'picks.confidence.week.auto', Confidence\SelectionController::class),
 
+    // Turning auto-unlock ON opens whatever is already due, there and then.
+    (new Extend\Event())
+        ->listen(\Flarum\Settings\Event\Saved::class, Listener\UnlockDueWeeksOnSettingsSaved::class),
+
     // -------------------------------------------------------------------------
     // Console commands
     // -------------------------------------------------------------------------
-    /*
-     * Turning auto-unlock ON opens whatever is already due, there and then,
-     * rather than waiting for the next scheduled run.
-     */
-    (new Extend\Event())
-        ->listen(\Flarum\Settings\Event\Saved::class, function (\Flarum\Settings\Event\Saved $event) {
-            if (empty($event->settings['ernestdefoe-picks.auto_unlock_weeks'])) {
-                return;
-            }
-
-            try {
-                resolve(\Resofire\Picks\Service\SyncScoresService::class)->unlockDueWeeks();
-            } catch (\Throwable $e) {
-                resolve(\Psr\Log\LoggerInterface::class)->warning('[picks] auto-unlock on save failed: '.$e->getMessage());
-            }
-        }),
-
     (new Extend\Console())
         ->command(SyncTeamsCommand::class)
         ->command(PollLiveScoresCommand::class)

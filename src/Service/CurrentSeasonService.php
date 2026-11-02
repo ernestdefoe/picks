@@ -62,7 +62,7 @@ class CurrentSeasonService
              * failed with "Database query failed". Forums without a prefix
              * never saw it.
              */
-            ->orderByRaw('CASE '.Week::query()->getQuery()->getGrammar()->wrap('picks_weeks.season_type')." WHEN 'regular' THEN 0 ELSE 1 END")
+            ->orderByRaw(Week::seasonTypeOrder('regular'))
             ->orderBy('picks_weeks.week_number')
             ->orderBy('picks_weeks.id')
             ->get(['picks_weeks.id', 'picks_weeks.is_open']);
@@ -132,7 +132,7 @@ class CurrentSeasonService
             ->where('season_id', $currentSeason->id)
             ->whereHas('events', fn ($q) => $q->whereIn('status', self::UNFINISHED))
             // Regular-season weeks rank ahead of postseason within a season.
-            ->orderByRaw("CASE season_type WHEN 'regular' THEN 0 ELSE 1 END")
+            ->orderByRaw(Week::seasonTypeOrder('regular'))
             ->orderBy('week_number')
             ->first();
     }

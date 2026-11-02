@@ -41,6 +41,19 @@ class Week extends AbstractModel
         'week_number' => 'integer',
     ];
 
+    /**
+     * ORDER BY text that ranks one season type ('regular' or 'postseason')
+     * ahead of the other. The column goes through the grammar because
+     * orderByRaw() is passed through verbatim: a qualified name written by
+     * hand misses the table prefix.
+     */
+    public static function seasonTypeOrder(string $first): string
+    {
+        $column = (new static())->getConnection()->getQueryGrammar()->wrap('picks_weeks.season_type');
+
+        return "CASE {$column} WHEN ".($first === 'postseason' ? "'postseason'" : "'regular'").' THEN 0 ELSE 1 END';
+    }
+
     /** @return BelongsTo<Season, $this> */
     public function season(): BelongsTo
     {
