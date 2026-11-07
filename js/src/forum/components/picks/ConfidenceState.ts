@@ -32,6 +32,9 @@ export default class ConfidenceState {
   saved = false;
   error: string | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
+  /** A save is on its way; a change made meanwhile waits for it, as it stood. */
+  private inFlight = false;
+  private queued: Record<string, unknown> | null = null;
 
   leaderboard: LeaderboardEntry[] = [];
   lbLoading = false;
@@ -182,14 +185,12 @@ export default class ConfidenceState {
     this.timer = setTimeout(() => this.save(), 600);
   }
 
-  save(): void {
-    if (this.timer) clearTimeout(this.timer);
-    this.timer = null;
-    if (!this.board || !this.canPlay()) return;
+  /** The whole board as the server takes it. */
+  private payload(): Record<string, unknown> | null {
+    if (!this.board || !this.canPlay()) return null;
 
-    const weekId = this.board.week_id;
     const body: Record<string, unknown> = {
-      week_id: weekId,
+      week_id: this.board.week_id,
       picks: this.order.map((id) => ({
         event_id: id,
         selected_outcome: this.outcomes[id] || null,
@@ -201,8 +202,76 @@ export default class ConfidenceState {
       body.tiebreaker = this.tiebreaker === '' ? null : parseInt(this.tiebreaker, 10);
     }
 
+    return body;
+  }
+
+  /** A change is waiting for its moment to save. */
+  pending(): boolean {
+    return this.timer !== null;
+  }
+
+  /**
+   * Send a change still waiting for its moment, now.
+   *
+   * 🚨 For a page that is being hidden or left: on a phone that is a swipe
+   * home, a locked screen or a closed tab straight after a tap, inside the
+   * wait — and the change was never sent. `keepalive` lets the request finish
+   * after the page has gone, which an XHR does not.
+   */
+  flush(): void {
+    if (!this.timer) return;
+    clearTimeout(this.timer);
+    this.timer = null;
+
+    const body = this.payload();
+    if (!body) return;
+
+    try {
+      fetch(app.forum.attribute('apiUrl') + '/picks/confidence', {
+        method: 'POST',
+        keepalive: true,
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': app.session.csrfToken },
+        body: JSON.stringify(body),
+      }).catch(() => {});
+    } catch (e) {
+      this.save();
+    }
+  }
+
+  save(): void {
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = null;
+
+    const body = this.payload();
+    if (body) this.send(body);
+  }
+
+  /**
+   * 🚨 One save at a time. Each sends the whole board, so two in the air at
+   * once could be applied in the wrong order — a slow phone connection is
+   * enough — and the older board would overwrite the newer one. A change made
+   * meanwhile is kept as it stood (the member may have moved to another week
+   * since) and sent once this one is back.
+   */
+  private send(body: Record<string, unknown>): void {
+    if (this.inFlight) {
+      this.queued = body;
+      return;
+    }
+
+    const weekId = body.week_id as number;
+    this.inFlight = true;
     this.saving = true;
     m.redraw();
+
+    const next = (): boolean => {
+      this.inFlight = false;
+      const queued = this.queued;
+      this.queued = null;
+      if (queued) this.send(queued);
+      return !!queued;
+    };
 
     app
       .request<{ status: string; data: C10Board }>({
@@ -212,8 +281,10 @@ export default class ConfidenceState {
         errorHandler: () => {},
       })
       .then((r) => {
+        if (next()) return;
         this.saving = false;
         this.saved = true;
+        this.error = null;
         // Keep the member's layout; take only what the server counts — and
         // only for the week it was saved for, if the member has moved on.
         if (this.board && r.data && this.board.week_id === weekId) {
@@ -228,8 +299,27 @@ export default class ConfidenceState {
         m.redraw();
       })
       .catch((e: any) => {
+        const code = e?.response?.code;
+
+        /*
+         * 🚨 No answer, or not one of ours (a dropped phone connection, a
+         * server error): the board on screen is still what the member wants.
+         * Reloading here threw their change away and showed the old board.
+         * Keep it, and send it again in a few seconds.
+         */
+        if (!code) {
+          if (next()) return;
+          this.saving = false;
+          this.error = 'offline';
+          if (!this.timer && this.board?.week_id === weekId) this.timer = setTimeout(() => this.save(), 4000);
+          m.redraw();
+          return;
+        }
+
+        this.inFlight = false;
+        this.queued = null;
         this.saving = false;
-        this.error = e?.response?.code || 'generic';
+        this.error = code;
         m.redraw();
         // The week as it really is — a game may have locked under the member.
         // Not for a bad tiebreaker: nothing else changed, and a reload would

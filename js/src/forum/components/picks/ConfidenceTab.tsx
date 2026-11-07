@@ -20,7 +20,7 @@ const t = (key: string, params?: Record<string, unknown>) => app.translator.tran
 const ts = (key: string, params?: Record<string, unknown>) => extractText(t(key, params));
 
 /** Refusal codes the server sends that have their own words. */
-const ERRORS = ['locked', 'duplicate_value', 'out_of_range', 'not_in_contest', 'bad_tiebreaker', 'disabled'];
+const ERRORS = ['locked', 'duplicate_value', 'out_of_range', 'not_in_contest', 'bad_tiebreaker', 'disabled', 'offline'];
 
 /**
  * The member's Confidence board: the week's chosen games, a winner for each,
@@ -38,6 +38,26 @@ export default class ConfidenceTab extends Component<TabAttrs> {
     if (state.currentWeekId && state.c10.weekId !== state.currentWeekId) {
       state.c10.load(state.currentWeekId);
     }
+  }
+
+  /** Hiding the page (a swipe home, a locked screen, a closed tab) sends a waiting change. */
+  private onHide = (): void => {
+    if (document.visibilityState === 'hidden') this.attrs.state.c10.flush();
+  };
+  private onPageHide = (): void => this.attrs.state.c10.flush();
+
+  oncreate(vnode: Mithril.VnodeDOM<TabAttrs, this>) {
+    super.oncreate(vnode);
+    document.addEventListener('visibilitychange', this.onHide);
+    window.addEventListener('pagehide', this.onPageHide);
+  }
+
+  onremove(vnode: Mithril.VnodeDOM<TabAttrs, this>) {
+    super.onremove(vnode);
+    document.removeEventListener('visibilitychange', this.onHide);
+    window.removeEventListener('pagehide', this.onPageHide);
+    // Leaving the tab, or the Picks page, sends a change still waiting.
+    if (this.attrs.state.c10.pending()) this.attrs.state.c10.save();
   }
 
   view(): Mithril.Children {

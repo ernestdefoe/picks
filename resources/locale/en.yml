@@ -457,6 +457,7 @@ ernestdefoe-picks:
         bad_tiebreaker: The tiebreaker must be a whole number of points.
         disabled: The Confidence contest has been turned off.
         generic: That did not save. Your board has been reloaded.
+        offline: Not saved yet. Trying again…
     game:
       time_tba: time TBA
       locks_at: "picks lock {time}"
