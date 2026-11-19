@@ -3,11 +3,13 @@
 namespace Resofire\Picks\Tests\integration\api;
 
 use Carbon\Carbon;
+use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use Resofire\Picks\Service\LogoService;
 use Resofire\Picks\Service\TeamSyncService;
 use Resofire\Picks\Team;
+use Resofire\Picks\Tests\integration\SeedsPicks;
 
 /**
  * ESPN numbers teams per league, so the college crest path is for college
@@ -16,6 +18,9 @@ use Resofire\Picks\Team;
  */
 class TeamLogoTest extends TestCase
 {
+    use RetrievesAuthorizedUsers;
+    use SeedsPicks;
+
     /** @var list<array{0: ?string, 1: ?string}> */
     public static array $fetched = [];
 
@@ -60,7 +65,8 @@ class TeamLogoTest extends TestCase
             {
                 TeamLogoTest::$fetched[] = [$logoUrl, $logoDarkUrl];
 
-                return ['logo_path' => 'assets/picks-logos/'.$slug.'.webp', 'logo_dark_path' => null];
+                // Alabama's download always fails, as a blocked CDN would.
+                return ['logo_path' => $slug === 'alabama' ? null : 'assets/picks-logos/'.$slug.'.webp', 'logo_dark_path' => null];
             }
         });
     }
@@ -74,7 +80,8 @@ class TeamLogoTest extends TestCase
             ['https://a.espncdn.com/i/teamlogos/ncaa/500/2.png', 'https://a.espncdn.com/i/teamlogos/ncaa/500-dark/2.png'],
             ['https://a.espncdn.com/i/teamlogos/ncaa/500/333.png', 'https://a.espncdn.com/i/teamlogos/ncaa/500-dark/333.png'],
         ], self::$fetched);
-        $this->assertSame(2, $result['saved']);
+        // Alabama's download failed; the two NFL teams have nothing to fetch from.
+        $this->assertSame(['saved' => 1, 'failed' => 3, 'remaining' => 3], array_intersect_key($result, array_flip(['saved', 'failed', 'remaining'])));
         $this->assertNull(Team::findOrFail(3)->logo_path, 'an NFL team was given a college crest');
     }
 
@@ -88,5 +95,47 @@ class TeamLogoTest extends TestCase
         $this->assertSame([
             ['https://a.espncdn.com/i/teamlogos/nfl/500/kc.png', 'https://a.espncdn.com/i/teamlogos/nfl/500-dark/kc.png'],
         ], self::$fetched);
+    }
+
+    #[Test]
+    public function the_logo_sync_is_queued_and_reports_one_pass_over_the_missing_crests()
+    {
+        $response = $this->call('POST', '/api/picks/sync/logos', 1, []);
+        $this->assertSame(202, $response->getStatusCode(), (string) $response->getBody());
+
+        // The test queue runs the job at once, so the first poll has the answer.
+        $status = $this->body($this->call('GET', '/api/picks/sync/logos/status', 1));
+        $this->assertSame('done', $status['status']);
+        $this->assertSame(['saved' => 1, 'failed' => 3, 'remaining' => 3], $status['result'], 'the failing teams were tried once, not forever');
+        $this->assertCount(2, self::$fetched);
+    }
+
+    #[Test]
+    public function a_single_logo_refresh_is_queued()
+    {
+        $this->assertSame(202, $this->call('POST', '/api/picks/teams/5/refresh-logo', 1, [])->getStatusCode());
+
+        $status = $this->body($this->call('GET', '/api/picks/sync/logo-5/status', 1));
+        $this->assertSame(['status' => 'done', 'result' => ['saved' => true]], $status);
+    }
+
+    #[Test]
+    public function a_failed_sync_reports_why()
+    {
+        // No CollegeFootballData key is set, so the teams sync cannot run.
+        $this->assertSame(202, $this->call('POST', '/api/picks/sync/teams', 1, [])->getStatusCode());
+
+        $status = $this->body($this->call('GET', '/api/picks/sync/teams/status', 1));
+        $this->assertSame('failed', $status['status']);
+        $this->assertNotEmpty($status['result']['message']);
+    }
+
+    #[Test]
+    public function the_espn_sync_refuses_a_college_season_without_queueing()
+    {
+        $response = $this->call('POST', '/api/picks/sync/espn', 1, ['season_id' => 1]);
+
+        $this->assertSame(422, $response->getStatusCode());
+        $this->assertSame('idle', $this->body($this->call('GET', '/api/picks/sync/espn/status', 1))['status']);
     }
 }

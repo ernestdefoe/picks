@@ -5,6 +5,7 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import type Mithril from 'mithril';
 import Team from '../../common/models/Team';
 import TeamEditModal from './TeamEditModal';
+import runSync, { SyncFailed } from '../utils/runSync';
 import crestUrl from '../../common/crest';
 
 type LogoStatus = 'both' | 'standard' | 'custom' | 'missing';
@@ -23,7 +24,6 @@ export default class TeamsTab extends Component {
   private syncResult: Mithril.Children = null;
   private logoSyncResult: Mithril.Children = null;
   private lastSync: string | null = null;
-  private logoProgress: { saved: number; failed: number; remaining: number } | null = null;
 
   oninit(vnode: Mithril.Vnode) {
     super.oninit(vnode);
@@ -53,24 +53,16 @@ export default class TeamsTab extends Component {
     this.syncResult = null;
     m.redraw();
 
-    app
-      .request<{ status: string; created: number; updated: number; logos: number; errors: string[]; message?: string }>({
-        method: 'POST',
-        url: app.forum.attribute('apiUrl') + '/picks/sync/teams',
+    runSync<{ created: number; updated: number }>('/sync/teams', 'teams')
+      .then((result) => {
+        this.syncResult = t('sync_done', { created: result.created, updated: result.updated });
+        this.lastSync = new Date().toISOString();
+        this.loadTeams();
       })
-      .then((response) => {
-        if (response.status === 'error') {
-          this.syncResult = response.message || t('sync_failed');
-        } else {
-          this.syncResult = t('sync_done', { created: response.created, updated: response.updated });
-          this.lastSync = new Date().toISOString();
-          this.loadTeams();
-        }
-        this.syncing = false;
-        m.redraw();
+      .catch((e) => {
+        this.syncResult = e instanceof SyncFailed && e.serverMessage ? e.serverMessage : t('sync_failed');
       })
-      .catch(() => {
-        this.syncResult = t('sync_failed');
+      .finally(() => {
         this.syncing = false;
         m.redraw();
       });
@@ -81,49 +73,18 @@ export default class TeamsTab extends Component {
     this.logoSyncResult = null;
     m.redraw();
 
-    const runBatch = () => {
-      app
-        .request<{ status: string; saved: number; failed: number; remaining: number; message?: string }>({
-          method: 'POST',
-          url: app.forum.attribute('apiUrl') + '/picks/sync/logos',
-          body: { batchSize: 20 },
-        })
-        .then((response) => {
-          if (response.status === 'error') {
-            this.logoSyncResult = response.message || t('logos_failed');
-            this.syncingLogos = false;
-            m.redraw();
-            return;
-          }
-
-          this.logoProgress = {
-            saved: (this.logoProgress?.saved || 0) + response.saved,
-            failed: (this.logoProgress?.failed || 0) + response.failed,
-            remaining: response.remaining,
-          };
-
-          m.redraw();
-
-          if (response.remaining > 0) {
-            // Continue with next batch after a short pause
-            setTimeout(runBatch, 500);
-          } else {
-            this.logoSyncResult = t('logos_done', { saved: this.logoProgress?.saved ?? 0, failed: this.logoProgress?.failed ?? 0 });
-            this.logoProgress = null;
-            this.syncingLogos = false;
-            this.loadTeams();
-            m.redraw();
-          }
-        })
-        .catch(() => {
-          this.logoSyncResult = t('logos_failed');
-          this.syncingLogos = false;
-          m.redraw();
-        });
-    };
-
-    this.logoProgress = { saved: 0, failed: 0, remaining: 0 };
-    runBatch();
+    runSync<{ saved: number; failed: number }>('/sync/logos', 'logos')
+      .then((result) => {
+        this.logoSyncResult = t('logos_done', { saved: result.saved, failed: result.failed });
+        this.loadTeams();
+      })
+      .catch((e) => {
+        this.logoSyncResult = e instanceof SyncFailed && e.serverMessage ? e.serverMessage : t('logos_failed');
+      })
+      .finally(() => {
+        this.syncingLogos = false;
+        m.redraw();
+      });
   }
 
   private refreshLogo(team: Team) {
@@ -131,14 +92,17 @@ export default class TeamsTab extends Component {
     this.refreshingId = id;
     m.redraw();
 
-    app
-      .request({ method: 'POST', url: `${app.forum.attribute('apiUrl')}/picks/teams/${id}/refresh-logo` })
-      .then(() => app.store.find<Team>('picks-teams', String(id)))
-      .then(() => {
-        this.refreshingId = null;
-        m.redraw();
+    runSync<{ saved?: boolean }>(`/teams/${id}/refresh-logo`, `logo-${id}`)
+      .then((result) => {
+        if (result.saved === false) app.alerts.show({ type: 'error' }, t('logo_refresh_failed'));
+
+        return app.store.find<Team>('picks-teams', String(id));
       })
-      .catch(() => {
+      .catch((e) => {
+        // A refused request was already shown by app.request; a failed download was not.
+        if (e instanceof SyncFailed) app.alerts.show({ type: 'error' }, t('logo_refresh_failed'));
+      })
+      .finally(() => {
         this.refreshingId = null;
         m.redraw();
       });
@@ -225,10 +189,9 @@ export default class TeamsTab extends Component {
 
         {(this.syncingLogos || this.logoSyncResult) && (
           <div className="PicksAlert PicksAlert--info">
-            {this.syncingLogos && this.logoProgress !== null ? (
+            {this.syncingLogos ? (
               <span>
-                <i className="fas fa-spinner fa-spin" />{' '}
-                {t('logos_running', { saved: this.logoProgress.saved, remaining: this.logoProgress.remaining })}
+                <i className="fas fa-spinner fa-spin" /> {t('logos_working')}
               </span>
             ) : (
               this.logoSyncResult

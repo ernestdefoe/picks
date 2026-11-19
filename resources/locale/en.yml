@@ -58,7 +58,8 @@ ernestdefoe-picks:
       refresh_logo: Re-download logos from ESPN
       sync_done: "Sync complete. {created} created, {updated} updated."
       sync_failed: The team sync failed. Check the API key and the server logs.
-      logos_running: "Downloading logos… {saved} saved, {remaining} to go."
+      logos_working: Downloading logos…
+      logo_refresh_failed: The logo could not be downloaded. Check the server logs.
       logos_done: "Logo sync complete. {saved} saved, {failed} failed."
       logos_failed: The logo sync failed. Check the server logs.
       logo_both: Light and dark
@@ -235,7 +236,6 @@ ernestdefoe-picks:
       sync_still_running: The sync is still running. Refresh in a moment to see the result.
       sync_done: "Sync complete. {updated, plural, one {# game} other {# games}} updated, {scored} scoring batches run, {skipped} skipped."
       sync_failed: The score sync failed.
-      sync_status_failed: The sync status could not be checked. Check the server logs.
       home_label: "{team} (home)"
       away_label: "{team} (away)"
       home_team: Home team

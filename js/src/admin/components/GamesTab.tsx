@@ -7,6 +7,7 @@ import Week from '../../common/models/Week';
 import ResultModal from './ResultModal';
 import crestUrl from '../../common/crest';
 import { score, sides } from '../../common/matchup';
+import runSync, { SyncFailed } from '../utils/runSync';
 
 const t = (key: string, params?: Record<string, unknown>) => app.translator.trans('ernestdefoe-picks.admin.games.' + key, params as any);
 
@@ -188,59 +189,19 @@ export default class GamesTab extends Component {
     this.syncResult = null;
     m.redraw();
 
-    // The sync now runs as a background job (the multi-week CFBD fetch can take
-    // minutes); dispatch it, then poll the status endpoint for the result.
-    app
-      .request({
-        method: 'POST',
-        url: app.forum.attribute('apiUrl') + '/picks/sync/scores',
+    // A background job on the server (the multi-week CFBD fetch can take
+    // minutes); runSync polls its status for the result.
+    runSync<{ updated?: number; scored?: number; skipped?: number }>('/sync/scores', 'scores')
+      .then((res) => {
+        this.syncResult = t('sync_done', { updated: res.updated ?? 0, scored: res.scored ?? 0, skipped: res.skipped ?? 0 });
+        this.load(this.page);
       })
-      .then(() => {
-        this.pollSyncStatus(0);
+      .catch((e) => {
+        if (!(e instanceof SyncFailed)) this.syncResult = t('sync_started_failed');
+        else if (e.timedOut) this.syncResult = t('sync_still_running');
+        else this.syncResult = e.serverMessage || t('sync_failed');
       })
-      .catch(() => {
-        this.syncResult = t('sync_started_failed');
-        this.syncing = false;
-        m.redraw();
-      });
-  }
-
-  private pollSyncStatus(attempt: number) {
-    // Cap polling so a stuck/crashed worker doesn't spin the UI forever
-    // (~5 minutes at 2s intervals).
-    if (attempt > 150) {
-      this.syncResult = t('sync_still_running');
-      this.syncing = false;
-      m.redraw();
-      return;
-    }
-
-    app
-      .request<{
-        status: string;
-        result: { status?: string; updated?: number; scored?: number; skipped?: number; message?: string } | null;
-      }>({
-        method: 'GET',
-        url: app.forum.attribute('apiUrl') + '/picks/sync/scores/status',
-      })
-      .then((r) => {
-        if (r.status === 'done') {
-          const res = r.result || {};
-          this.syncResult = t('sync_done', { updated: res.updated ?? 0, scored: res.scored ?? 0, skipped: res.skipped ?? 0 });
-          this.syncing = false;
-          this.load(this.page);
-          m.redraw();
-        } else if (r.status === 'failed') {
-          this.syncResult = r.result?.message || t('sync_failed');
-          this.syncing = false;
-          m.redraw();
-        } else {
-          // running / idle — keep polling
-          setTimeout(() => this.pollSyncStatus(attempt + 1), 2000);
-        }
-      })
-      .catch(() => {
-        this.syncResult = t('sync_status_failed');
+      .finally(() => {
         this.syncing = false;
         m.redraw();
       });

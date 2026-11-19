@@ -7,6 +7,7 @@ import Season from '../../common/models/Season';
 import Week from '../../common/models/Week';
 import LeaguesPanel from './LeaguesPanel';
 import extractText from 'flarum/common/utils/extractText';
+import runSync, { SyncFailed } from '../utils/runSync';
 
 const t = (key: string, params?: Record<string, unknown>) => app.translator.trans('ernestdefoe-picks.admin.seasons.' + key, params as any);
 
@@ -79,38 +80,23 @@ export default class SeasonsTab extends Component {
     this.syncResult = null;
     m.redraw();
 
-    app
-      .request<{
-        status: string;
-        weeksCreated: number;
-        weeksUpdated: number;
-        gamesCreated: number;
-        gamesUpdated: number;
-        message?: string;
-      }>({
-        method: 'POST',
-        url: app.forum.attribute('apiUrl') + '/picks/sync/schedule',
-      })
+    runSync<{ weeksCreated: number; weeksUpdated: number; gamesCreated: number; gamesUpdated: number }>('/sync/schedule', 'schedule')
       .then((response) => {
-        if (response.status === 'error') {
-          this.syncResult = response.message || t('sync_failed');
-        } else {
-          this.syncResult = t('sync_done', {
-            weeksCreated: response.weeksCreated,
-            weeksUpdated: response.weeksUpdated,
-            gamesCreated: response.gamesCreated,
-            gamesUpdated: response.gamesUpdated,
-          });
-          this.lastSync = new Date().toISOString();
-          // Clear store cache and reload
-          this.forgetSeasons();
-          this.loadSeasons();
-        }
-        this.syncing = false;
-        m.redraw();
+        this.syncResult = t('sync_done', {
+          weeksCreated: response.weeksCreated,
+          weeksUpdated: response.weeksUpdated,
+          gamesCreated: response.gamesCreated,
+          gamesUpdated: response.gamesUpdated,
+        });
+        this.lastSync = new Date().toISOString();
+        // Clear store cache and reload
+        this.forgetSeasons();
+        this.loadSeasons();
       })
-      .catch(() => {
-        this.syncResult = t('sync_failed');
+      .catch((e) => {
+        this.syncResult = e instanceof SyncFailed && e.serverMessage ? e.serverMessage : t('sync_failed');
+      })
+      .finally(() => {
         this.syncing = false;
         m.redraw();
       });

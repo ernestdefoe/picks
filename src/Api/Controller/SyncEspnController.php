@@ -9,13 +9,13 @@ use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use Psr\Log\LoggerInterface;
 use Resofire\Picks\Season;
-use Resofire\Picks\Service\EspnSyncService;
+use Resofire\Picks\Sync\AdminSync;
 use Resofire\Picks\Service\Leagues\Leagues;
 
 /**
- * POST /api/picks/sync/espn — fill one ESPN-backed season now.
+ * POST /api/picks/sync/espn — queue a sync of one ESPN-backed season; the admin
+ * polls /picks/sync/espn/status for the result.
  *
  * 🚨 One season, named in the request, rather than "sync everything". The
  * scheduled command syncs every ESPN season because that is what a schedule is
@@ -27,9 +27,8 @@ use Resofire\Picks\Service\Leagues\Leagues;
 class SyncEspnController implements RequestHandlerInterface
 {
     public function __construct(
-        protected EspnSyncService $sync,
+        protected AdminSync $sync,
         protected Leagues $leagues,
-        protected LoggerInterface $logger,
         protected TranslatorInterface $translator
     ) {
     }
@@ -61,14 +60,6 @@ class SyncEspnController implements RequestHandlerInterface
             ], 422);
         }
 
-        try {
-            $result = $this->sync->sync($season);
-        } catch (\Throwable $e) {
-            $this->logger->warning('[picks] ESPN sync failed', ['season' => $season->id, 'exception' => $e]);
-
-            return new JsonResponse(['status' => 'error', 'message' => $e->getMessage()], 500);
-        }
-
-        return new JsonResponse(['status' => 'ok'] + $result);
+        return new JsonResponse($this->sync->start('espn', ['season_id' => (int) $season->id]), 202);
     }
 }

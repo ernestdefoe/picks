@@ -149,15 +149,20 @@ class TeamSyncService
     }
 
     /**
-     * Download logos for FBS teams that are missing them, in batches.
-     * Re-fetches the team list from CFBD to get the logo URLs.
+     * Download logos for one batch of the teams missing them, those after
+     * $afterId in id order.
+     *
+     * @return array{saved: int, failed: int, remaining: int, tried: int, last_id: int}
      */
-    public function syncLogos(int $batchSize = 20): array
+    public function syncLogos(int $batchSize = 20, int $afterId = 0): array
     {
-        // Get teams that need logos, with their ESPN IDs so we can build URLs
+        // The next teams that need logos, after the last one tried, with
+        // their ESPN IDs so we can build URLs.
         $teams = Team::whereNull('logo_path')
             ->whereNotNull('espn_id')
             ->where('logo_custom', false)
+            ->where('id', '>', $afterId)
+            ->orderBy('id')
             ->limit($batchSize)
             ->get();
 
@@ -192,7 +197,10 @@ class TeamSyncService
             ->where('logo_custom', false)
             ->count();
 
-        return compact('saved', 'failed', 'remaining');
+        return compact('saved', 'failed', 'remaining') + [
+            'tried' => $teams->count(),
+            'last_id' => (int) ($teams->last()->id ?? $afterId),
+        ];
     }
 
     /**

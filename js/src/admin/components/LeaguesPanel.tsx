@@ -4,6 +4,7 @@ import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import type Mithril from 'mithril';
 import Season from '../../common/models/Season';
+import runSync from '../utils/runSync';
 
 const t = (k: string, p: Record<string, unknown> = {}) => app.translator.trans('ernestdefoe-picks.admin.leagues.' + k, p);
 
@@ -283,20 +284,8 @@ export default class LeaguesPanel extends Component<Attrs> {
     this.message = null;
     m.redraw();
 
-    app
-      .request<{ status: string; message?: string; created?: number; updated?: number; teams?: number }>({
-        method: 'POST',
-        url: app.forum.attribute('apiUrl') + '/picks/sync/espn',
-        body: { season_id: Number(season.id()) },
-      })
+    runSync<{ created?: number; updated?: number; teams?: number }>('/sync/espn', 'espn', { season_id: Number(season.id()) })
       .then((res) => {
-        this.busyId = null;
-
-        if (res.status !== 'ok') {
-          this.say(res.message || (t('sync_failed') as unknown as string), true);
-          return;
-        }
-
         this.say(
           t('sync_done', {
             created: res.created ?? 0,
@@ -308,10 +297,13 @@ export default class LeaguesPanel extends Component<Attrs> {
         this.attrs.onchange();
       })
       .catch((e: any) => {
-        this.busyId = null;
         // The server's own words where it gave any — "not synced from ESPN" is
         // a far better message than "sync failed".
-        this.say(e?.response?.message || (t('sync_failed') as unknown as string), true);
+        this.say(e?.serverMessage || e?.response?.message || (t('sync_failed') as unknown as string), true);
+      })
+      .finally(() => {
+        this.busyId = null;
+        m.redraw();
       });
   }
 

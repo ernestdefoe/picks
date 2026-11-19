@@ -20,11 +20,8 @@ use Resofire\Picks\Api\Controller\SeedTestDataController;
 use Resofire\Picks\Api\Controller\StatsController;
 use Resofire\Picks\Api\Controller\SubmitPickController;
 use Resofire\Picks\Api\Controller\SyncEspnController;
-use Resofire\Picks\Api\Controller\SyncLogosController;
-use Resofire\Picks\Api\Controller\SyncScheduleController;
-use Resofire\Picks\Api\Controller\SyncScoresController;
-use Resofire\Picks\Api\Controller\SyncScoresStatusController;
-use Resofire\Picks\Api\Controller\SyncTeamsController;
+use Resofire\Picks\Api\Controller\StartSyncController;
+use Resofire\Picks\Api\Controller\SyncStatusController;
 use Resofire\Picks\Api\Controller\UserHistoryController;
 use Resofire\Picks\Api\Controller\UserScoresController;
 use Resofire\Picks\Api\Controller\WeekOpenController;
@@ -112,9 +109,6 @@ $extenders = [
         ->default('ernestdefoe-picks.last_teams_sync', null)
         ->default('ernestdefoe-picks.last_schedule_sync', null)
         ->default('ernestdefoe-picks.last_scores_sync', null)
-        ->default('ernestdefoe-picks.scores_sync_status', null)
-        ->default('ernestdefoe-picks.scores_sync_result', null)
-        ->default('ernestdefoe-picks.scores_sync_started', null)
         ->default('ernestdefoe-picks.espn_polling_enabled', false)
         ->default('ernestdefoe-picks.espn_poll_interval_minutes', 5)
         ->default('ernestdefoe-picks.nav_label', '')
@@ -151,12 +145,10 @@ $extenders = [
         ->post('/picks/submit', 'picks.submit', SubmitPickController::class)
         ->delete('/picks/events/{id}/pick', 'picks.pick.delete', DeletePickController::class)
         ->post('/picks/weeks/{id}/open', 'picks.weeks.open', WeekOpenController::class)
-        ->post('/picks/sync/teams', 'picks.sync.teams', SyncTeamsController::class)
-        ->post('/picks/sync/logos', 'picks.sync.logos', SyncLogosController::class)
-        ->post('/picks/sync/schedule', 'picks.sync.schedule', SyncScheduleController::class)
-        ->post('/picks/sync/scores', 'picks.sync.scores', SyncScoresController::class)
+        // The sync buttons queue a job and answer 202; the admin polls the status.
+        ->post('/picks/sync/{task:teams|logos|schedule|scores}', 'picks.sync', StartSyncController::class)
         ->post('/picks/sync/espn', 'picks.sync.espn', SyncEspnController::class)
-        ->get('/picks/sync/scores/status', 'picks.sync.scores.status', SyncScoresStatusController::class)
+        ->get('/picks/sync/{task:[a-z0-9-]+}/status', 'picks.sync.status', SyncStatusController::class)
         ->get('/picks/stats', 'picks.stats', StatsController::class)
         ->post('/picks/reset', 'picks.reset', ResetDataController::class)
         ->post('/picks/events/{id}/result', 'picks.events.result', EnterResultController::class)
