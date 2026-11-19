@@ -15,6 +15,11 @@ use Tobyz\JsonApiServer\Context;
  */
 class SeasonResource extends AbstractDatabaseResource
 {
+    public function __construct(
+        protected Leagues $leagues
+    ) {
+    }
+
     public function type(): string
     {
         return 'picks-seasons';
@@ -97,9 +102,7 @@ class SeasonResource extends AbstractDatabaseResource
                 ->writable()
                 ->get(fn (Season $s) => (string) ($s->league ?: Leagues::DEFAULT))
                 ->set(function (Season $s, $value) {
-                    $leagues = new Leagues();
-
-                    $s->league = $leagues->has((string) $value) ? (string) $value : Leagues::DEFAULT;
+                    $s->league = $this->leagues->has((string) $value) ? (string) $value : Leagues::DEFAULT;
                 }),
 
             /* What the league means, so a client need not carry its own copy. */

@@ -43,14 +43,4 @@ class PicksPageContent
     {
         $document->title = $this->translator->trans('ernestdefoe-picks.api.page_title');
     }
-
-    /**
-     * Replace the page's description rather than adding a second one.
-     *
-     * 🚨 Appending leaves TWO `<meta name="description">` tags on the page —
-     * fof/seo has already written the forum-wide one by the time this runs, and
-     * measured on the demo both were served. A crawler picks one, usually the
-     * first, so the specific description silently loses to the generic one and
-     * every page still describes the whole site.
-     */
 }

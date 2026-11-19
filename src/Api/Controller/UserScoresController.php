@@ -20,7 +20,8 @@ use Resofire\Picks\UserScore;
  * (totals, accuracy, rank, and the player count for each scope), used by the
  * profile stat cards.
  *
- * Permission: picks.view (same gate as every other picks endpoint).
+ * Permission: picks.view for your own scores; picks.viewHistory for anybody
+ * else's, the same gate as the history these cards sit beside.
  */
 class UserScoresController implements RequestHandlerInterface
 {
@@ -34,7 +35,6 @@ class UserScoresController implements RequestHandlerInterface
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $actor = RequestUtil::getActor($request);
-        $actor->assertCan('picks.view');
 
         $params = $request->getQueryParams();
         $userId = (int) Arr::get($params, 'user_id', 0);
@@ -42,6 +42,8 @@ class UserScoresController implements RequestHandlerInterface
         if (! $userId) {
             return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-picks.api.errors.user_id_required')], 422);
         }
+
+        $actor->assertCan($actor->id === $userId ? 'picks.view' : 'picks.viewHistory');
 
         try {
             // Current week (most recent season with an unfinished game, then the

@@ -4,8 +4,10 @@ namespace Resofire\Picks\Service;
 
 use Carbon\Carbon;
 use DateTimeInterface;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Resofire\Picks\PickEvent;
 use Resofire\Picks\Season;
+use Resofire\Picks\UserScore;
 use Resofire\Picks\Week;
 
 /**
@@ -25,10 +27,13 @@ class CurrentSeasonService
     /** Game statuses that mean "not yet finished". */
     public const UNFINISHED = ['scheduled', 'in_progress'];
 
-    /** Board week ids already worked out in this request. */
-    private static ?int $boardWeekId = null;
+    /** How long the board week is remembered, in seconds. */
+    private const BOARD_WEEK_TTL = 10;
 
-    private static ?int $boardWeekAt = null;
+    public function __construct(
+        protected CacheRepository $cache
+    ) {
+    }
 
     /**
      * The week the board opens on, and the week its "this week" button goes
@@ -38,17 +43,24 @@ class CurrentSeasonService
      * being kept" for the leaderboard and stats, and ignores which weeks are
      * open; this one answers "which open week should a visitor see".
      *
-     * Two queries for every week of every season, whatever the size of the
-     * schedule. Remembered (statically) for a few seconds, because the week
-     * resource asks once per week it serializes and each ask may resolve a
-     * fresh instance of this service.
+     * Two queries whatever the size of the schedule: the weeks, and one row
+     * per week of its games summed up in SQL. Remembered in the cache for a few
+     * seconds, because the week resource asks once per week it serializes.
      */
     public function getBoardWeekId(?DateTimeInterface $now = null): ?int
     {
-        if ($now === null && self::$boardWeekAt !== null && time() - self::$boardWeekAt < 10) {
-            return self::$boardWeekId;
+        if ($now !== null) {
+            return $this->pickBoardWeek($now);
         }
 
+        // 0 stands for "no week": the cache does not keep a null.
+        $id = (int) $this->cache->remember('picks.board_week_id', self::BOARD_WEEK_TTL, fn () => $this->pickBoardWeek(Carbon::now('UTC')) ?? 0);
+
+        return $id > 0 ? $id : null;
+    }
+
+    private function pickBoardWeek(DateTimeInterface $now): ?int
+    {
         $weeks = Week::query()
             ->join('picks_seasons', 'picks_seasons.id', '=', 'picks_weeks.season_id')
             ->orderBy('picks_seasons.year')
@@ -77,35 +89,50 @@ class CurrentSeasonService
             ];
         }
 
-        if ($rows !== []) {
-            $events = PickEvent::query()
-                ->whereIn('week_id', array_keys($rows))
-                ->get(['week_id', 'match_date', 'status']);
+        foreach ($this->gameSummaries() as $summary) {
+            $id = (int) $summary->week_id;
 
-            foreach ($events as $event) {
-                $id = (int) $event->week_id;
-                $kickoff = self::utc($event->getRawOriginal('match_date'));
-
-                // 🚨 Anything not final — `closed` included, which is a game
-                // whose picks have locked and which may well be under way.
-                if ($event->status !== PickEvent::STATUS_FINISHED) {
-                    $rows[$id]['unfinished'][] = $kickoff;
-                }
-
-                if ($kickoff !== null && ($rows[$id]['last_kickoff'] === null || $kickoff > $rows[$id]['last_kickoff'])) {
-                    $rows[$id]['last_kickoff'] = $kickoff;
-                }
+            if (! isset($rows[$id])) {
+                continue;
             }
+
+            /*
+             * 🚨 Anything not final counts as unfinished — `closed` included,
+             * which is a game whose picks have locked and which may well be under
+             * way. CurrentWeek only asks whether ANY unfinished game is still in
+             * play, which is true exactly when the latest unfinished kickoff is
+             * (every game has one: `match_date` is required), so that kickoff
+             * stands in for the whole list.
+             */
+            if ($summary->unfinished_last !== null) {
+                $rows[$id]['unfinished'][] = self::utc($summary->unfinished_last);
+            }
+
+            $rows[$id]['last_kickoff'] = self::utc($summary->last_kickoff);
         }
 
-        $picked = CurrentWeek::pick(array_values($rows), $now ?? Carbon::now('UTC'));
+        return CurrentWeek::pick(array_values($rows), $now);
+    }
 
-        if ($now === null) {
-            self::$boardWeekId = $picked;
-            self::$boardWeekAt = time();
-        }
+    /**
+     * One row per week: its latest kickoff and its latest unfinished kickoff.
+     *
+     * @return \Illuminate\Support\Collection<int, \stdClass>
+     */
+    private function gameSummaries(): \Illuminate\Support\Collection
+    {
+        $query = PickEvent::query()->toBase();
+        $grammar = $query->getGrammar();
+        $status = $grammar->wrap('status');
+        $kickoff = $grammar->wrap('match_date');
 
-        return $picked;
+        return $query
+            ->select('week_id')
+            ->selectRaw("MAX({$kickoff}) as last_kickoff")
+            ->selectRaw("MAX(CASE WHEN {$status} <> ? THEN {$kickoff} END) as unfinished_last", [PickEvent::STATUS_FINISHED])
+            ->whereNotNull('week_id')
+            ->groupBy('week_id')
+            ->get();
     }
 
     private static function utc(mixed $value): ?string
@@ -135,5 +162,21 @@ class CurrentSeasonService
             ->orderByRaw(Week::seasonTypeOrder('regular'))
             ->orderBy('week_number')
             ->first();
+    }
+
+    /**
+     * The season whose standings are being kept: the current week's, or
+     * between seasons the latest one anybody has scores in.
+     */
+    public function getCurrentSeasonId(): ?int
+    {
+        $id = $this->getCurrentWeek()->season_id
+            ?? Season::query()
+                ->whereIn('id', UserScore::query()->select('season_id')->whereNotNull('season_id'))
+                ->orderByDesc('year')
+                ->orderByDesc('id')
+                ->value('id');
+
+        return $id === null ? null : (int) $id;
     }
 }

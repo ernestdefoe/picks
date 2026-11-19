@@ -3,7 +3,6 @@
 namespace Resofire\Picks\Confidence;
 
 use Flarum\Database\AbstractModel;
-use Flarum\User\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Resofire\Picks\PickEvent;
 use Resofire\Picks\Week;
@@ -31,12 +30,6 @@ class ConfidenceGame extends AbstractModel
     public function week(): BelongsTo
     {
         return $this->belongsTo(Week::class);
-    }
-
-    /** @return BelongsTo<User, $this> */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
     }
 
     /** @return BelongsTo<PickEvent, $this> */

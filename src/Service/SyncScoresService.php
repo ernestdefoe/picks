@@ -193,7 +193,7 @@ class SyncScoresService
 
         // Bulk-load every event referenced in this scoreboard payload in ONE
         // query (keyed by cfbd_id) rather than a SELECT per game. This command
-        // runs every 5 minutes via the scheduler; on a game Saturday with 30+
+        // runs every minute via the scheduler; on a game Saturday with 30+
         // concurrent games that was 30+ indexed lookups per tick.
         $espnIds = [];
         foreach ($events as $espnEvent) {
@@ -523,15 +523,15 @@ class SyncScoresService
         return $id;
     }
 
+    /** Why the last fetch failed, so the thrown message can say. */
+    private ?string $lastError = null;
+
     /**
      * Fetch a URL via the container-managed Guzzle client and return decoded
      * JSON, or null on any transport / non-200 / parse failure. Uses the same
      * 'http_errors' => false convention as CfbdService so the host's proxy/SSL
      * config applies and the call is mockable in tests.
      */
-    /** Why the last fetch failed, so the thrown message can say. */
-    private ?string $lastError = null;
-
     private function fetchJson(string $url): ?array
     {
         try {

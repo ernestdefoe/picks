@@ -11,6 +11,7 @@ use Illuminate\Contracts\Queue\Queue;
 use Psr\Log\LoggerInterface;
 use Resofire\Picks\Confidence\ConfidenceContest;
 use Resofire\Picks\Service\CfbdService;
+use Resofire\Picks\Service\Leagues\Leagues;
 use Resofire\Picks\Service\LogoService;
 use Resofire\Picks\Service\SyncScoresService;
 
@@ -24,6 +25,14 @@ class PicksServiceProvider extends AbstractServiceProvider
         // interfaces/classes already bound (SettingsRepositoryInterface, Queue,
         // CfbdService, etc.) or auto-instantiable (GuzzleHttp\Client), so Flarum
         // resolves them automatically — no closure required.
+
+        /*
+         * 🚨 One registry for the whole application. An extension that adds a
+         * league does it to THIS instance (resolve it and call register()), and
+         * every reader sees it; a registry made with `new` starts from the
+         * built-in list each time.
+         */
+        $this->container->singleton(Leagues::class);
 
         // SyncScoresService: the concrete Guzzle client + queue are passed
         // explicitly so the wiring is unambiguous.

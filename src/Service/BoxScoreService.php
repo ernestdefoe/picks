@@ -54,7 +54,7 @@ class BoxScoreService
         protected CfbdService $cfbd,
         protected SettingsRepositoryInterface $settings,
         protected \Resofire\Picks\Service\Providers\EspnProvider $espn,
-        protected Leagues $leagues = new Leagues(),
+        protected Leagues $leagues,
         protected ?Cache $cache = null
     ) {
     }
@@ -308,7 +308,7 @@ class BoxScoreService
         ?League $league = null,
         array $extra = []
     ): ?array {
-        $league ??= (new Leagues())->get(Leagues::DEFAULT);
+        $league ??= $this->leagues->get(Leagues::DEFAULT);
 
         $document = ['game' => $gameId];
 

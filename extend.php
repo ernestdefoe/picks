@@ -79,7 +79,7 @@ $extenders = [
          * that runs and reports nothing changed.
          */
         ->content(function (Document $document): void {
-            $document->payload['picksLeagues'] = (new Leagues())->manifest(resolve(TranslatorInterface::class));
+            $document->payload['picksLeagues'] = resolve(Leagues::class)->manifest(resolve(TranslatorInterface::class));
         }),
 
     new Extend\Locales(__DIR__.'/resources/locale'),
@@ -179,9 +179,9 @@ $extenders = [
         ->get('/picks/confidence/leaderboard', 'picks.confidence.leaderboard', Confidence\LeaderboardController::class)
         ->get('/picks/confidence/history', 'picks.confidence.history', Confidence\HistoryController::class)
         ->get('/picks/confidence/user-history', 'picks.confidence.user-history', Confidence\UserHistoryController::class)
-        ->get('/picks/confidence/weeks/{id}', 'picks.confidence.week', Confidence\SelectionController::class)
-        ->post('/picks/confidence/weeks/{id}', 'picks.confidence.week.save', Confidence\SelectionController::class)
-        ->post('/picks/confidence/weeks/{id}/auto', 'picks.confidence.week.auto', Confidence\SelectionController::class),
+        ->get('/picks/confidence/weeks/{id}', 'picks.confidence.week', Confidence\ShowSelectionController::class)
+        ->post('/picks/confidence/weeks/{id}', 'picks.confidence.week.save', Confidence\SaveSelectionController::class)
+        ->post('/picks/confidence/weeks/{id}/auto', 'picks.confidence.week.auto', Confidence\AutoSelectionController::class),
 
     // Turning auto-unlock ON opens whatever is already due, there and then.
     (new Extend\Event())
@@ -236,6 +236,24 @@ $extenders = [
             $event->everyFifteenMinutes()->withoutOverlapping();
         })
         /*
+         * 🚨 Its own command, not a line in the score poll: the poll returns
+         * early when ESPN polling is off or nothing is on today, and a board
+         * that scores by hand or from CFBD still wants its weeks to open.
+         * Plain, with no options — see the 🚨 at the end of this list.
+         */
+        ->schedule(UnlockWeeksCommand::class, function ($event) {
+            $event->everyFifteenMinutes()->withoutOverlapping();
+        })
+        /*
+         * 🚨 Tuesday morning, not Sunday night. The week's last games finish
+         * late on Saturday and a handful of fixtures run into Monday; posting
+         * before they are scored puts a table on the board that changes
+         * underneath the people replying to it.
+         */
+        ->schedule(PostStandingsCommand::class, function ($event) {
+            $event->weeklyOn(2, '09:00')->withoutOverlapping();
+        })
+        /*
          * 🚨 The ranks and records on a fixture, kept current.
          *
          * Nothing was refreshing these. College football syncs its schedule
@@ -250,38 +268,19 @@ $extenders = [
          * ones each side carried INTO it, and rewriting those later with
          * today's poll would restate every result on the board.
          *
-         * Daily rather than weekly, though the polls themselves move weekly —
-         * records change every Saturday, and a board a week behind on those is
-         * wrong far more often than it is right.
+         * Every six hours rather than weekly, though the polls themselves move
+         * weekly — records change every Saturday, and a board a week behind on
+         * those is wrong far more often than it is right. It also carries
+         * kickoff times, and a time announced in the afternoon has to land
+         * before Game Day opens that game's thread.
          *
          * The cost is one request per week that still has unplayed fixtures —
-         * about a dozen a day early in a season, falling to one or two by the
+         * about a dozen a run early in a season, falling to one or two by the
          * end — against a feed that answers a whole week at a time. The
          * command's own ceiling of forty requests a run bounds it whatever
          * happens.
          */
-        /*
-         * 🚨 Tuesday morning, not Sunday night. The week's last games finish
-         * late on Saturday and a handful of fixtures run into Monday; posting
-         * before they are scored puts a table on the board that changes
-         * underneath the people replying to it.
-         */
-        /*
-         * 🚨 Its own command, not a line in the score poll: the poll returns
-         * early when ESPN polling is off or nothing is on today, and a board
-         * that scores by hand or from CFBD still wants its weeks to open.
-         * Plain, with no options — see the 🚨 at the end of this list.
-         */
-        ->schedule(UnlockWeeksCommand::class, function ($event) {
-            $event->everyFifteenMinutes()->withoutOverlapping();
-        })
-        ->schedule(PostStandingsCommand::class, function ($event) {
-            $event->weeklyOn(2, '09:00')->withoutOverlapping();
-        })
         ->schedule(BackfillLeadInCommand::class, function ($event) {
-            // Every six hours, not daily: it also carries kickoff times, and a
-            // time announced in the afternoon has to land before Game Day opens
-            // that game's thread. Four runs a day is still a few dozen requests.
             $event->cron('30 */6 * * *')->withoutOverlapping();
             /*
              * 🚨 Passed positionally, NOT as ['--upcoming' => true].

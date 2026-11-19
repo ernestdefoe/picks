@@ -16,13 +16,13 @@ use Resofire\Picks\PickEvent;
 use Resofire\Picks\Week;
 
 /**
- * The admin's view of a week's Confidence games.
+ * The admin's view of a week's Confidence games, shared by the three handlers:
  *
- *   GET  /picks/confidence/weeks/{id}       the chosen games and every other game in the week
- *   POST /picks/confidence/weeks/{id}       { event_ids: [...] } — the new games, in order
- *   POST /picks/confidence/weeks/{id}/auto  choose them again by the automatic rule
+ *   GET  /picks/confidence/weeks/{id}       ShowSelectionController
+ *   POST /picks/confidence/weeks/{id}       SaveSelectionController — { event_ids: [...] }, in order
+ *   POST /picks/confidence/weeks/{id}/auto  AutoSelectionController — choose again by the automatic rule
  */
-class SelectionController implements RequestHandlerInterface
+abstract class AbstractSelectionController implements RequestHandlerInterface
 {
     public function __construct(protected ConfidenceContest $contest)
     {
@@ -38,25 +38,19 @@ class SelectionController implements RequestHandlerInterface
             return new JsonResponse(['status' => 'error', 'code' => 'no_week'], 404);
         }
 
-        if ($request->getMethod() === 'POST') {
-            $auto = str_ends_with(rtrim($request->getUri()->getPath(), '/'), '/auto');
+        $error = $this->change($week, $request);
 
-            if ($auto) {
-                $error = $this->contest->autoSelect($week);
-            } else {
-                $ids = Arr::get((array) $request->getParsedBody(), 'event_ids', []);
-                $error = is_array($ids) ? $this->contest->setSelection($week, $ids) : 'bad_request';
-            }
-
-            if ($error !== null) {
-                return new JsonResponse(['status' => 'error', 'code' => $error, 'data' => $this->view($week)], 422);
-            }
+        if ($error !== null) {
+            return new JsonResponse(['status' => 'error', 'code' => $error, 'data' => $this->view($week)], 422);
         }
 
         return new JsonResponse(['data' => $this->view($week)]);
     }
 
-    private function view(Week $week): array
+    /** Make this handler's change to the week. An error code, or null. */
+    abstract protected function change(Week $week, ServerRequestInterface $request): ?string;
+
+    protected function view(Week $week): array
     {
         $selection = $this->contest->selection($week->id);
         $chosen = $selection->pluck('event_id')->map(fn ($id) => (int) $id)->all();

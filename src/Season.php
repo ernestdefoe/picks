@@ -46,7 +46,7 @@ class Season extends AbstractModel
      */
     public function leagueDefinition(): \Resofire\Picks\Service\Leagues\League
     {
-        return (new \Resofire\Picks\Service\Leagues\Leagues())->get($this->league);
+        return resolve(\Resofire\Picks\Service\Leagues\Leagues::class)->get($this->league);
     }
 
     /** @return HasMany<Week, $this> */

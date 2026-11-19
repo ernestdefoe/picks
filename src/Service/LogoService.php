@@ -70,6 +70,8 @@ class LogoService
                 'http_errors' => false,
             ]);
         } catch (\Throwable $e) {
+            $this->log->warning('[Picks] Logo download failed from '.$url.': '.$e->getMessage());
+
             return null;
         }
 

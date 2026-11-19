@@ -29,8 +29,10 @@ class GameHighlights
     /** Kickoff plus a long game plus a day. */
     public const WINDOW_HOURS = 30;
 
-    public function __construct(protected EspnProvider $espn)
-    {
+    public function __construct(
+        protected EspnProvider $espn,
+        protected Leagues $leagues
+    ) {
     }
 
     /** Whether this game is still worth asking about. */
@@ -66,7 +68,7 @@ class GameHighlights
         $season = $event->week?->season;
         $league = $season !== null && method_exists($season, 'leagueDefinition')
             ? $season->leagueDefinition()
-            : (new Leagues())->get(Leagues::DEFAULT);
+            : $this->leagues->get(Leagues::DEFAULT);
 
         // College football matches ESPN by its CFBD id, which IS the ESPN id.
         $id = trim((string) ($event->external_id ?: $event->cfbd_id));

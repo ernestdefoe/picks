@@ -9,6 +9,7 @@ use Flarum\Foundation\Config;
 use Flarum\Locale\TranslatorInterface;
 use Flarum\User\User;
 use Illuminate\Database\ConnectionInterface;
+use Resofire\Picks\Service\CurrentSeasonService;
 
 /**
  * The pick'em standings, as a Page Builder block.
@@ -23,7 +24,8 @@ class LeaderboardBlock extends AbstractBlock
     public function __construct(
         protected ConnectionInterface $db,
         protected TranslatorInterface $translator,
-        protected Config $config
+        protected Config $config,
+        protected CurrentSeasonService $currentSeason
     ) {
     }
 
@@ -109,7 +111,15 @@ class LeaderboardBlock extends AbstractBlock
             ->whereNull('s.week_id');
 
         if ($season) {
-            $query->whereNotNull('s.season_id');
+            // This season's rows only: every season keeps its own totals, and
+            // sweeping them all up lists a member once per season played.
+            $seasonId = $this->currentSeason->getCurrentSeasonId();
+
+            if ($seasonId === null) {
+                return ['rows' => []];
+            }
+
+            $query->where('s.season_id', $seasonId);
         } else {
             // All-time is the row belonging to no season in particular.
             $query->whereNull('s.season_id');
