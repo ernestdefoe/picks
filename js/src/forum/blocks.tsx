@@ -5,13 +5,16 @@ import app from 'flarum/forum/app';
  *
  * 🚨 Page Builder is not imported and not required. Picks works on a board that
  * has never heard of it, and a hard import would make this bundle fail to
- * evaluate where it is absent — taking the pick'em down with it.
+ * evaluate where it is absent — taking the pick'em down with it. Nothing is
+ * registered unless it is enabled.
  *
  * 🚨 Registered through the queue rather than `app.pageBuilder.registerBlock`.
  * `app.pageBuilder` does not exist until Page Builder's own initializer has run,
  * and which of two extensions initialises first is not something either decides.
  */
 export default function registerBlocks(): void {
+  if (!('ernestdefoe-page-builder' in flarum.extensions)) return;
+
   const t = (k: string) => app.translator.trans(`ernestdefoe-picks.forum.leaderboard_block.${k}`);
 
   const component = {

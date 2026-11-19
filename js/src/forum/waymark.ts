@@ -17,9 +17,14 @@ const ROUTES = ['picks', 'picks.week'];
 
 let claimed = false;
 
+/** Waymark's API, only while ernestdefoe/waymark is enabled. */
+function api(): any {
+  return 'ernestdefoe-waymark' in flarum.extensions ? (app as any).waymark : null;
+}
+
 /** Stop Waymark drawing its own trail on these routes. Safe to call every init. */
 export function claimWaymarkRoutes(): void {
-  const w = (app as any).waymark;
+  const w = api();
   if (claimed || !w || typeof w.register !== 'function') return;
 
   ROUTES.forEach((name) => w.register(name, () => null));
@@ -27,7 +32,7 @@ export function claimWaymarkRoutes(): void {
 }
 
 export function waymark(crumbs: Crumb[]): Mithril.Children {
-  const w = (app as any).waymark;
+  const w = api();
   if (!w || typeof w.render !== 'function') return null;
 
   try {

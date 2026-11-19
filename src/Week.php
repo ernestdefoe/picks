@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $start_date
  * @property string|null $end_date
  * @property bool        $is_open
+ * @property int|null    $standings_discussion_id
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  * @property-read Season|null $season

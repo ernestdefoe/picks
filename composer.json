@@ -47,7 +47,9 @@
                 "color": "#1A2744"
             },
             "optional-dependencies": [
-                "ernestdefoe/page-builder"
+                "ernestdefoe/page-builder",
+                "ernestdefoe/waymark",
+                "flarum/tags"
             ]
         },
         "flarum-cli": {
@@ -66,7 +68,8 @@
     },
     "require-dev": {
         "flarum/phpstan": "^2.0",
-        "flarum/testing": "^2.0"
+        "flarum/testing": "^2.0",
+        "flarum/tags": "^2.0"
     },
     "scripts": {
         "test": [
@@ -85,6 +88,8 @@
     "minimum-stability": "beta",
     "prefer-stable": true,
     "suggest": {
-        "ernestdefoe/page-builder": "Adds the Pick'em standings as a Page Builder block."
+        "ernestdefoe/page-builder": "Adds the Pick'em standings as a Page Builder block.",
+        "flarum/tags": "Puts the weekly standings discussion in a tag.",
+        "ernestdefoe/waymark": "Shows breadcrumbs above the pick'em pages."
     }
 }

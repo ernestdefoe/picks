@@ -5,8 +5,7 @@ namespace Resofire\Picks\Service;
 use Resofire\Picks\Pick;
 
 /**
- * Shared pick-statistics queries used by both the admin StatsController and the
- * public PublicStatsController, so the logic lives in one place.
+ * Pick-statistics queries for the admin StatsController.
  */
 class PickStatsService
 {

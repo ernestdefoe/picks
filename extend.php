@@ -14,7 +14,6 @@ use Resofire\Picks\Api\Controller\LeaderboardHistoryController;
 use Resofire\Picks\Api\Controller\ListEventsController;
 use Resofire\Picks\Api\Controller\ListLeaderboardController;
 use Resofire\Picks\Api\Controller\ListPicksController;
-use Resofire\Picks\Api\Controller\PublicStatsController;
 use Resofire\Picks\Api\Controller\RefreshTeamLogoController;
 use Resofire\Picks\Api\Controller\ResetDataController;
 use Resofire\Picks\Api\Controller\SeedTestDataController;
@@ -159,7 +158,6 @@ $extenders = [
         ->post('/picks/sync/espn', 'picks.sync.espn', SyncEspnController::class)
         ->get('/picks/sync/scores/status', 'picks.sync.scores.status', SyncScoresStatusController::class)
         ->get('/picks/stats', 'picks.stats', StatsController::class)
-        ->get('/picks/public-stats', 'picks.public-stats', PublicStatsController::class)
         ->post('/picks/reset', 'picks.reset', ResetDataController::class)
         ->post('/picks/events/{id}/result', 'picks.events.result', EnterResultController::class)
         ->post('/picks/teams/{id}/refresh-logo', 'picks.teams.refresh-logo', RefreshTeamLogoController::class)
@@ -307,6 +305,15 @@ $extenders[] = (new Extend\Conditional())
         new \Ernestdefoe\PageBuilder\Extend\PageBuilderBlock(
             \Resofire\Picks\Block\LeaderboardBlock::class
         ),
+    ]);
+
+/*
+ * The weekly standings discussion goes into the configured tag only where
+ * flarum/tags is enabled; without it the discussion is posted untagged.
+ */
+$extenders[] = (new Extend\Conditional())
+    ->whenExtensionEnabled('flarum-tags', fn () => [
+        (new Extend\ServiceProvider())->register(\Resofire\Picks\Standings\TagsServiceProvider::class),
     ]);
 
 return $extenders;

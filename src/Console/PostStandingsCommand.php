@@ -4,14 +4,18 @@ namespace Resofire\Picks\Console;
 
 use Carbon\Carbon;
 use Flarum\Console\AbstractCommand;
+use Flarum\Api\JsonApi;
+use Flarum\Api\Resource\DiscussionResource;
 use Flarum\Discussion\Discussion;
+use Flarum\Foundation\DispatchEventsTrait;
 use Flarum\Foundation\Config;
 use Flarum\Locale\TranslatorInterface;
 use Flarum\Post\CommentPost;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\User\User;
-use Illuminate\Database\ConnectionInterface;
+use Illuminate\Contracts\Events\Dispatcher;
 use Resofire\Picks\Season;
+use Resofire\Picks\Standings\StandingsTags;
 use Resofire\Picks\UserScore;
 use Resofire\Picks\Week;
 use Symfony\Component\Console\Input\InputOption;
@@ -30,6 +34,8 @@ use Symfony\Component\Console\Input\InputOption;
  */
 class PostStandingsCommand extends AbstractCommand
 {
+    use DispatchEventsTrait;
+
     public const SETTING_TAG = 'ernestdefoe-picks.standings_tag';
     public const SETTING_AUTHOR = 'ernestdefoe-picks.standings_author_id';
 
@@ -38,9 +44,11 @@ class PostStandingsCommand extends AbstractCommand
 
     public function __construct(
         protected SettingsRepositoryInterface $settings,
-        protected ConnectionInterface $db,
         protected Config $config,
-        protected TranslatorInterface $translator
+        protected TranslatorInterface $translator,
+        protected JsonApi $api,
+        protected StandingsTags $tags,
+        protected Dispatcher $events
     ) {
         parent::__construct();
     }
@@ -80,8 +88,7 @@ class PostStandingsCommand extends AbstractCommand
 
         /*
          * 🚨 Translated in the forum's default locale — the console has no
-         * visitor to take one from. The title is also how a rerun finds last
-         * week's thread to edit, so it must come out the same on every run.
+         * visitor to take one from.
          */
         $title = $this->trans('title', ['week' => trim($week->name)]);
         $body = $this->body($week, $rows);
@@ -96,6 +103,12 @@ class PostStandingsCommand extends AbstractCommand
             return 0;
         }
 
+        return $this->publish($week, $title, $body);
+    }
+
+    /** Edit the week's thread if it was published already, or start it. */
+    protected function publish(Week $week, string $title, string $body): int
+    {
         $author = $this->author();
 
         if ($author === null) {
@@ -104,50 +117,95 @@ class PostStandingsCommand extends AbstractCommand
             return 1;
         }
 
-        $existing = Discussion::query()->where('title', $title)->first();
+        $slug = trim((string) ($this->input->getOption('tag') ?: $this->settings->get(self::SETTING_TAG, '')));
 
-        if ($existing !== null) {
-            $post = CommentPost::query()->find($existing->first_post_id);
-
-            if ($post !== null) {
-                $post->setContentAttribute($body, $author);
-                $post->edited_at = Carbon::now();
-                $post->edited_user_id = $author->id;
-                $post->save();
-                $this->info("Updated “{$title}” (discussion #{$existing->id}).");
-
-                return 0;
-            }
+        if ($this->tags->missing($slug)) {
+            $this->error('No tag with slug "'.$slug.'" — the standings will be posted untagged.');
         }
 
-        $discussion = Discussion::start($title, $author);
-        $discussion->save();
+        $existing = $this->thread($week, $author, $title);
+
+        $post = $existing === null ? null : CommentPost::query()->find($existing->first_post_id);
+
+        if ($post !== null) {
+            // Core's own edit, so Revised fires as it does for any edited post.
+            $post->revise($body, $author)->save();
+            $this->dispatchEventsFor($post, $author);
+            $this->info("Updated “{$title}” (discussion #{$existing->id}).");
+
+            return 0;
+        }
 
         /*
-         * 🚨 Built by hand, not CommentPost::reply() — that is a Flarum 1.x
-         * static that no longer exists, and calling it throws a
-         * BadMethodCallException rather than anything the signature warns of.
+         * 🚨 Through the JSON:API, as the author, so core and every extension
+         * see an ordinary new discussion: Started and Posted fire, followers are
+         * notified, search indexes it and the tag counters move.
          */
-        $post = new CommentPost();
-        $post->discussion_id = $discussion->id;
-        $post->user_id = $author->id;
-        $post->type = CommentPost::$type;
-        $post->created_at = Carbon::now();
-        $post->setContentAttribute($body, $author);
-        $post->save();
+        $tags = $this->tags->relationship($slug);
+        $discussion = $this->api->forResource(DiscussionResource::class)->forEndpoint('create')->process(
+            ['data' => array_filter([
+                'attributes' => ['title' => $title, 'content' => $body],
+                'relationships' => $tags === null ? null : ['tags' => $tags],
+            ])],
+            options: ['actor' => $author]
+        );
 
-        $discussion->setFirstPost($post);
-        $discussion->setLastPost($post);
-        $discussion->save();
-
-        $this->tag($discussion);
+        $week->standings_discussion_id = $discussion->id;
+        $week->save();
 
         $this->info("Published “{$title}” as discussion #{$discussion->id}.");
 
         return 0;
     }
 
-    /** The most recent week that actually has scored picks in it. */
+    /**
+     * The week's standings thread, if it was already published.
+     *
+     * 🚨 By the id the week remembers, and only while the author still owns
+     * it. "Week 1" names a week in every season, and any member can start a
+     * thread with the same title: matching on the title alone edited last
+     * season's post, or somebody else's.
+     */
+    protected function thread(Week $week, User $author, string $title): ?Discussion
+    {
+        if ($week->standings_discussion_id) {
+            $found = Discussion::query()->whereKey($week->standings_discussion_id)->where('user_id', $author->id)->first();
+
+            if ($found !== null && $found->first_post_id) {
+                return $found;
+            }
+        }
+
+        /*
+         * A board that published this week before the id was kept: the
+         * author's own thread with this title, started once the week was under
+         * way. Adopted once, then remembered.
+         */
+        $since = $week->events()->min('match_date');
+        $legacy = $since === null ? null : Discussion::query()
+            ->where('title', $title)
+            ->where('user_id', $author->id)
+            ->where('created_at', '>=', Carbon::parse((string) $since, 'UTC')->subDays(7))
+            ->whereNotNull('first_post_id')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($legacy !== null) {
+            $week->standings_discussion_id = $legacy->id;
+            $week->save();
+        }
+
+        return $legacy;
+    }
+
+    /**
+     * The most recent week with scored picks, in the most recent season that
+     * has any.
+     *
+     * 🚨 Season first. Week numbers start again every season, so the highest
+     * week number anywhere was last season's final week all through the next
+     * one.
+     */
     protected function week(): ?Week
     {
         $given = $this->input->getOption('week');
@@ -156,9 +214,21 @@ class PostStandingsCommand extends AbstractCommand
             return Week::query()->find((int) $given);
         }
 
-        return Week::query()
-            ->whereHas('events', fn ($q) => $q->whereHas('picks', fn ($p) => $p->whereNotNull('is_correct')))
+        $scored = fn ($q) => $q->whereHas('events', fn ($e) => $e->whereHas('picks', fn ($p) => $p->whereNotNull('is_correct')));
+
+        $season = Season::query()
+            ->whereHas('weeks', $scored)
+            ->orderByDesc('year')
+            ->orderByDesc('id')
+            ->first();
+
+        return $season === null ? null : Week::query()
+            ->where('season_id', $season->id)
+            ->where($scored)
+            // Postseason after the regular season, then the latest week.
+            ->orderByRaw(Week::seasonTypeOrder('postseason'))
             ->orderByDesc('week_number')
+            ->orderByDesc('id')
             ->first();
     }
 
@@ -318,27 +388,5 @@ class PostStandingsCommand extends AbstractCommand
             ->whereIn('id', fn ($q) => $q->select('user_id')->from('group_user')->where('group_id', 1))
             ->orderBy('id')
             ->first();
-    }
-
-    protected function tag(Discussion $discussion): void
-    {
-        $slug = trim((string) ($this->input->getOption('tag') ?: $this->settings->get(self::SETTING_TAG, '')));
-
-        if ($slug === '' || ! $this->db->getSchemaBuilder()->hasTable('tags')) {
-            return;
-        }
-
-        $tagId = $this->db->table('tags')->where('slug', $slug)->value('id');
-
-        if ($tagId === null) {
-            $this->error('No tag with slug "'.$slug.'" — the standings were posted untagged.');
-
-            return;
-        }
-
-        $this->db->table('discussion_tag')->insertOrIgnore([
-            'discussion_id' => $discussion->id,
-            'tag_id' => $tagId,
-        ]);
     }
 }
