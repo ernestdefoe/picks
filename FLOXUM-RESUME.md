@@ -31,9 +31,11 @@ Nothing pushed, tagged or deployed.
    StatsController::coverage, Team/SeasonResource::fields, CurrentSeasonService::pickBoardWeek, ForumPicksAttributes::__invoke.
    Files > 600 lines: ConfidenceContest 796, SyncScoresService 716, BoxScoreService 616.
 3. Watch items: ResetData without a transaction; Team/Week index unpaginated (admin asks page[limit]=500).
-   Known exception to raise with the Command Center: migration 2026_10_03_000001 has a deliberate no-op down (no safe reversal).
+   Migration 2026_10_03_000001's no-op down is ACCEPTED by the Command Center (a data repair can't be reversed safely; one-line comment in down()).
 4. Re-run pre-floxum (aim: zero findings), ship-check (3 DBs, N+1, phones), npm ci + build js/dist, browser pass again.
 5. Send the Command Center the commit range + pre-floxum score + test results; wait for approval.
-6. After release: apply the showcase seed change (side-session-notes/.../picks-floxum-wave2.md), bin/deploy showcase,
+6. BEFORE the release (readers first): change showcase/seeds/65-picks.php to work with BOTH APIs: POST /picks-picks,
+   and on a 404 (Picks before this release) fall back to POST /picks/submit. Commit only that file in ~/github/showcase.
+7. After release: bin/deploy showcase,
    dev, then fbsfb (fbsfb2_app, composer update ernestdefoe/picks, migrate, cache:clear, php-fpm then horizon restart).
    ScoreAggregator::recalculateUserScore() is kept for the showcase seed.

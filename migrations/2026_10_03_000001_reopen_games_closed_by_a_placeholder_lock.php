@@ -30,6 +30,6 @@ return [
     },
 
     'down' => function (Builder $schema) {
-        // Nothing to undo: the auto-close puts any of these back once its lock passes.
+        // A data repair: the games it reopened can't be told from any other scheduled game, so it can't be reversed safely.
     },
 ];
