@@ -6,6 +6,8 @@ use Flarum\Api\Endpoint;
 use Flarum\Api\Resource\AbstractDatabaseResource;
 use Flarum\Api\Schema;
 use Illuminate\Database\Eloquent\Builder;
+use Psr\Log\LoggerInterface;
+use Resofire\Picks\Confidence\ConfidenceContest;
 use Resofire\Picks\Service\CurrentSeasonService;
 use Resofire\Picks\Week;
 use Tobyz\JsonApiServer\Context;
@@ -16,7 +18,9 @@ use Tobyz\JsonApiServer\Context;
 class WeekResource extends AbstractDatabaseResource
 {
     public function __construct(
-        protected CurrentSeasonService $currentSeason
+        protected CurrentSeasonService $currentSeason,
+        protected ConfidenceContest $contest,
+        protected LoggerInterface $log
     ) {
     }
 
@@ -85,7 +89,9 @@ class WeekResource extends AbstractDatabaseResource
                 ->nullable()
                 ->get(fn (Week $w) => $w->end_date),
 
+            // Opened and closed by an admin (Update is picks.manage).
             Schema\Boolean::make('isOpen')
+                ->writable()
                 ->get(fn (Week $w) => (bool) $w->is_open),
 
             /*
@@ -101,5 +107,24 @@ class WeekResource extends AbstractDatabaseResource
                 ->includable()
                 ->type('picks-seasons'),
         ];
+    }
+
+    /**
+     * The week's Confidence games are chosen as it opens.
+     *
+     * @param Week $model
+     */
+    public function saved(object $model, Context $context): ?object
+    {
+        if ($model->wasChanged('is_open') && $model->is_open) {
+            try {
+                $this->contest->ensureSelected($model);
+            } catch (\Throwable $e) {
+                // The week opens either way; the games can be chosen in the admin.
+                $this->log->warning('[picks] confidence selection on open failed: '.$e->getMessage());
+            }
+        }
+
+        return $model;
     }
 }

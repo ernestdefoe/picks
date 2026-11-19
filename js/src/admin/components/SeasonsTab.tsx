@@ -105,23 +105,15 @@ export default class SeasonsTab extends Component {
   private togglingWeekId: string | null = null;
 
   private toggleWeekOpen(week: Week) {
-    const newState = !week.isOpen();
     this.togglingWeekId = String(week.id());
     m.redraw();
 
-    app
-      .request<{ status: string; week_id: number; is_open: boolean }>({
-        method: 'POST',
-        url: `${app.forum.attribute('apiUrl')}/picks/weeks/${week.id()}/open`,
-        body: { is_open: newState },
-      })
-      .then((r) => {
-        // Update the store model directly
-        (week as any).data.attributes.isOpen = r.is_open;
-        this.togglingWeekId = null;
-        m.redraw();
-      })
+    week
+      .save({ isOpen: !week.isOpen() })
       .catch(() => {
+        // app.request already showed the error; the switch stays as it was.
+      })
+      .finally(() => {
         this.togglingWeekId = null;
         m.redraw();
       });

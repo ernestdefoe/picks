@@ -5,6 +5,7 @@ namespace Resofire\Picks\Api\Resource;
 use Flarum\Api\Endpoint;
 use Flarum\Api\Resource\AbstractDatabaseResource;
 use Flarum\Api\Schema;
+use Flarum\Api\Sort\SortColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Resofire\Picks\PickEvent;
 use Tobyz\JsonApiServer\Context;
@@ -48,10 +49,15 @@ class EventResource extends AbstractDatabaseResource
              * could read all of this whether or not they had `picks.view`, so
              * the permission neither let anybody in nor kept anybody out.
              */
+            /*
+             * filter[week], filter[status] and filter[q] (team name) come from
+             * EventSearcher. Up to 200 a page: a college Saturday is ninety games.
+             */
             Endpoint\Index::make()
                 ->can('picks.view')
                 ->defaultInclude(['homeTeam', 'awayTeam', 'week'])
-                ->paginate(),
+                ->defaultSort('matchDate')
+                ->paginate(50, 200),
             Endpoint\Show::make()
                 ->can('picks.view')
                 ->defaultInclude(['homeTeam', 'awayTeam', 'week']),
@@ -95,6 +101,7 @@ class EventResource extends AbstractDatabaseResource
 
             Schema\Str::make('status')
                 ->writable()
+                ->in(['scheduled', 'in_progress', 'closed', PickEvent::STATUS_FINISHED])
                 ->get(fn (PickEvent $e) => $e->status),
 
             // Scores are READ-ONLY on this resource by design. Entering a
@@ -152,6 +159,14 @@ class EventResource extends AbstractDatabaseResource
             Schema\Relationship\ToOne::make('awayTeam')
                 ->includable()
                 ->type('picks-teams'),
+        ];
+    }
+
+    public function sorts(): array
+    {
+        return [
+            SortColumn::make('matchDate'),
+            SortColumn::make('status'),
         ];
     }
 }

@@ -8,34 +8,15 @@ import ResultModal from './ResultModal';
 import crestUrl from '../../common/crest';
 import { score, sides } from '../../common/matchup';
 import runSync, { SyncFailed } from '../utils/runSync';
+import { apiGames, type ApiGame, type ApiTeam, type ApiDocument } from '../../common/utils/apiGames';
+
+/** The admin's sort choices, as JSON:API sorts. */
+const SORTS: Record<string, string> = { date_asc: 'matchDate', date_desc: '-matchDate', status: 'status,matchDate' };
+const PER_PAGE = 50;
 
 const t = (key: string, params?: Record<string, unknown>) => app.translator.trans('ernestdefoe-picks.admin.games.' + key, params as any);
 
-interface GameTeam {
-  id: number;
-  name: string;
-  abbreviation: string | null;
-  conference: string | null;
-  logo_path: string | null;
-  logo_url: string | null;
-  logo_dark_url: string | null;
-}
-
-interface Game {
-  id: number;
-  cfbd_id: number | null;
-  week_id: number | null;
-  week_name: string | null;
-  status: string;
-  match_date: string | null;
-  cutoff_date: string | null;
-  neutral_site: boolean;
-  home_score: number | null;
-  away_score: number | null;
-  result: string | null;
-  home_team: GameTeam | null;
-  away_team: GameTeam | null;
-}
+type Game = ApiGame;
 
 interface GamesMeta {
   total: number;
@@ -93,25 +74,21 @@ export default class GamesTab extends Component {
     this.page = page;
     m.redraw();
 
-    const params: Record<string, any> = {
-      page: this.page,
-      per_page: 50,
-      sort: this.sort,
-    };
-
-    if (this.filterWeekId) params.week_id = this.filterWeekId;
-    if (this.filterStatus) params.status = this.filterStatus;
-    if (this.search) params.search = this.search;
+    const filter: Record<string, string> = {};
+    if (this.filterWeekId) filter.week = this.filterWeekId;
+    if (this.filterStatus) filter.status = this.filterStatus;
+    if (this.search) filter.q = this.search;
 
     app
-      .request<{ data: Game[]; meta: GamesMeta }>({
+      .request<ApiDocument & { meta?: { page?: { total?: number } } }>({
         method: 'GET',
-        url: app.forum.attribute('apiUrl') + '/picks/events',
-        params,
+        url: app.forum.attribute('apiUrl') + '/picks-events',
+        params: { filter, sort: SORTS[this.sort] || 'matchDate', page: { offset: (this.page - 1) * PER_PAGE, limit: PER_PAGE } },
       })
       .then((r) => {
-        this.games = r.data || [];
-        this.meta = r.meta || null;
+        const total = r.meta?.page?.total ?? 0;
+        this.games = apiGames(r);
+        this.meta = { total, current_page: this.page, per_page: PER_PAGE, last_page: Math.max(1, Math.ceil(total / PER_PAGE)) };
         this.loading = false;
         m.redraw();
       })
@@ -143,7 +120,7 @@ export default class GamesTab extends Component {
     return <span className={`PicksBadge ${classes[status] || ''}`}>{labels[status] || status}</span>;
   }
 
-  private renderTeamLogo(team: GameTeam | null): Mithril.Children {
+  private renderTeamLogo(team: ApiTeam | null): Mithril.Children {
     if (!team) return <div className="PicksTeamLogo PicksTeamLogo--placeholder PicksTeamLogo--small">?</div>;
 
     if (team.logo_url) {

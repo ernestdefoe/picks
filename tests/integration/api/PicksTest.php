@@ -21,6 +21,19 @@ class PicksTest extends TestCase
         $this->seedPicks();
     }
 
+    /** Pick a game as $actor through the JSON:API. */
+    private function pick(?int $actor, int $eventId, string $outcome, ?int $confidence = null)
+    {
+        $attributes = ['eventId' => $eventId, 'selectedOutcome' => $outcome] + ($confidence === null ? [] : ['confidence' => $confidence]);
+
+        return $this->call('POST', '/api/picks-picks', $actor, ['data' => ['type' => 'picks-picks', 'attributes' => $attributes]]);
+    }
+
+    private function pickId(int $userId, int $eventId): int
+    {
+        return (int) $this->database()->table('picks_picks')->where('user_id', $userId)->where('event_id', $eventId)->value('id');
+    }
+
     private function picks(): array
     {
         return $this->database()->table('picks_picks')->orderBy('id')->get(['user_id', 'event_id', 'selected_outcome'])
@@ -41,30 +54,49 @@ class PicksTest extends TestCase
     #[Test]
     public function a_member_picks_an_open_game_and_may_change_it()
     {
-        $response = $this->call('POST', '/api/picks/submit', 2, ['event_id' => 1, 'selected_outcome' => 'home']);
-        $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+        $response = $this->pick(2, 1, 'home');
+        $this->assertSame(201, $response->getStatusCode(), (string) $response->getBody());
 
-        $this->call('POST', '/api/picks/submit', 2, ['event_id' => 1, 'selected_outcome' => 'away']);
-
+        // A second pick on the same game (a stale page, a double click) changes it.
+        $this->assertSame(201, $this->pick(2, 1, 'away')->getStatusCode());
         $this->assertSame([[2, 1, 'away']], $this->picks(), 'One pick per game, the latest choice');
+
+        $id = $this->pickId(2, 1);
+        $patch = $this->call('PATCH', '/api/picks-picks/'.$id, 2, ['data' => ['type' => 'picks-picks', 'id' => (string) $id, 'attributes' => ['selectedOutcome' => 'home']]]);
+        $this->assertSame(200, $patch->getStatusCode(), (string) $patch->getBody());
+        $this->assertSame([[2, 1, 'home']], $this->picks());
     }
 
     #[Test]
     public function no_pick_after_the_cutoff_or_in_a_locked_week()
     {
-        $this->assertSame(422, $this->call('POST', '/api/picks/submit', 2, ['event_id' => 2, 'selected_outcome' => 'home'])->getStatusCode(), 'Past the cutoff');
-        $this->assertSame(422, $this->call('POST', '/api/picks/submit', 2, ['event_id' => 3, 'selected_outcome' => 'home'])->getStatusCode(), 'Week not open');
-        $this->assertSame(404, $this->call('POST', '/api/picks/submit', 2, ['event_id' => 99, 'selected_outcome' => 'home'])->getStatusCode());
-        $this->assertSame(422, $this->call('POST', '/api/picks/submit', 2, ['event_id' => 1, 'selected_outcome' => 'draw'])->getStatusCode());
+        $this->assertSame(422, $this->pick(2, 2, 'home')->getStatusCode(), 'Past the cutoff');
+        $this->assertSame(422, $this->pick(2, 3, 'home')->getStatusCode(), 'Week not open');
+        $this->assertSame(422, $this->pick(2, 99, 'home')->getStatusCode(), 'No such game');
+        $this->assertSame(422, $this->pick(2, 1, 'draw')->getStatusCode());
         $this->assertSame([], $this->picks());
     }
 
     #[Test]
     public function a_confidence_value_counts_only_in_confidence_mode()
     {
-        $this->call('POST', '/api/picks/submit', 2, ['event_id' => 1, 'selected_outcome' => 'home', 'confidence' => 7]);
-
+        $this->pick(2, 1, 'home', 7);
         $this->assertNull($this->database()->table('picks_picks')->value('confidence'));
+    }
+
+    #[Test]
+    public function in_confidence_mode_the_value_is_kept_until_it_is_changed()
+    {
+        $this->setting('ernestdefoe-picks.confidence_mode', '1');
+
+        $this->pick(2, 1, 'home', 7);
+        $this->assertSame(7, (int) $this->database()->table('picks_picks')->value('confidence'));
+
+        // Changing the side leaves the confidence alone.
+        $this->pick(2, 1, 'away');
+        $this->assertSame(7, (int) $this->database()->table('picks_picks')->value('confidence'));
+
+        $this->assertSame(422, $this->pick(2, 1, 'away', 11)->getStatusCode(), 'Out of range');
     }
 
     #[Test]
@@ -72,14 +104,14 @@ class PicksTest extends TestCase
     {
         $this->database()->table('group_permission')->where('permission', 'picks.makePicks')->delete();
 
-        $this->assertSame(403, $this->call('POST', '/api/picks/submit', 2, ['event_id' => 1, 'selected_outcome' => 'home'])->getStatusCode());
+        $this->assertSame(403, $this->pick(2, 1, 'home')->getStatusCode());
         $this->assertSame([], $this->picks());
     }
 
     #[Test]
     public function a_guest_cannot_pick()
     {
-        $this->assertSame(401, $this->call('POST', '/api/picks/submit', null, ['event_id' => 1, 'selected_outcome' => 'home'])->getStatusCode());
+        $this->assertSame(401, $this->pick(null, 1, 'home')->getStatusCode());
     }
 
     #[Test]
@@ -90,9 +122,20 @@ class PicksTest extends TestCase
             ['user_id' => 2, 'event_id' => 2, 'selected_outcome' => 'home'],
         ]]);
 
-        $this->assertSame(200, $this->call('DELETE', '/api/picks/events/1/pick', 2)->getStatusCode());
-        $this->assertSame(422, $this->call('DELETE', '/api/picks/events/2/pick', 2)->getStatusCode());
+        $this->assertSame(204, $this->call('DELETE', '/api/picks-picks/'.$this->pickId(2, 1), 2)->getStatusCode());
+        $this->assertSame(422, $this->call('DELETE', '/api/picks-picks/'.$this->pickId(2, 2), 2)->getStatusCode());
         $this->assertSame([[2, 2, 'home']], $this->picks());
+    }
+
+    #[Test]
+    public function nobody_changes_or_withdraws_another_members_pick()
+    {
+        $this->prepareDatabase(['picks_picks' => [['user_id' => 3, 'event_id' => 1, 'selected_outcome' => 'home']]]);
+        $id = $this->pickId(3, 1);
+
+        $this->assertSame(404, $this->call('DELETE', '/api/picks-picks/'.$id, 2)->getStatusCode());
+        $this->assertSame(404, $this->call('PATCH', '/api/picks-picks/'.$id, 2, ['data' => ['type' => 'picks-picks', 'id' => (string) $id, 'attributes' => ['selectedOutcome' => 'away']]])->getStatusCode());
+        $this->assertSame([[3, 1, 'home']], $this->picks());
     }
 
     #[Test]
@@ -103,14 +146,16 @@ class PicksTest extends TestCase
             ['user_id' => 3, 'event_id' => 2, 'selected_outcome' => 'away'],
         ]]);
 
-        $response = $this->call('GET', '/api/picks/my-picks', 2, null, ['week_id' => '1']);
+        $games = $this->call('GET', '/api/picks-events', 2, null, ['filter' => ['week' => '1']]);
+        $this->assertSame(200, $games->getStatusCode(), (string) $games->getBody());
+        $canPick = array_column(array_map(fn ($g) => ['id' => (int) $g['id'], 'can' => $g['attributes']['canPick']], $this->body($games)['data']), 'can', 'id');
+        ksort($canPick);
+        $this->assertSame([1 => true, 2 => false], $canPick, "this week's games only");
 
-        $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
-        $games = array_column($this->body($response)['data'], null, 'id');
-        $this->assertTrue($games[1]['can_pick']);
-        $this->assertFalse($games[2]['can_pick']);
-        $this->assertSame('home', $games[1]['my_pick']['selected_outcome']);
-        $this->assertNull($games[2]['my_pick']);
+        $picks = $this->call('GET', '/api/picks-picks', 2, null, ['filter' => ['week' => '1']]);
+        $this->assertSame(200, $picks->getStatusCode(), (string) $picks->getBody());
+        $mine = array_map(fn ($p) => [$p['attributes']['eventId'], $p['attributes']['selectedOutcome']], $this->body($picks)['data']);
+        $this->assertSame([[1, 'home']], $mine);
     }
 
     #[Test]
@@ -118,7 +163,8 @@ class PicksTest extends TestCase
     {
         $this->database()->table('group_permission')->where('permission', 'picks.view')->delete();
 
-        $this->assertSame(403, $this->call('GET', '/api/picks/my-picks', 2, null, ['week_id' => '1'])->getStatusCode());
+        $this->assertSame(403, $this->call('GET', '/api/picks-events', 2, null, ['filter' => ['week' => '1']])->getStatusCode());
+        $this->assertSame(403, $this->call('GET', '/api/picks-picks', 2, null, ['filter' => ['week' => '1']])->getStatusCode());
         $this->assertSame(403, $this->call('GET', '/api/picks/leaderboard', 2, null, ['scope' => 'alltime'])->getStatusCode());
     }
 
@@ -194,7 +240,12 @@ class PicksTest extends TestCase
     #[Test]
     public function a_week_costs_the_same_queries_however_many_games_it_holds()
     {
-        $week = fn () => $this->call('GET', '/api/picks/my-picks', 2, null, ['week_id' => '1']);
+        // The board's two requests: the week's games, and the member's picks on them.
+        $week = function () {
+            $this->call('GET', '/api/picks-events', 2, null, ['filter' => ['week' => '1'], 'page' => ['limit' => 200]]);
+
+            return $this->call('GET', '/api/picks-picks', 2, null, ['filter' => ['week' => '1'], 'page' => ['limit' => 200]]);
+        };
 
         $week();
         $few = $this->queries($week);

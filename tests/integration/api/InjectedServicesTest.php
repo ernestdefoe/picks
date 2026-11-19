@@ -54,7 +54,7 @@ class InjectedServicesTest extends TestCase
     #[Test]
     public function opening_a_week_chooses_its_confidence_games()
     {
-        $response = $this->call('POST', '/api/picks/weeks/2/open', 1, ['is_open' => true]);
+        $response = $this->call('PATCH', '/api/picks-weeks/2', 1, ['data' => ['type' => 'picks-weeks', 'id' => '2', 'attributes' => ['isOpen' => true]]]);
 
         $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
         $this->assertSame([3], $this->database()->table('picks_confidence_games')->where('week_id', 2)->pluck('event_id')->map(fn ($id) => (int) $id)->all());

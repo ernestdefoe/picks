@@ -1,6 +1,9 @@
 import app from 'flarum/forum/app';
-import type { Game, WeekInfo, WeeksMeta, LeaderboardEntry, LeaderboardHistorySeason, LeaderboardContext } from './types';
+import type { Game, MyPick, WeekInfo, WeeksMeta, LeaderboardEntry, LeaderboardHistorySeason, LeaderboardContext } from './types';
+import { apiGames, type ApiDocument } from '../../../common/utils/apiGames';
 import ConfidenceState from './ConfidenceState';
+
+const apiUrl = () => app.forum.attribute<string>('apiUrl');
 
 /**
  * Shared state + data-loading/mutation for the picks page tabs.
@@ -133,16 +136,29 @@ export default class PicksState {
     this.gamesLoading = true;
     m.redraw();
 
-    app
-      .request<{ data: Game[]; meta: any }>({
-        method: 'GET',
-        url: app.forum.attribute('apiUrl') + '/picks/my-picks',
-        params: { week_id: this.currentWeekId },
-      })
-      .then((r) => {
-        this.games = r.data || [];
-        this.weeksMeta = r.meta || {};
-        this.weekOpen = r.meta?.week_open ?? false;
+    // The week's games, and the member's own picks on them: a guest has none to ask for.
+    const params = { filter: { week: this.currentWeekId }, page: { limit: 200, total: 0 } };
+    const none: ApiDocument = { data: [] };
+
+    Promise.all([
+      app.request<ApiDocument>({ method: 'GET', url: apiUrl() + '/picks-events', params }),
+      app.session.user ? app.request<ApiDocument>({ method: 'GET', url: apiUrl() + '/picks-picks', params }) : Promise.resolve(none),
+    ])
+      .then(([events, picks]) => {
+        const mine = new Map<number, MyPick>();
+        picks.data.forEach((p) =>
+          mine.set(Number(p.attributes.eventId), {
+            id: Number(p.id),
+            selected_outcome: p.attributes.selectedOutcome,
+            is_correct: p.attributes.isCorrect ?? null,
+            confidence: p.attributes.confidence ?? null,
+          })
+        );
+
+        const games = apiGames(events);
+        this.weekOpen = games[0]?.week_open ?? false;
+        this.games = games.map((g) => ({ ...g, my_pick: mine.get(g.id) ?? null }));
+        this.weeksMeta = { week_open: this.weekOpen, total: this.games.length, picked: mine.size };
         this.gamesLoading = false;
         this.applyPendingPick();
         m.redraw();
@@ -326,19 +342,9 @@ export default class PicksState {
     this.submitting[game.id] = true;
     m.redraw();
 
-    app
-      .request<{
-        status: string;
-        pick_id: number;
-        selected_outcome: string;
-        confidence: number | null;
-      }>({
-        method: 'POST',
-        url: app.forum.attribute('apiUrl') + '/picks/submit',
-        body: { event_id: game.id, selected_outcome: outcome },
-      })
-      .then((r) => {
-        if (game.my_pick) game.my_pick.id = r.pick_id;
+    this.savePick(game, { selectedOutcome: outcome })
+      .then((id) => {
+        if (game.my_pick) game.my_pick.id = id;
         // Increment picked count only when this is a new pick, not changing an existing one
         if (prev === null) {
           this.weeksMeta.picked = (this.weeksMeta.picked || 0) + 1;
@@ -347,7 +353,9 @@ export default class PicksState {
         m.redraw();
       })
       .catch(() => {
-        if (game.my_pick) game.my_pick.selected_outcome = prev as 'home' | 'away';
+        // Back to what it was: no pick at all if this was the first.
+        if (prev === null) game.my_pick = null;
+        else if (game.my_pick) game.my_pick.selected_outcome = prev;
         this.submitting[game.id] = false;
         m.redraw();
       });
@@ -365,7 +373,7 @@ export default class PicksState {
     app
       .request({
         method: 'DELETE',
-        url: `${app.forum.attribute('apiUrl')}/picks/events/${game.id}/pick`,
+        url: `${apiUrl()}/picks-picks/${prevPick.id}`,
       })
       .then(() => {
         this.submitting[game.id] = false;
@@ -383,6 +391,25 @@ export default class PicksState {
       });
   }
 
+  /**
+   * Save the member's pick on a game: a change to the pick they have, or a new
+   * one. Resolves with the pick's id.
+   */
+  private savePick(game: Game, attributes: Record<string, unknown>): Promise<number> {
+    const id = game.my_pick?.id;
+    const body = id
+      ? { data: { type: 'picks-picks', id: String(id), attributes } }
+      : { data: { type: 'picks-picks', attributes: { eventId: game.id, ...attributes } } };
+
+    return app
+      .request<{ data: { id: string } }>({
+        method: id ? 'PATCH' : 'POST',
+        url: apiUrl() + '/picks-picks' + (id ? '/' + id : ''),
+        body,
+      })
+      .then((r) => Number(r.data.id));
+  }
+
   submitConfidence(game: Game, confidence: number): void {
     if (!game.my_pick || !game.can_pick) return;
     // Capture the previous value so a failed request can roll back the
@@ -391,20 +418,10 @@ export default class PicksState {
     game.my_pick.confidence = confidence;
     m.redraw();
 
-    app
-      .request({
-        method: 'POST',
-        url: app.forum.attribute('apiUrl') + '/picks/submit',
-        body: {
-          event_id: game.id,
-          selected_outcome: game.my_pick.selected_outcome,
-          confidence,
-        },
-      })
-      .catch(() => {
-        if (game.my_pick) game.my_pick.confidence = prevConfidence;
-        m.redraw();
-      });
+    this.savePick(game, { selectedOutcome: game.my_pick.selected_outcome, confidence }).catch(() => {
+      if (game.my_pick) game.my_pick.confidence = prevConfidence;
+      m.redraw();
+    });
   }
 
   /**

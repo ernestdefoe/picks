@@ -28,7 +28,6 @@ class ManagementTest extends TestCase
     public static function managementRoutes(): array
     {
         return [
-            'events' => ['GET', '/api/picks/events'],
             'stats' => ['GET', '/api/picks/stats'],
             'sync status' => ['GET', '/api/picks/sync/scores/status'],
             'sync teams' => ['POST', '/api/picks/sync/teams'],
@@ -36,7 +35,7 @@ class ManagementTest extends TestCase
             'sync schedule' => ['POST', '/api/picks/sync/schedule'],
             'sync scores' => ['POST', '/api/picks/sync/scores'],
             'sync espn' => ['POST', '/api/picks/sync/espn'],
-            'open week' => ['POST', '/api/picks/weeks/2/open'],
+            'open week' => ['PATCH', '/api/picks-weeks/2'],
             'enter result' => ['POST', '/api/picks/events/1/result'],
             'refresh logo' => ['POST', '/api/picks/teams/1/refresh-logo'],
             'reset' => ['POST', '/api/picks/reset'],
@@ -64,5 +63,16 @@ class ManagementTest extends TestCase
         $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
         $this->assertSame(0, $this->database()->table('picks_events')->count());
         $this->assertSame(4, $this->database()->table('picks_teams')->count());
+    }
+
+    #[Test]
+    public function the_admin_finds_games_by_team_status_and_week()
+    {
+        $ids = fn (array $query) => array_map(fn ($g) => (int) $g['id'], $this->body($this->call('GET', '/api/picks-events', 1, null, $query))['data']);
+
+        $this->assertSame([1], $ids(['filter' => ['q' => 'Ala']]), 'Alabama plays game 1 only');
+        $this->assertSame([3], $ids(['filter' => ['q' => 'UGA', 'week' => '2']]), 'by abbreviation, in week 2');
+        $this->assertSame([3, 1], $ids(['filter' => ['q' => 'Georgia'], 'sort' => '-matchDate']), 'newest first, ties by id');
+        $this->assertSame([], $ids(['filter' => ['status' => 'bogus']]), 'an unknown status matches nothing');
     }
 }

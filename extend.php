@@ -6,27 +6,24 @@ use Flarum\Api\Resource;
 use Flarum\Extend;
 use Flarum\Frontend\Document;
 use Flarum\Locale\TranslatorInterface;
+use Flarum\Search\Database\DatabaseSearchDriver;
 use Resofire\Picks\Api\Controller\Confidence;
-use Resofire\Picks\Api\Controller\DeletePickController;
 use Resofire\Picks\Api\Controller\EnterResultController;
 use Resofire\Picks\Api\Controller\LeaderboardContextController;
 use Resofire\Picks\Api\Controller\LeaderboardHistoryController;
-use Resofire\Picks\Api\Controller\ListEventsController;
 use Resofire\Picks\Api\Controller\ListLeaderboardController;
-use Resofire\Picks\Api\Controller\ListPicksController;
 use Resofire\Picks\Api\Controller\RefreshTeamLogoController;
 use Resofire\Picks\Api\Controller\ResetDataController;
 use Resofire\Picks\Api\Controller\SeedTestDataController;
 use Resofire\Picks\Api\Controller\StatsController;
-use Resofire\Picks\Api\Controller\SubmitPickController;
-use Resofire\Picks\Api\Controller\SyncEspnController;
 use Resofire\Picks\Api\Controller\StartSyncController;
+use Resofire\Picks\Api\Controller\SyncEspnController;
 use Resofire\Picks\Api\Controller\SyncStatusController;
 use Resofire\Picks\Api\Controller\UserHistoryController;
 use Resofire\Picks\Api\Controller\UserScoresController;
-use Resofire\Picks\Api\Controller\WeekOpenController;
 use Resofire\Picks\Api\ForumPicksAttributes;
 use Resofire\Picks\Api\Resource\EventResource;
+use Resofire\Picks\Api\Resource\PickResource;
 use Resofire\Picks\Api\Resource\SeasonResource;
 use Resofire\Picks\Api\Resource\TeamResource;
 use Resofire\Picks\Api\Resource\WeekResource;
@@ -39,6 +36,9 @@ use Resofire\Picks\Console\SyncTeamsCommand;
 use Resofire\Picks\Console\UnlockWeeksCommand;
 use Resofire\Picks\Frontend\PicksPageContent;
 use Resofire\Picks\Listener;
+use Resofire\Picks\Pick;
+use Resofire\Picks\PickEvent;
+use Resofire\Picks\Search;
 use Resofire\Picks\Service\Leagues\Leagues;
 
 $extenders = [
@@ -134,17 +134,23 @@ $extenders = [
     new Extend\ApiResource(SeasonResource::class),
     new Extend\ApiResource(WeekResource::class),
     new Extend\ApiResource(EventResource::class),
+    new Extend\ApiResource(PickResource::class),
+
+    // filter[week], filter[status] and team-name search on games; the actor's
+    // own picks by week.
+    (new Extend\SearchDriver(DatabaseSearchDriver::class))
+        ->addSearcher(PickEvent::class, Search\EventSearcher::class)
+        ->addFilter(Search\EventSearcher::class, Search\Filter\EventWeekFilter::class)
+        ->addFilter(Search\EventSearcher::class, Search\Filter\EventStatusFilter::class)
+        ->setFulltext(Search\EventSearcher::class, Search\EventFulltext::class)
+        ->addSearcher(Pick::class, Search\PickSearcher::class)
+        ->addFilter(Search\PickSearcher::class, Search\Filter\PickWeekFilter::class),
 
     // -------------------------------------------------------------------------
     // Custom API routes (non-resource actions)
     // -------------------------------------------------------------------------
     (new Extend\Routes('api'))
-        ->get('/picks/events', 'picks.events.index', ListEventsController::class)
-        ->get('/picks/my-picks', 'picks.my-picks', ListPicksController::class)
         ->get('/picks/leaderboard', 'picks.leaderboard', ListLeaderboardController::class)
-        ->post('/picks/submit', 'picks.submit', SubmitPickController::class)
-        ->delete('/picks/events/{id}/pick', 'picks.pick.delete', DeletePickController::class)
-        ->post('/picks/weeks/{id}/open', 'picks.weeks.open', WeekOpenController::class)
         // The sync buttons queue a job and answer 202; the admin polls the status.
         ->post('/picks/sync/{task:teams|logos|schedule|scores}', 'picks.sync', StartSyncController::class)
         ->post('/picks/sync/espn', 'picks.sync.espn', SyncEspnController::class)
@@ -153,7 +159,6 @@ $extenders = [
         ->post('/picks/reset', 'picks.reset', ResetDataController::class)
         ->post('/picks/events/{id}/result', 'picks.events.result', EnterResultController::class)
         ->post('/picks/teams/{id}/refresh-logo', 'picks.teams.refresh-logo', RefreshTeamLogoController::class)
-        // ── New routes ────────────────────────────────────────────────────────
         ->get('/picks/user-scores', 'picks.user-scores', UserScoresController::class)
         ->get('/picks/user-history', 'picks.user-history', UserHistoryController::class)
         ->get('/picks/leaderboard-history', 'picks.leaderboard-history', LeaderboardHistoryController::class)
