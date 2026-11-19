@@ -15,6 +15,11 @@ use Tobyz\JsonApiServer\Context;
  */
 class WeekResource extends AbstractDatabaseResource
 {
+    public function __construct(
+        protected CurrentSeasonService $currentSeason
+    ) {
+    }
+
     public function type(): string
     {
         return 'picks-weeks';
@@ -90,7 +95,7 @@ class WeekResource extends AbstractDatabaseResource
              * board opens two at a time.
              */
             Schema\Boolean::make('isCurrent')
-                ->get(fn (Week $w) => (int) $w->id === resolve(CurrentSeasonService::class)->getBoardWeekId()),
+                ->get(fn (Week $w) => (int) $w->id === $this->currentSeason->getBoardWeekId()),
 
             Schema\Relationship\ToOne::make('season')
                 ->includable()

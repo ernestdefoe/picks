@@ -4,6 +4,7 @@ namespace Resofire\Picks\Jobs;
 
 use Flarum\Queue\AbstractJob;
 use Flarum\Settings\SettingsRepositoryInterface;
+use Psr\Log\LoggerInterface;
 use Resofire\Picks\Confidence\ConfidenceContest;
 use Resofire\Picks\Pick;
 use Resofire\Picks\PickEvent;
@@ -17,7 +18,7 @@ class ScorePicksJob extends AbstractJob
     ) {
     }
 
-    public function handle(SettingsRepositoryInterface $settings, ScoreAggregator $aggregator, ConfidenceContest $confidence): void
+    public function handle(SettingsRepositoryInterface $settings, ScoreAggregator $aggregator, ConfidenceContest $confidence, LoggerInterface $log): void
     {
         $event = PickEvent::find($this->eventId);
 
@@ -36,7 +37,7 @@ class ScorePicksJob extends AbstractJob
         try {
             $confidence->scoreEvent($event);
         } catch (\Throwable $e) {
-            resolve(\Psr\Log\LoggerInterface::class)->error('[picks] confidence scoring failed for event '.$event->id.': '.$e->getMessage());
+            $log->error('[picks] confidence scoring failed for event '.$event->id.': '.$e->getMessage());
         }
 
         /*

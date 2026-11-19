@@ -5,6 +5,7 @@ namespace Resofire\Picks\Api;
 use Flarum\Api\Context;
 use Flarum\Api\Schema;
 use Flarum\Settings\SettingsRepositoryInterface;
+use Resofire\Picks\Confidence\ConfidenceContest;
 
 /**
  * Invokable fields class for Extend\ApiResource(ForumResource::class)->fields().
@@ -14,8 +15,10 @@ use Flarum\Settings\SettingsRepositoryInterface;
  */
 class ForumPicksAttributes
 {
-    public function __construct(protected SettingsRepositoryInterface $settings)
-    {
+    public function __construct(
+        protected SettingsRepositoryInterface $settings,
+        protected ConfidenceContest $contest
+    ) {
     }
 
     public function __invoke(): array
@@ -54,12 +57,12 @@ class ForumPicksAttributes
 
             Schema\Integer::make('picksC10Games')
                 ->get(
-                    fn (object $model, Context $context) => resolve(\Resofire\Picks\Confidence\ConfidenceContest::class)->size()
+                    fn (object $model, Context $context) => $this->contest->size()
                 ),
 
             Schema\Str::make('picksC10Penalty')
                 ->get(
-                    fn (object $model, Context $context) => resolve(\Resofire\Picks\Confidence\ConfidenceContest::class)->penalty()
+                    fn (object $model, Context $context) => $this->contest->penalty()
                 ),
 
             // ── New: whether the current actor can view other members' pick history ──

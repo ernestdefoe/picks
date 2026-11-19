@@ -45,7 +45,10 @@
                 "name": "fas fa-football",
                 "backgroundColor": "#69c6b9",
                 "color": "#1A2744"
-            }
+            },
+            "optional-dependencies": [
+                "ernestdefoe/page-builder"
+            ]
         },
         "flarum-cli": {
             "modules": {
@@ -80,5 +83,8 @@
         "analyse:phpstan": "Run static analysis"
     },
     "minimum-stability": "beta",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "suggest": {
+        "ernestdefoe/page-builder": "Adds the Pick'em standings as a Page Builder block."
+    }
 }

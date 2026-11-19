@@ -9,12 +9,16 @@ use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
+use Resofire\Picks\Confidence\ConfidenceContest;
 use Resofire\Picks\Week;
 
 class WeekOpenController implements RequestHandlerInterface
 {
     public function __construct(
-        protected TranslatorInterface $translator
+        protected TranslatorInterface $translator,
+        protected ConfidenceContest $contest,
+        protected LoggerInterface $log
     ) {
     }
 
@@ -38,9 +42,9 @@ class WeekOpenController implements RequestHandlerInterface
         // The week's Confidence games are chosen as it opens.
         if ($week->is_open) {
             try {
-                resolve(\Resofire\Picks\Confidence\ConfidenceContest::class)->ensureSelected($week);
+                $this->contest->ensureSelected($week);
             } catch (\Throwable $e) {
-                resolve(\Psr\Log\LoggerInterface::class)->warning('[picks] confidence selection on open failed: '.$e->getMessage());
+                $this->log->warning('[picks] confidence selection on open failed: '.$e->getMessage());
             }
         }
 

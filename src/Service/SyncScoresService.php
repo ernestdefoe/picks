@@ -8,6 +8,7 @@ use Flarum\Settings\SettingsRepositoryInterface;
 use GuzzleHttp\Client as HttpClient;
 use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Support\Arr;
+use Psr\Log\LoggerInterface;
 use Resofire\Picks\Confidence\ConfidenceContest;
 use Resofire\Picks\Confidence\ConfidenceGame;
 use Resofire\Picks\Confidence\ConfidencePick;
@@ -27,7 +28,9 @@ class SyncScoresService
         protected SettingsRepositoryInterface $settings,
         protected Queue $queue,
         protected HttpClient $http,
-        protected TranslatorInterface $translator
+        protected TranslatorInterface $translator,
+        protected ConfidenceContest $contest,
+        protected LoggerInterface $log
     ) {
     }
 
@@ -510,10 +513,10 @@ class SyncScoresService
             // The week's Confidence games are chosen as it opens.
             try {
                 if ($week = Week::find($id)) {
-                    resolve(ConfidenceContest::class)->ensureSelected($week);
+                    $this->contest->ensureSelected($week);
                 }
             } catch (\Throwable $e) {
-                resolve(\Psr\Log\LoggerInterface::class)->warning('[picks] confidence selection on unlock failed: '.$e->getMessage());
+                $this->log->warning('[picks] confidence selection on unlock failed: '.$e->getMessage());
             }
         }
 

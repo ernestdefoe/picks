@@ -296,20 +296,18 @@ $extenders = [
 ];
 
 /*
- * The pick'em standings as a Page Builder block — only where Page Builder is
- * installed.
+ * The pick'em standings as a Page Builder block, only where Page Builder is
+ * enabled.
  *
- * 🚨 Guarded on the EXTENDER's class, not on the extension being enabled. This
- * file is read at boot, before anything knows which extensions are on, and
- * naming a class from an extension that is not installed is a fatal at compile
- * time rather than a missing block. The block class itself is never mentioned
- * outside this branch for the same reason: it extends a Page Builder base class
- * that would not be there to extend.
+ * 🚨 The Page Builder classes are named only inside the callback, which runs
+ * only when that extension is on. LeaderboardBlock extends a Page Builder base
+ * class, so loading it without Page Builder installed would be a fatal.
  */
-if (class_exists(\Ernestdefoe\PageBuilder\Extend\PageBuilderBlock::class)) {
-    $extenders[] = new \Ernestdefoe\PageBuilder\Extend\PageBuilderBlock(
-        \Resofire\Picks\Block\LeaderboardBlock::class
-    );
-}
+$extenders[] = (new Extend\Conditional())
+    ->whenExtensionEnabled('ernestdefoe-page-builder', fn () => [
+        new \Ernestdefoe\PageBuilder\Extend\PageBuilderBlock(
+            \Resofire\Picks\Block\LeaderboardBlock::class
+        ),
+    ]);
 
 return $extenders;

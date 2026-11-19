@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Resofire\Picks\Block;
 
 use Ernestdefoe\PageBuilder\Block\AbstractBlock;
+use Flarum\Foundation\Config;
 use Flarum\Locale\TranslatorInterface;
 use Flarum\User\User;
 use Illuminate\Database\ConnectionInterface;
@@ -21,7 +22,8 @@ class LeaderboardBlock extends AbstractBlock
 {
     public function __construct(
         protected ConnectionInterface $db,
-        protected TranslatorInterface $translator
+        protected TranslatorInterface $translator,
+        protected Config $config
     ) {
     }
 
@@ -181,6 +183,6 @@ class LeaderboardBlock extends AbstractBlock
             return $name;
         }
 
-        return rtrim((string) resolve('flarum.config')->url(), '/').'/assets/avatars/'.$name;
+        return rtrim((string) $this->config->url(), '/').'/assets/avatars/'.$name;
     }
 }

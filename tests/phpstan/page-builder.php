@@ -5,7 +5,7 @@
  * scanFiles, never loaded). Page Builder is an optional, private package, so it
  * cannot be a dev dependency; LeaderboardBlock is registered only when it is
  * installed. This mirrors the two types it extends, as Page Builder declares
- * them.
+ * them, and the extender extend.php registers the block with.
  */
 
 namespace Ernestdefoe\PageBuilder\Block;
@@ -55,5 +55,22 @@ abstract class AbstractBlock implements BlockInterface
     public function resolve(array $settings, User $actor): array
     {
         return [];
+    }
+}
+
+namespace Ernestdefoe\PageBuilder\Extend;
+
+use Flarum\Extend\ExtenderInterface;
+use Flarum\Extension\Extension;
+use Illuminate\Contracts\Container\Container;
+
+class PageBuilderBlock implements ExtenderInterface
+{
+    public function __construct(protected string $blockClass)
+    {
+    }
+
+    public function extend(Container $container, ?Extension $extension = null): void
+    {
     }
 }

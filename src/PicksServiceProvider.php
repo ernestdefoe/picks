@@ -9,6 +9,7 @@ use GuzzleHttp\Client as HttpClient;
 use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
 use Illuminate\Contracts\Queue\Queue;
 use Psr\Log\LoggerInterface;
+use Resofire\Picks\Confidence\ConfidenceContest;
 use Resofire\Picks\Service\CfbdService;
 use Resofire\Picks\Service\LogoService;
 use Resofire\Picks\Service\SyncScoresService;
@@ -32,7 +33,9 @@ class PicksServiceProvider extends AbstractServiceProvider
                 $container->make(SettingsRepositoryInterface::class),
                 $container->make(Queue::class),
                 $container->make(HttpClient::class),
-                $container->make(TranslatorInterface::class)
+                $container->make(TranslatorInterface::class),
+                $container->make(ConfidenceContest::class),
+                $container->make(LoggerInterface::class)
             );
         });
 
