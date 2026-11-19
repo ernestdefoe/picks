@@ -128,20 +128,15 @@ class TestDataSeeder
             }
 
             // Roll up week scores
-            $seasonId = $weeksById->get($weekId)?->season_id;
-            foreach ($userIds as $userId) {
-                $this->upsertScore($userId, $weekId, $seasonId);
-            }
+            $this->scoreScope($userIds, $weekId, $weeksById->get($weekId)?->season_id);
         }
 
         // Roll up season + all-time
         $season2026Id = Week::query()->whereIn('id', $weekIds)->value('season_id');
-        foreach ($userIds as $userId) {
-            if ($season2026Id) {
-                $this->upsertScore($userId, null, $season2026Id);
-            }
-            $this->upsertScore($userId, null, null);
+        if ($season2026Id) {
+            $this->scoreScope($userIds, null, $season2026Id);
         }
+        $this->scoreScope($userIds, null, null);
 
         return [
             'status' => 'success',
@@ -262,18 +257,14 @@ class TestDataSeeder
                 Pick::query()->insert($chunk);
             }
 
-            foreach ($userIds as $userId) {
-                $this->upsertScore($userId, $week->id, $season->id);
-            }
+            $this->scoreScope($userIds, $week->id, $season->id);
 
             $weeksCreated++;
         }
 
         // Roll up season + all-time
-        foreach ($userIds as $userId) {
-            $this->upsertScore($userId, null, $season->id);
-            $this->upsertScore($userId, null, null);
-        }
+        $this->scoreScope($userIds, null, $season->id);
+        $this->scoreScope($userIds, null, null);
 
         return [
             'status' => 'success',
@@ -312,9 +303,7 @@ class TestDataSeeder
         $season->delete();
 
         // Recalculate all-time scores without fake data
-        foreach (User::query()->pluck('id')->toArray() as $userId) {
-            $this->upsertScore($userId, null, null);
-        }
+        $this->scoreScope(User::query()->pluck('id')->all(), null, null);
 
         return ['status' => 'success', 'message' => 'Fake 2025 season removed. All-time scores recalculated.'];
     }
@@ -372,16 +361,10 @@ class TestDataSeeder
 
     // ── Score calculation — delegates to the shared ScoreAggregator ───────────
 
-    private function upsertScore(int $userId, ?int $weekId, ?int $seasonId): void
+    /** @param int[] $userIds */
+    private function scoreScope(array $userIds, ?int $weekId, ?int $seasonId): void
     {
-        $this->aggregator->upsertScore(
-            $userId,
-            $weekId,
-            $seasonId,
-            weekScope: $weekId !== null,
-            confidenceMode: $this->confidenceMode,
-            confidencePenalty: $this->confidencePenalty,
-        );
+        $this->aggregator->scoreScope($userIds, $weekId, $seasonId, $this->confidenceMode, $this->confidencePenalty);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

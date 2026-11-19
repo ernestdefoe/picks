@@ -20,20 +20,6 @@ class ResultTest extends TestCase
         $this->seedPicks();
     }
 
-    /**
-     * 🚨 Known, and reported rather than hidden: scoring a game recalculates
-     * each picker's week, season and all-time rows one picker at a time
-     * (ScoreAggregator), so the queries grow with the number of pickers. The
-     * job runs inside this request because the test queue is synchronous.
-     * Only those shapes are exempt; the rest of the request is still checked.
-     *
-     * @return string[]
-     */
-    protected function allowedRepeatedQueries(): array
-    {
-        return ['picks_user_scores', 'picks_picks'];
-    }
-
     #[Test]
     public function an_admin_enters_a_result_and_the_picks_are_marked()
     {

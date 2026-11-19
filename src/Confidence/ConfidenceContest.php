@@ -400,6 +400,11 @@ class ConfidenceContest
     /**
      * Recompute the week and season rows of these members, then re-rank both.
      *
+     * 🚨 A fixed handful of queries for the whole batch, not several per
+     * member: the week's picks, guesses and season picks are each read once,
+     * and each scope is written in one upsert. Week rows first, because a
+     * season's tiebreak total sums the week rows' differences.
+     *
      * @param int[] $userIds
      */
     public function restate(int $weekId, array $userIds): void
@@ -410,48 +415,78 @@ class ConfidenceContest
             return;
         }
 
+        $seasonId = (int) $week->season_id;
         $penalty = $this->penalty();
-        $first = ConfidenceGame::with('event')->where('week_id', $weekId)->where('position', 1)->first();
+        $seasonWeekIds = Week::where('season_id', $seasonId)->pluck('id')->all();
 
-        $seasonWeekIds = Week::where('season_id', $week->season_id)->pluck('id')->all();
+        foreach (array_chunk($userIds, 500) as $chunk) {
+            $this->writeScores($chunk, $seasonId, $weekId, 'w'.$weekId, $this->weekTotals($weekId, $chunk));
 
-        foreach ($userIds as $userId) {
-            $weekPicks = ConfidencePick::where('user_id', $userId)->where('week_id', $weekId)->get(['is_correct', 'confidence']);
-            $total = Scoring::total(self::scorable($weekPicks), $penalty);
-
-            $guess = ConfidenceEntry::where('user_id', $userId)->where('week_id', $weekId)->value('tiebreaker_total');
-            $diff = $first && $first->event && $first->event->isFinished()
-                ? Scoring::tiebreakDiff($guess === null ? null : (int) $guess, $first->event->home_score, $first->event->away_score)
-                : null;
-
-            $this->writeScore($userId, (int) $week->season_id, $weekId, 'w'.$weekId, $total, $diff);
-
-            $seasonPicks = ConfidencePick::where('user_id', $userId)->whereIn('week_id', $seasonWeekIds)->get(['is_correct', 'confidence']);
-            $seasonTotal = Scoring::total(self::scorable($seasonPicks), $penalty);
-            $seasonDiffs = ConfidenceScore::where('user_id', $userId)
+            $diffs = ConfidenceScore::whereIn('user_id', $chunk)
                 ->whereIn('week_id', $seasonWeekIds)
                 ->whereNotNull('tiebreak_diff')
-                ->pluck('tiebreak_diff');
+                ->get(['user_id', 'tiebreak_diff'])
+                ->groupBy('user_id');
+            $picks = ConfidencePick::whereIn('user_id', $chunk)->whereIn('week_id', $seasonWeekIds)->get(['user_id', 'is_correct', 'confidence'])->groupBy('user_id');
 
-            $this->writeScore(
-                $userId,
-                (int) $week->season_id,
-                null,
-                's'.$week->season_id,
-                $seasonTotal,
-                $seasonDiffs->isEmpty() ? null : (int) $seasonDiffs->sum()
-            );
+            $season = [];
+            foreach ($chunk as $userId) {
+                $mine = $diffs->get($userId);
+                $season[$userId] = [
+                    Scoring::total(self::scorable($picks->get($userId, collect())), $penalty),
+                    $mine === null ? null : (int) $mine->sum('tiebreak_diff'),
+                ];
+            }
+
+            $this->writeScores($chunk, $seasonId, null, 's'.$seasonId, $season);
         }
 
         $this->rerank('w'.$weekId);
-        $this->rerank('s'.$week->season_id);
+        $this->rerank('s'.$seasonId);
     }
 
-    private function writeScore(int $userId, int $seasonId, ?int $weekId, string $scope, array $total, ?int $diff): void
+    /**
+     * Each member's week total and tiebreak difference.
+     *
+     * @param int[] $userIds
+     * @return array<int, array{0: array<string, int|float>, 1: ?int}>
+     */
+    private function weekTotals(int $weekId, array $userIds): array
     {
-        ConfidenceScore::updateOrCreate(
-            ['user_id' => $userId, 'scope' => $scope],
-            [
+        $penalty = $this->penalty();
+        $first = ConfidenceGame::with('event')->where('week_id', $weekId)->where('position', 1)->first();
+        $final = $first && $first->event && $first->event->isFinished() ? $first->event : null;
+
+        $picks = ConfidencePick::whereIn('user_id', $userIds)->where('week_id', $weekId)->get(['user_id', 'is_correct', 'confidence'])->groupBy('user_id');
+        $guesses = ConfidenceEntry::whereIn('user_id', $userIds)->where('week_id', $weekId)->pluck('tiebreaker_total', 'user_id');
+
+        $out = [];
+        foreach ($userIds as $userId) {
+            $guess = $guesses->get($userId);
+            $out[$userId] = [
+                Scoring::total(self::scorable($picks->get($userId, collect())), $penalty),
+                $final === null ? null : Scoring::tiebreakDiff($guess === null ? null : (int) $guess, $final->home_score, $final->away_score),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * One upsert for a scope's rows, keyed on (user_id, scope).
+     *
+     * @param int[] $userIds
+     * @param array<int, array{0: array<string, int|float>, 1: ?int}> $totals
+     */
+    private function writeScores(array $userIds, int $seasonId, ?int $weekId, string $scope, array $totals): void
+    {
+        $rows = [];
+
+        foreach ($userIds as $userId) {
+            [$total, $diff] = $totals[$userId];
+            $rows[] = [
+                'user_id' => $userId,
+                'scope' => $scope,
                 'season_id' => $seasonId,
                 'week_id' => $weekId,
                 'total_points' => $total['points'],
@@ -459,16 +494,21 @@ class ConfidenceContest
                 'correct_picks' => $total['correct'],
                 'accuracy' => $total['accuracy'],
                 'tiebreak_diff' => $diff,
-            ]
-        );
+            ];
+        }
+
+        ConfidenceScore::query()->upsert($rows, ['user_id', 'scope'], ['season_id', 'week_id', 'total_points', 'total_picks', 'correct_picks', 'accuracy', 'tiebreak_diff']);
     }
 
-    /** The standings order for one scope, with last pass's rank kept for the arrows. */
+    /**
+     * The standings order for one scope, with last pass's rank kept for the
+     * arrows. Only rows whose rank moved are written, in one upsert.
+     */
     private function rerank(string $scope): void
     {
-        $rows = $this->rankedRows($scope);
+        $changed = [];
 
-        foreach ($rows as $index => $row) {
+        foreach ($this->rankedRows($scope) as $index => $row) {
             $rank = $index + 1;
             $score = $row['model'];
 
@@ -476,9 +516,19 @@ class ConfidenceContest
                 continue;
             }
 
-            $score->previous_rank = $score->current_rank ?? $rank;
-            $score->current_rank = $rank;
-            $score->save();
+            // user_id, scope and season_id keep the (never-taken) INSERT branch valid.
+            $changed[] = [
+                'id' => (int) $score->id,
+                'user_id' => (int) $score->user_id,
+                'scope' => $scope,
+                'season_id' => (int) $score->season_id,
+                'previous_rank' => $score->current_rank ?? $rank,
+                'current_rank' => $rank,
+            ];
+        }
+
+        if ($changed !== []) {
+            ConfidenceScore::query()->upsert($changed, ['id'], ['previous_rank', 'current_rank']);
         }
     }
 

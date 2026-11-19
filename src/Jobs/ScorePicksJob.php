@@ -85,10 +85,8 @@ class ScorePicksJob extends AbstractJob
         // every member who picked the game.
         $seasonId = $this->getSeasonId($event->week_id);
 
-        // Recalculate scores for each user (shared ScoreAggregator)
-        foreach ($userIds as $userId) {
-            $aggregator->recalculateUserScore($userId, $event->week_id, $seasonId, $confidenceMode, $confidencePenalty);
-        }
+        // Every picker's week, season and all-time rows, a batch per scope.
+        $aggregator->recalculate($userIds->all(), $event->week_id, $seasonId, $confidenceMode, $confidencePenalty);
 
         // Update rank movement for all users in each affected scope
         $this->updateRankMovements($event->week_id, $seasonId);
