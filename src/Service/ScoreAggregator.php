@@ -54,6 +54,15 @@ class ScoreAggregator
     }
 
     /**
+     * One member's week, season and all-time scores. Kept for scripts that
+     * score members one at a time (the showcase seed does).
+     */
+    public function recalculateUserScore(int $userId, ?int $weekId, ?int $seasonId, bool $confidenceMode = false, string $confidencePenalty = 'none'): void
+    {
+        $this->recalculate([$userId], $weekId, $seasonId, $confidenceMode, $confidencePenalty);
+    }
+
+    /**
      * Write one scope's score row for each of these members: a week (week id
      * given), a season (season id only) or all time (neither).
      *
