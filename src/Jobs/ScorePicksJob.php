@@ -57,8 +57,8 @@ class ScorePicksJob extends AbstractJob
             return;
         }
 
-        $confidenceMode = (bool) $settings->get('ernestdefoe-picks.confidence_mode', false);
-        $confidencePenalty = $settings->get('ernestdefoe-picks.confidence_penalty', 'none');
+        $confidenceMode = (bool) $settings->get('ernestdefoe-picks.confidence_mode');
+        $confidencePenalty = $settings->get('ernestdefoe-picks.confidence_penalty');
 
         // Unique users affected — read before the batch update so we can bail
         // early when nobody picked this game.

@@ -42,7 +42,7 @@ class SubmitPickController implements RequestHandlerInterface
         // Confidence only applies when confidence mode is enabled. When it's off
         // we ignore any client-supplied value so a stale/forged confidence can't
         // influence scoring; when it's on, the value (if present) is range-checked.
-        $confidenceMode = (bool) $this->settings->get('ernestdefoe-picks.confidence_mode', false);
+        $confidenceMode = (bool) $this->settings->get('ernestdefoe-picks.confidence_mode');
 
         if (! $confidenceMode) {
             $confidence = null;

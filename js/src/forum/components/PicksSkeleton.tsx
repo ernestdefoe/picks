@@ -1,7 +1,5 @@
 import Component from 'flarum/common/Component';
 
-declare const m: any;
-
 /**
  * Loading skeletons for the picks pages.
  *

@@ -71,7 +71,7 @@ class EspnSyncService
 
         $weeks = [];
 
-        $offset = (int) $this->settings->get('ernestdefoe-picks.picks_lock_offset_minutes', 0);
+        $offset = (int) $this->settings->get('ernestdefoe-picks.picks_lock_offset_minutes');
 
         foreach ($games as $game) {
             if ($game['external_id'] === '' || $game['home'] === '' || $game['away'] === '') {

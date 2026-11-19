@@ -1,16 +1,16 @@
 import app from 'flarum/admin/app';
-import Modal, { IInternalModalAttrs } from 'flarum/common/components/Modal';
+import FormModal, { IFormModalAttrs } from 'flarum/common/components/FormModal';
 import Button from 'flarum/common/components/Button';
 import type Mithril from 'mithril';
 import Team from '../../common/models/Team';
 import extractText from 'flarum/common/utils/extractText';
 
-interface TeamEditModalAttrs extends IInternalModalAttrs {
+interface TeamEditModalAttrs extends IFormModalAttrs {
   team: Team;
   onsave: () => void;
 }
 
-export default class TeamEditModal extends Modal<TeamEditModalAttrs> {
+export default class TeamEditModal extends FormModal<TeamEditModalAttrs> {
   private team!: Team;
   private name: string = '';
   private abbreviation: string = '';

@@ -44,8 +44,8 @@ class TestDataSeeder
     ) {
         // Seeded scores must honour the same confidence settings as live
         // scoring, so the Testing-tab leaderboard matches production behaviour.
-        $this->confidenceMode = (bool) $settings->get('ernestdefoe-picks.confidence_mode', false);
-        $this->confidencePenalty = $settings->get('ernestdefoe-picks.confidence_penalty', 'none');
+        $this->confidenceMode = (bool) $settings->get('ernestdefoe-picks.confidence_mode');
+        $this->confidencePenalty = $settings->get('ernestdefoe-picks.confidence_penalty');
     }
 
     /** @return array{status: string, message: string} */

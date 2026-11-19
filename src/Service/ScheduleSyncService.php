@@ -32,10 +32,10 @@ class ScheduleSyncService
      */
     public function sync(): array
     {
-        $year = (int) $this->settings->get('ernestdefoe-picks.season_year', (int) date('Y'));
+        $year = (int) $this->settings->get('ernestdefoe-picks.season_year');
 
-        $syncRegular = (bool) $this->settings->get('ernestdefoe-picks.sync_regular_season', true);
-        $syncPostseason = (bool) $this->settings->get('ernestdefoe-picks.sync_postseason', true);
+        $syncRegular = (bool) $this->settings->get('ernestdefoe-picks.sync_regular_season');
+        $syncPostseason = (bool) $this->settings->get('ernestdefoe-picks.sync_postseason');
 
         $season = $this->syncSeason($year);
 
@@ -317,10 +317,7 @@ class ScheduleSyncService
             return null;
         }
 
-        $offsetMinutes = (int) $this->settings->get(
-            'ernestdefoe-picks.picks_lock_offset_minutes',
-            0
-        );
+        $offsetMinutes = (int) $this->settings->get('ernestdefoe-picks.picks_lock_offset_minutes');
 
         if ($startTimeTbd) {
             // Use noon UTC on the game date as a safe cutoff when time is TBD

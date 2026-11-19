@@ -79,7 +79,9 @@ export default class ConfidenceTab extends Component {
       app.store
         .find<Week[]>('picks-weeks')
         .then(pick)
-        .catch(() => {});
+        .catch(() => {
+          // app.store.find already showed the error alert; the tab keeps its empty week picker.
+        });
   }
 
   private weeks(): Week[] {

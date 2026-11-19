@@ -233,7 +233,10 @@ export default class ConfidenceState {
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': app.session.csrfToken },
         body: JSON.stringify(body),
-      }).catch(() => {});
+      }).catch(() => {
+        // The page is going away, so there is nobody left to tell. If this
+        // failed, the next visit shows the board as the server kept it.
+      });
     } catch (e) {
       this.save();
     }

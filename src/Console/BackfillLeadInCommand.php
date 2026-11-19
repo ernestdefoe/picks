@@ -74,7 +74,7 @@ class BackfillLeadInCommand extends AbstractCommand
 
     protected function fire(): int
     {
-        $year = (int) ($this->input->getOption('season') ?: $this->settings->get('ernestdefoe-picks.season_year', (int) date('Y')));
+        $year = (int) ($this->input->getOption('season') ?: $this->settings->get('ernestdefoe-picks.season_year'));
         $postseason = (bool) $this->input->getOption('postseason');
         $upcoming = (bool) $this->input->getOption('upcoming');
         $force = (bool) $this->input->getOption('force') || $upcoming;
@@ -230,7 +230,7 @@ class BackfillLeadInCommand extends AbstractCommand
          * day — by which point Game Day had already opened the thread at the
          * placeholder and told everyone the wrong time.
          */
-        Kickoff::apply($row, $competition, (int) $this->settings->get('ernestdefoe-picks.picks_lock_offset_minutes', 0));
+        Kickoff::apply($row, $competition, (int) $this->settings->get('ernestdefoe-picks.picks_lock_offset_minutes'));
     }
 
     /**

@@ -41,18 +41,18 @@ class ForumPicksAttributes
 
             Schema\Boolean::make('picksConfidenceMode')
                 ->get(
-                    fn (object $model, Context $context) => (bool) $this->settings->get('ernestdefoe-picks.confidence_mode', false)
+                    fn (object $model, Context $context) => (bool) $this->settings->get('ernestdefoe-picks.confidence_mode')
                 ),
 
             Schema\Str::make('picksConfidencePenalty')
                 ->get(
-                    fn (object $model, Context $context) => $this->settings->get('ernestdefoe-picks.confidence_penalty', 'none')
+                    fn (object $model, Context $context) => $this->settings->get('ernestdefoe-picks.confidence_penalty')
                 ),
 
             // The Confidence contest, beside the full board.
             Schema\Boolean::make('picksC10Enabled')
                 ->get(
-                    fn (object $model, Context $context) => (bool) $this->settings->get('ernestdefoe-picks.confidence10_enabled', false)
+                    fn (object $model, Context $context) => (bool) $this->settings->get('ernestdefoe-picks.confidence10_enabled')
                 ),
 
             Schema\Integer::make('picksC10Games')

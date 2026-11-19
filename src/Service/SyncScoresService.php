@@ -45,9 +45,9 @@ class SyncScoresService
      */
     public function sync(): array
     {
-        $year = (int) $this->settings->get('ernestdefoe-picks.season_year', (int) date('Y'));
-        $syncRegular = (bool) $this->settings->get('ernestdefoe-picks.sync_regular_season', true);
-        $syncPostseason = (bool) $this->settings->get('ernestdefoe-picks.sync_postseason', true);
+        $year = (int) $this->settings->get('ernestdefoe-picks.season_year');
+        $syncRegular = (bool) $this->settings->get('ernestdefoe-picks.sync_regular_season');
+        $syncPostseason = (bool) $this->settings->get('ernestdefoe-picks.sync_postseason');
 
         $updated = 0;
         $scored = 0;
@@ -447,7 +447,7 @@ class SyncScoresService
      */
     public function maybeUnlockNextWeek(int $weekId): bool
     {
-        if (! $this->settings->get('ernestdefoe-picks.auto_unlock_weeks', false)) {
+        if (! $this->settings->get('ernestdefoe-picks.auto_unlock_weeks')) {
             return false;
         }
 
@@ -463,7 +463,7 @@ class SyncScoresService
      */
     public function unlockDueWeeks(?\DateTimeInterface $now = null): array
     {
-        if (! $this->settings->get('ernestdefoe-picks.auto_unlock_weeks', false)) {
+        if (! $this->settings->get('ernestdefoe-picks.auto_unlock_weeks')) {
             return [];
         }
 
@@ -589,7 +589,7 @@ class SyncScoresService
 
         return Week::where('season_type', 'regular')
             ->whereHas('season', function ($q) {
-                $year = (int) $this->settings->get('ernestdefoe-picks.season_year', (int) date('Y'));
+                $year = (int) $this->settings->get('ernestdefoe-picks.season_year');
                 $q->where('year', $year);
             })
             ->pluck('week_number')
@@ -602,6 +602,6 @@ class SyncScoresService
 
     private function lockOffset(): int
     {
-        return (int) $this->settings->get('ernestdefoe-picks.picks_lock_offset_minutes', 0);
+        return (int) $this->settings->get('ernestdefoe-picks.picks_lock_offset_minutes');
     }
 }

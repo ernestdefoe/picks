@@ -41,7 +41,7 @@ class CfbdService
 
         $params = ['classification' => 'fbs'];
 
-        $conferenceFilter = trim((string) $this->settings->get('ernestdefoe-picks.conference_filter', ''));
+        $conferenceFilter = trim((string) $this->settings->get('ernestdefoe-picks.conference_filter'));
         if ($conferenceFilter !== '') {
             $params['conference'] = $conferenceFilter;
         }

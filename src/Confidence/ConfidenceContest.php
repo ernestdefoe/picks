@@ -35,19 +35,19 @@ class ConfidenceContest
 
     public function enabled(): bool
     {
-        return (bool) $this->settings->get('ernestdefoe-picks.confidence10_enabled', false);
+        return (bool) $this->settings->get('ernestdefoe-picks.confidence10_enabled');
     }
 
     public function size(): int
     {
-        $n = (int) $this->settings->get('ernestdefoe-picks.confidence10_games', self::DEFAULT_SIZE);
+        $n = (int) $this->settings->get('ernestdefoe-picks.confidence10_games');
 
         return max(self::MIN_SIZE, min(self::MAX_SIZE, $n ?: self::DEFAULT_SIZE));
     }
 
     public function penalty(): string
     {
-        $rule = (string) $this->settings->get('ernestdefoe-picks.confidence10_penalty', 'none');
+        $rule = (string) $this->settings->get('ernestdefoe-picks.confidence10_penalty');
 
         return in_array($rule, Scoring::PENALTIES, true) ? $rule : 'none';
     }

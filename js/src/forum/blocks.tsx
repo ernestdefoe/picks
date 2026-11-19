@@ -1,7 +1,5 @@
 import app from 'flarum/forum/app';
 
-declare const m: any;
-
 /**
  * The pick'em standings, offered to Page Builder.
  *

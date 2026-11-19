@@ -5,8 +5,6 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import type Mithril from 'mithril';
 import Season from '../../common/models/Season';
 
-declare const m: any;
-
 const t = (k: string, p: Record<string, unknown> = {}) => app.translator.trans('ernestdefoe-picks.admin.leagues.' + k, p);
 
 interface LeagueDef {
