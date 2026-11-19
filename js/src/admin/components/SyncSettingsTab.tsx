@@ -152,180 +152,232 @@ export default class SyncSettingsTab extends Component {
   }
 
   view() {
+    return (
+      <div className="PicksSyncSettingsTab">
+        {this.renderHeader()}
+
+        {/* Sync Status */}
+        {this.renderStatusSection()}
+
+        {/* API Configuration */}
+        <div className="PicksSettingsSection">
+          <h4 className="PicksSettingsSection-title">{app.translator.trans('ernestdefoe-picks.admin.sync.api_title')}</h4>
+
+          {this.renderApiKeyField()}
+
+          {this.renderSeasonYearField()}
+
+          {this.renderConferenceFilterField()}
+        </div>
+
+        {/* Sync Options */}
+        {this.renderOptionsSection()}
+
+        {this.renderSaveResult()}
+
+        {this.renderSaveButton()}
+
+        {/* Danger Zone */}
+        {this.renderDangerZone()}
+      </div>
+    );
+  }
+
+  private renderHeader() {
+    return (
+      <div className="PicksTab-header">
+        <div>
+          <h3>
+            <i className="fas fa-sync" /> {app.translator.trans('ernestdefoe-picks.admin.nav.sync')}
+          </h3>
+        </div>
+      </div>
+    );
+  }
+
+  private renderStatusSection() {
     const s = app.data.settings;
     const lastTeams = s['ernestdefoe-picks.last_teams_sync'] || null;
     const lastSchedule = s['ernestdefoe-picks.last_schedule_sync'] || null;
     const lastScores = s['ernestdefoe-picks.last_scores_sync'] || null;
 
     return (
-      <div className="PicksSyncSettingsTab">
-        <div className="PicksTab-header">
-          <div>
-            <h3>
-              <i className="fas fa-sync" /> {app.translator.trans('ernestdefoe-picks.admin.nav.sync')}
-            </h3>
+      <div className="PicksSettingsSection">
+        <h4 className="PicksSettingsSection-title">{app.translator.trans('ernestdefoe-picks.admin.sync.status_title')}</h4>
+        <div className="PicksSyncStatus">
+          <div className="PicksSyncStatus-row">
+            <i className="fas fa-users" />
+            <span>{app.translator.trans('ernestdefoe-picks.admin.sync.last_teams')}</span>
+            <strong>{this.formatDate(lastTeams)}</strong>
+          </div>
+          <div className="PicksSyncStatus-row">
+            <i className="fas fa-calendar-alt" />
+            <span>{app.translator.trans('ernestdefoe-picks.admin.sync.last_schedule')}</span>
+            <strong>{this.formatDate(lastSchedule)}</strong>
+          </div>
+          <div className="PicksSyncStatus-row">
+            <i className="fas fa-trophy" />
+            <span>{app.translator.trans('ernestdefoe-picks.admin.sync.last_scores')}</span>
+            <strong>{this.formatDate(lastScores)}</strong>
           </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* Sync Status */}
-        <div className="PicksSettingsSection">
-          <h4 className="PicksSettingsSection-title">{app.translator.trans('ernestdefoe-picks.admin.sync.status_title')}</h4>
-          <div className="PicksSyncStatus">
-            <div className="PicksSyncStatus-row">
-              <i className="fas fa-users" />
-              <span>{app.translator.trans('ernestdefoe-picks.admin.sync.last_teams')}</span>
-              <strong>{this.formatDate(lastTeams)}</strong>
-            </div>
-            <div className="PicksSyncStatus-row">
-              <i className="fas fa-calendar-alt" />
-              <span>{app.translator.trans('ernestdefoe-picks.admin.sync.last_schedule')}</span>
-              <strong>{this.formatDate(lastSchedule)}</strong>
-            </div>
-            <div className="PicksSyncStatus-row">
-              <i className="fas fa-trophy" />
-              <span>{app.translator.trans('ernestdefoe-picks.admin.sync.last_scores')}</span>
-              <strong>{this.formatDate(lastScores)}</strong>
-            </div>
-          </div>
-        </div>
+  private renderApiKeyField() {
+    return (
+      <div className="Form-group">
+        <label>{app.translator.trans('ernestdefoe-picks.admin.sync.cfbd_api_key')}</label>
+        <input
+          className="FormControl"
+          type="password"
+          value={this.cfbdApiKey}
+          placeholder={extractText(t('cfbd_api_key_placeholder'))}
+          oninput={(e: InputEvent) => {
+            this.cfbdApiKey = (e.target as HTMLInputElement).value;
+            this.checkDirty();
+          }}
+        />
+        <p className="helpText">{app.translator.trans('ernestdefoe-picks.admin.sync.cfbd_api_key_help')}</p>
+      </div>
+    );
+  }
 
-        {/* API Configuration */}
-        <div className="PicksSettingsSection">
-          <h4 className="PicksSettingsSection-title">{app.translator.trans('ernestdefoe-picks.admin.sync.api_title')}</h4>
+  private renderSeasonYearField() {
+    return (
+      <div className="Form-group">
+        <label>{app.translator.trans('ernestdefoe-picks.admin.sync.season_year')}</label>
+        <input
+          className="FormControl"
+          type="number"
+          value={this.seasonYear}
+          min="2000"
+          max="2099"
+          oninput={(e: InputEvent) => {
+            this.seasonYear = (e.target as HTMLInputElement).value;
+            this.checkDirty();
+          }}
+        />
+        <p className="helpText">{app.translator.trans('ernestdefoe-picks.admin.sync.season_year_help')}</p>
+      </div>
+    );
+  }
 
-          <div className="Form-group">
-            <label>{app.translator.trans('ernestdefoe-picks.admin.sync.cfbd_api_key')}</label>
-            <input
-              className="FormControl"
-              type="password"
-              value={this.cfbdApiKey}
-              placeholder={extractText(t('cfbd_api_key_placeholder'))}
-              oninput={(e: InputEvent) => {
-                this.cfbdApiKey = (e.target as HTMLInputElement).value;
-                this.checkDirty();
-              }}
-            />
-            <p className="helpText">{app.translator.trans('ernestdefoe-picks.admin.sync.cfbd_api_key_help')}</p>
-          </div>
+  private renderConferenceFilterField() {
+    return (
+      <div className="Form-group">
+        <label>{app.translator.trans('ernestdefoe-picks.admin.sync.conference_filter')}</label>
+        <input
+          className="FormControl"
+          type="text"
+          value={this.conferenceFilter}
+          placeholder={extractText(t('conference_filter_placeholder'))}
+          oninput={(e: InputEvent) => {
+            this.conferenceFilter = (e.target as HTMLInputElement).value;
+            this.checkDirty();
+          }}
+        />
+        <p className="helpText">{app.translator.trans('ernestdefoe-picks.admin.sync.conference_filter_help')}</p>
+      </div>
+    );
+  }
 
-          <div className="Form-group">
-            <label>{app.translator.trans('ernestdefoe-picks.admin.sync.season_year')}</label>
-            <input
-              className="FormControl"
-              type="number"
-              value={this.seasonYear}
-              min="2000"
-              max="2099"
-              oninput={(e: InputEvent) => {
-                this.seasonYear = (e.target as HTMLInputElement).value;
-                this.checkDirty();
-              }}
-            />
-            <p className="helpText">{app.translator.trans('ernestdefoe-picks.admin.sync.season_year_help')}</p>
-          </div>
-
-          <div className="Form-group">
-            <label>{app.translator.trans('ernestdefoe-picks.admin.sync.conference_filter')}</label>
-            <input
-              className="FormControl"
-              type="text"
-              value={this.conferenceFilter}
-              placeholder={extractText(t('conference_filter_placeholder'))}
-              oninput={(e: InputEvent) => {
-                this.conferenceFilter = (e.target as HTMLInputElement).value;
-                this.checkDirty();
-              }}
-            />
-            <p className="helpText">{app.translator.trans('ernestdefoe-picks.admin.sync.conference_filter_help')}</p>
-          </div>
-        </div>
-
-        {/* Sync Options */}
-        <div className="PicksSettingsSection">
-          <h4 className="PicksSettingsSection-title">{app.translator.trans('ernestdefoe-picks.admin.sync.options_title')}</h4>
-
-          <div className="Form-group">
-            <label className="checkbox">
-              <input
-                type="checkbox"
-                checked={this.syncRegularSeason}
-                onchange={(e: Event) => {
-                  this.syncRegularSeason = (e.target as HTMLInputElement).checked;
-                  this.checkDirty();
-                }}
-              />{' '}
-              {app.translator.trans('ernestdefoe-picks.admin.sync.sync_regular_season')}
-            </label>
-          </div>
-
-          <div className="Form-group">
-            <label className="checkbox">
-              <input
-                type="checkbox"
-                checked={this.syncPostseason}
-                onchange={(e: Event) => {
-                  this.syncPostseason = (e.target as HTMLInputElement).checked;
-                  this.checkDirty();
-                }}
-              />{' '}
-              {app.translator.trans('ernestdefoe-picks.admin.sync.sync_postseason')}
-            </label>
-          </div>
-        </div>
-
-        {this.saveResult && <div className="PicksAlert PicksAlert--info">{this.saveResult}</div>}
+  private renderOptionsSection() {
+    return (
+      <div className="PicksSettingsSection">
+        <h4 className="PicksSettingsSection-title">{app.translator.trans('ernestdefoe-picks.admin.sync.options_title')}</h4>
 
         <div className="Form-group">
-          <Button className="Button Button--primary" loading={this.saving} disabled={!this.dirty} onclick={() => this.save()}>
-            {app.translator.trans('ernestdefoe-picks.admin.common.save')}
-          </Button>
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={this.syncRegularSeason}
+              onchange={(e: Event) => {
+                this.syncRegularSeason = (e.target as HTMLInputElement).checked;
+                this.checkDirty();
+              }}
+            />{' '}
+            {app.translator.trans('ernestdefoe-picks.admin.sync.sync_regular_season')}
+          </label>
         </div>
 
-        {/* Danger Zone */}
-        <div className="PicksDangerZone">
-          <h4 className="PicksDangerZone-title">
-            <i className="fas fa-exclamation-triangle" /> {app.translator.trans('ernestdefoe-picks.admin.sync.danger_title')}
-          </h4>
-          <p className="PicksDangerZone-description">{app.translator.trans('ernestdefoe-picks.admin.sync.danger_description')}</p>
+        <div className="Form-group">
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={this.syncPostseason}
+              onchange={(e: Event) => {
+                this.syncPostseason = (e.target as HTMLInputElement).checked;
+                this.checkDirty();
+              }}
+            />{' '}
+            {app.translator.trans('ernestdefoe-picks.admin.sync.sync_postseason')}
+          </label>
+        </div>
+      </div>
+    );
+  }
 
-          <div className="PicksDangerZone-actions">
-            <div className="PicksDangerZone-action">
-              <div>
-                <strong>{app.translator.trans('ernestdefoe-picks.admin.sync.reset_schedule_title')}</strong>
-                <p>{app.translator.trans('ernestdefoe-picks.admin.sync.reset_schedule_description')}</p>
-              </div>
-              <Button
-                className="Button Button--danger"
-                loading={this.resetting === 'schedule'}
-                disabled={this.resetting !== null}
-                onclick={() => this.reset('schedule')}
-              >
-                {app.translator.trans('ernestdefoe-picks.admin.sync.reset_schedule_button')}
-              </Button>
-            </div>
+  private renderSaveResult() {
+    return this.saveResult && <div className="PicksAlert PicksAlert--info">{this.saveResult}</div>;
+  }
 
-            <div className="PicksDangerZone-action PicksDangerZone-action--severe">
-              <div>
-                <strong>{app.translator.trans('ernestdefoe-picks.admin.sync.reset_all_title')}</strong>
-                <p>{app.translator.trans('ernestdefoe-picks.admin.sync.reset_all_description')}</p>
-              </div>
-              <Button
-                className="Button Button--danger"
-                loading={this.resetting === 'all'}
-                disabled={this.resetting !== null}
-                onclick={() => this.reset('all')}
-              >
-                {app.translator.trans('ernestdefoe-picks.admin.sync.reset_all_button')}
-              </Button>
+  private renderSaveButton() {
+    return (
+      <div className="Form-group">
+        <Button className="Button Button--primary" loading={this.saving} disabled={!this.dirty} onclick={() => this.save()}>
+          {app.translator.trans('ernestdefoe-picks.admin.common.save')}
+        </Button>
+      </div>
+    );
+  }
+
+  private renderDangerZone() {
+    return (
+      <div className="PicksDangerZone">
+        <h4 className="PicksDangerZone-title">
+          <i className="fas fa-exclamation-triangle" /> {app.translator.trans('ernestdefoe-picks.admin.sync.danger_title')}
+        </h4>
+        <p className="PicksDangerZone-description">{app.translator.trans('ernestdefoe-picks.admin.sync.danger_description')}</p>
+
+        <div className="PicksDangerZone-actions">
+          <div className="PicksDangerZone-action">
+            <div>
+              <strong>{app.translator.trans('ernestdefoe-picks.admin.sync.reset_schedule_title')}</strong>
+              <p>{app.translator.trans('ernestdefoe-picks.admin.sync.reset_schedule_description')}</p>
             </div>
+            <Button
+              className="Button Button--danger"
+              loading={this.resetting === 'schedule'}
+              disabled={this.resetting !== null}
+              onclick={() => this.reset('schedule')}
+            >
+              {app.translator.trans('ernestdefoe-picks.admin.sync.reset_schedule_button')}
+            </Button>
           </div>
 
-          {this.resetResult && (
-            <div className="PicksAlert PicksAlert--info" style="margin-top: 12px;">
-              {this.resetResult}
+          <div className="PicksDangerZone-action PicksDangerZone-action--severe">
+            <div>
+              <strong>{app.translator.trans('ernestdefoe-picks.admin.sync.reset_all_title')}</strong>
+              <p>{app.translator.trans('ernestdefoe-picks.admin.sync.reset_all_description')}</p>
             </div>
-          )}
+            <Button
+              className="Button Button--danger"
+              loading={this.resetting === 'all'}
+              disabled={this.resetting !== null}
+              onclick={() => this.reset('all')}
+            >
+              {app.translator.trans('ernestdefoe-picks.admin.sync.reset_all_button')}
+            </Button>
+          </div>
         </div>
+
+        {this.resetResult && (
+          <div className="PicksAlert PicksAlert--info" style="margin-top: 12px;">
+            {this.resetResult}
+          </div>
+        )}
       </div>
     );
   }

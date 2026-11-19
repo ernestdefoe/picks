@@ -142,9 +142,33 @@ class ConfidenceContest
             return 'frozen';
         }
 
+        $already = $current->pluck('event_id')->map(fn ($id) => (int) $id)->all();
+        $error = $this->unpickableGame($week, $eventIds, $already);
+
+        if ($error !== null) {
+            return $error;
+        }
+
+        $removed = array_values(array_diff($already, $eventIds));
+        $oldFirst = $already[0] ?? null;
+        $newFirst = $eventIds[0] ?? null;
+
+        $this->writeSelection($week, $eventIds, $removed, $oldFirst, $newFirst);
+
+        return null;
+    }
+
+    /**
+     * The first chosen game that is not in the week or can no longer be
+     * picked, as an error code; null when every one is fine.
+     *
+     * @param int[] $eventIds
+     * @param int[] $already
+     */
+    private function unpickableGame(Week $week, array $eventIds, array $already): ?string
+    {
         $events = PickEvent::where('week_id', $week->id)->whereIn('id', $eventIds ?: [0])->get()->keyBy('id');
         $now = Carbon::now('UTC');
-        $already = $current->pluck('event_id')->map(fn ($id) => (int) $id)->all();
 
         foreach ($eventIds as $id) {
             $event = $events->get($id);
@@ -158,10 +182,15 @@ class ConfidenceContest
             }
         }
 
-        $removed = array_values(array_diff($already, $eventIds));
-        $oldFirst = $already[0] ?? null;
-        $newFirst = $eventIds[0] ?? null;
+        return null;
+    }
 
+    /**
+     * @param int[] $eventIds
+     * @param int[] $removed
+     */
+    private function writeSelection(Week $week, array $eventIds, array $removed, ?int $oldFirst, ?int $newFirst): void
+    {
         $this->db->transaction(function () use ($week, $eventIds, $removed, $oldFirst, $newFirst) {
             ConfidenceGame::where('week_id', $week->id)->delete();
 
@@ -188,8 +217,6 @@ class ConfidenceContest
                 ConfidenceEntry::where('week_id', $week->id)->update(['tiebreaker_total' => null]);
             }
         });
-
-        return null;
     }
 
     /* --------------------------------------------------------------- member */
@@ -204,19 +231,7 @@ class ConfidenceContest
         $selection = $this->selection($week->id);
         $eventIds = $selection->pluck('event_id')->all();
 
-        $mine = collect();
-        $entry = null;
-        $score = null;
-
-        if (! $actor->isGuest()) {
-            $mine = ConfidencePick::where('user_id', $actor->id)
-                ->where('week_id', $week->id)
-                ->get()
-                ->keyBy('event_id');
-
-            $entry = ConfidenceEntry::where('user_id', $actor->id)->where('week_id', $week->id)->first();
-            $score = ConfidenceScore::where('user_id', $actor->id)->where('scope', 'w'.$week->id)->first();
-        }
+        [$mine, $entry, $score] = $this->memberRows($week, $actor);
 
         $first = $selection->first();
 
@@ -242,22 +257,55 @@ class ConfidenceContest
             'penalty' => $this->penalty(),
             'frozen' => $this->isFrozen($selection),
             'games' => $games,
-            'tiebreaker' => $first ? [
-                'event_id' => (int) $first->event_id,
-                'can_change' => $first->event->canPick(),
-                'guess' => $entry?->tiebreaker_total,
-                'actual_total' => $first->event->hasScores()
-                    ? (int) $first->event->home_score + (int) $first->event->away_score
-                    : null,
-            ] : null,
-            'my_score' => $score ? [
-                'total_points' => (int) $score->total_points,
-                'total_picks' => (int) $score->total_picks,
-                'correct_picks' => (int) $score->correct_picks,
-                'tiebreak_diff' => $score->tiebreak_diff,
-            ] : null,
+            'tiebreaker' => $this->tiebreakerBlock($first, $entry),
+            'my_score' => $this->myScoreBlock($score),
             'picked' => $mine->filter(fn ($p) => in_array($p->event_id, $eventIds))->count(),
         ];
+    }
+
+    /**
+     * The member's own picks (keyed by event id), tiebreaker entry and week
+     * score; empty for a guest.
+     *
+     * @return array{0: Collection, 1: ?ConfidenceEntry, 2: ?ConfidenceScore}
+     */
+    private function memberRows(Week $week, User $actor): array
+    {
+        if ($actor->isGuest()) {
+            return [collect(), null, null];
+        }
+
+        $mine = ConfidencePick::where('user_id', $actor->id)
+            ->where('week_id', $week->id)
+            ->get()
+            ->keyBy('event_id');
+
+        $entry = ConfidenceEntry::where('user_id', $actor->id)->where('week_id', $week->id)->first();
+        $score = ConfidenceScore::where('user_id', $actor->id)->where('scope', 'w'.$week->id)->first();
+
+        return [$mine, $entry, $score];
+    }
+
+    private function tiebreakerBlock(?ConfidenceGame $first, ?ConfidenceEntry $entry): ?array
+    {
+        return $first ? [
+            'event_id' => (int) $first->event_id,
+            'can_change' => $first->event->canPick(),
+            'guess' => $entry?->tiebreaker_total,
+            'actual_total' => $first->event->hasScores()
+                ? (int) $first->event->home_score + (int) $first->event->away_score
+                : null,
+        ] : null;
+    }
+
+    private function myScoreBlock(?ConfidenceScore $score): ?array
+    {
+        return $score ? [
+            'total_points' => (int) $score->total_points,
+            'total_picks' => (int) $score->total_picks,
+            'correct_picks' => (int) $score->correct_picks,
+            'tiebreak_diff' => $score->tiebreak_diff,
+        ] : null;
     }
 
     /**
@@ -282,14 +330,7 @@ class ConfidenceContest
         $locked = $selection->filter(fn (ConfidenceGame $g) => ! $g->event->canPick())
             ->pluck('event_id')->map(fn ($id) => (int) $id)->all();
 
-        $existing = ConfidencePick::where('user_id', $actor->id)
-            ->where('week_id', $week->id)
-            ->get()
-            ->mapWithKeys(fn (ConfidencePick $p) => [(int) $p->event_id => [
-                'outcome' => $p->selected_outcome,
-                'confidence' => (int) $p->confidence,
-            ]])
-            ->all();
+        $existing = $this->existingPicks($week, $actor);
 
         $result = Rules::validate(
             $this->size(),
@@ -303,24 +344,70 @@ class ConfidenceContest
             return ['error' => $result['error'], 'event_id' => $result['event_id']];
         }
 
-        $guess = null;
-        if ($tiebreaker !== false) {
-            $checked = Rules::tiebreaker($tiebreaker);
-            if ($checked['error'] !== null) {
-                return ['error' => $checked['error'], 'event_id' => null];
-            }
-
-            $first = $selection->first();
-            $entry = ConfidenceEntry::where('user_id', $actor->id)->where('week_id', $week->id)->first();
-            $was = $entry?->tiebreaker_total;
-
-            if ($checked['value'] !== $was && ! $first->event->canPick()) {
-                return ['error' => Rules::LOCKED, 'event_id' => (int) $first->event_id];
-            }
-
-            $guess = $checked;
+        [$tbError, $guess] = $this->tiebreakerGuess($week, $actor, $selection, $tiebreaker);
+        if ($tbError !== null) {
+            return $tbError;
         }
 
+        $this->writePicks($week, $actor, $locked, $result, $guess);
+
+        return null;
+    }
+
+    /**
+     * The member's current picks for the week, keyed by event id.
+     *
+     * @return array<int, array{outcome: mixed, confidence: int}>
+     */
+    private function existingPicks(Week $week, User $actor): array
+    {
+        return ConfidencePick::where('user_id', $actor->id)
+            ->where('week_id', $week->id)
+            ->get()
+            ->mapWithKeys(fn (ConfidencePick $p) => [(int) $p->event_id => [
+                'outcome' => $p->selected_outcome,
+                'confidence' => (int) $p->confidence,
+            ]])
+            ->all();
+    }
+
+    /**
+     * Check the tiebreaker guess. Returns [error, guess]: an error to hand
+     * back, or the checked guess to write (null when left alone).
+     *
+     * @param Collection<int, ConfidenceGame> $selection
+     * @param mixed $tiebreaker
+     * @return array{0: ?array, 1: ?array}
+     */
+    private function tiebreakerGuess(Week $week, User $actor, Collection $selection, $tiebreaker): array
+    {
+        if ($tiebreaker === false) {
+            return [null, null];
+        }
+
+        $checked = Rules::tiebreaker($tiebreaker);
+        if ($checked['error'] !== null) {
+            return [['error' => $checked['error'], 'event_id' => null], null];
+        }
+
+        $first = $selection->first();
+        $entry = ConfidenceEntry::where('user_id', $actor->id)->where('week_id', $week->id)->first();
+        $was = $entry?->tiebreaker_total;
+
+        if ($checked['value'] !== $was && ! $first->event->canPick()) {
+            return [['error' => Rules::LOCKED, 'event_id' => (int) $first->event_id], null];
+        }
+
+        return [null, $checked];
+    }
+
+    /**
+     * @param array<int, int> $locked
+     * @param array<string, mixed> $result
+     * @param array<string, mixed>|null $guess
+     */
+    private function writePicks(Week $week, User $actor, array $locked, array $result, ?array $guess): void
+    {
         $this->db->transaction(function () use ($week, $actor, $locked, $result, $guess) {
             /*
              * 🚨 Delete-then-insert, so a reshuffle never collides with the
@@ -356,8 +443,6 @@ class ConfidenceContest
                 $entry->save();
             }
         });
-
-        return null;
     }
 
     /* -------------------------------------------------------------- scoring */

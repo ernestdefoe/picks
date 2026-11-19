@@ -71,72 +71,25 @@ class TestDataSeeder
         $weekIds = $eventsByWeek->keys()->toArray();
         $picksInserted = 0;
 
-        // Preload every existing (user_id, event_id) pair in ONE query, keyed
-        // "userId:eventId", so we don't fire an exists() per combination.
-        $existingPairs = [];
-        foreach (
-            Pick::query()
-                ->whereIn('event_id', $events->pluck('id')->all())
-                ->get(['user_id', 'event_id']) as $existing
-        ) {
-            $existingPairs[$existing->user_id.':'.$existing->event_id] = true;
-        }
+        $existingPairs = $this->existingPairs($events->pluck('id')->all());
 
         // Batch-load the weeks once instead of Week::find() inside the loop.
         $weeksById = Week::query()->whereIn('id', $weekIds)->get()->keyBy('id');
 
         foreach ($weekIds as $weekId) {
-            $weekEvents = $eventsByWeek[$weekId];
-            $weekPickRows = [];
-
-            foreach ($userIds as $userId) {
-                $hitRate = $hitRates[$userId];
-
-                foreach ($weekEvents as $event) {
-                    if (isset($existingPairs[$userId.':'.$event->id])) {
-                        continue;
-                    }
-
-                    $isCorrect = null;
-                    $outcome = $this->randomOutcome();
-
-                    if ($event->status === PickEvent::STATUS_FINISHED && $event->result) {
-                        $correct = $this->rollCorrect($hitRate);
-                        $outcome = $correct ? $event->result : ($event->result === 'home' ? 'away' : 'home');
-                        $isCorrect = ($outcome === $event->result);
-                    }
-
-                    $weekPickRows[] = [
-                        'user_id' => $userId,
-                        'event_id' => $event->id,
-                        'selected_outcome' => $outcome,
-                        'is_correct' => $isCorrect,
-                        'confidence' => null,
-                        'created_at' => Carbon::now(),
-                        'updated_at' => Carbon::now(),
-                    ];
-
-                    $picksInserted++;
-                }
-            }
+            $weekPickRows = $this->realPickRows($eventsByWeek[$weekId], $userIds, $hitRates, $existingPairs);
+            $picksInserted += count($weekPickRows);
 
             // Bulk-insert this week's picks in chunks instead of one INSERT per
             // row (was ~users × events INSERTs per week — 12 800+ across a fake
             // season). Done before score roll-up so the scores see the rows.
-            foreach (array_chunk($weekPickRows, self::INSERT_CHUNK) as $chunk) {
-                Pick::query()->insert($chunk);
-            }
+            $this->insertPicks($weekPickRows);
 
             // Roll up week scores
             $this->scoreScope($userIds, $weekId, $weeksById->get($weekId)?->season_id);
         }
 
-        // Roll up season + all-time
-        $season2026Id = Week::query()->whereIn('id', $weekIds)->value('season_id');
-        if ($season2026Id) {
-            $this->scoreScope($userIds, null, $season2026Id);
-        }
-        $this->scoreScope($userIds, null, null);
+        $this->rollUpSeasonAndAllTime($userIds, $weekIds);
 
         return [
             'status' => 'success',
@@ -164,100 +117,13 @@ class TestDataSeeder
 
         $hitRates = $this->assignHitRates($userIds);
 
-        // Create fake season
-        $season = new Season();
-        $season->name = '2025 Season';
-        $season->slug = self::FAKE_SLUG;
-        $season->year = self::FAKE_YEAR;
-        $season->start_date = '2025-08-28';
-        $season->end_date = '2025-12-06';
-        $season->save();
+        $season = $this->createFakeSeason();
 
         $picksInserted = 0;
         $weeksCreated = 0;
 
         for ($wn = 1; $wn <= self::FAKE_WEEK_COUNT; $wn++) {
-            $weekStart = Carbon::parse('2025-08-28')->addWeeks($wn - 1);
-            $weekEnd = $weekStart->copy()->addDays(6);
-
-            $week = new Week();
-            $week->season_id = $season->id;
-            $week->name = 'Week '.$wn;
-            $week->week_number = $wn;
-            $week->season_type = 'regular';
-            $week->start_date = $weekStart->toDateString();
-            $week->end_date = $weekEnd->toDateString();
-            $week->is_open = false;
-            $week->save();
-
-            $usedTeams = [];
-            $eventIds = [];
-            $results = [];
-            $gameDate = $weekStart->copy()->addDays(5)->setTime(15, 0);
-
-            for ($e = 0; $e < self::EVENTS_PER_WEEK; $e++) {
-                [$homeId, $awayId] = $this->pickTeamPair($teamIds, $usedTeams);
-                if (! $homeId || ! $awayId) {
-                    break;
-                }
-
-                $usedTeams[] = $homeId;
-                $usedTeams[] = $awayId;
-                $result = $this->randomOutcome();
-
-                $eventId = PickEvent::query()->insertGetId([
-                    'week_id' => $week->id,
-                    'home_team_id' => $homeId,
-                    'away_team_id' => $awayId,
-                    'cfbd_id' => null,
-                    'neutral_site' => false,
-                    'match_date' => $gameDate->copy(),
-                    'cutoff_date' => $gameDate->copy()->subMinutes(30),
-                    'status' => PickEvent::STATUS_FINISHED,
-                    'home_score' => $result === 'home' ? rand(21, 42) : rand(7, 20),
-                    'away_score' => $result === 'away' ? rand(21, 42) : rand(7, 20),
-                    'result' => $result,
-                    'created_at' => Carbon::now(),
-                    'updated_at' => Carbon::now(),
-                ]);
-
-                $eventIds[] = $eventId;
-                $results[$eventId] = $result;
-                $gameDate->addHours(2);
-            }
-
-            $weekPickRows = [];
-
-            foreach ($userIds as $userId) {
-                $hitRate = $hitRates[$userId];
-
-                foreach ($eventIds as $eventId) {
-                    $correct = $this->rollCorrect($hitRate);
-                    $outcome = $correct
-                        ? $results[$eventId]
-                        : ($results[$eventId] === 'home' ? 'away' : 'home');
-
-                    $weekPickRows[] = [
-                        'user_id' => $userId,
-                        'event_id' => $eventId,
-                        'selected_outcome' => $outcome,
-                        'is_correct' => $correct,
-                        'confidence' => null,
-                        'created_at' => Carbon::now(),
-                        'updated_at' => Carbon::now(),
-                    ];
-
-                    $picksInserted++;
-                }
-            }
-
-            // Bulk-insert this week's picks in chunks instead of one INSERT per
-            // row, then roll up scores once the rows exist.
-            foreach (array_chunk($weekPickRows, self::INSERT_CHUNK) as $chunk) {
-                Pick::query()->insert($chunk);
-            }
-
-            $this->scoreScope($userIds, $week->id, $season->id);
+            $picksInserted += $this->seedFakeWeek($season->id, $wn, $teamIds, $userIds, $hitRates);
 
             $weeksCreated++;
         }
@@ -270,6 +136,234 @@ class TestDataSeeder
             'status' => 'success',
             'message' => "Created fake 2025 season with {$weeksCreated} weeks and {$picksInserted} picks.",
         ];
+    }
+
+    /**
+     * Create one fake week with its fixtures and picks, then score it.
+     * Returns the number of picks inserted.
+     *
+     * @param int[] $teamIds
+     * @param int[] $userIds
+     * @param array<int, float> $hitRates
+     */
+    private function seedFakeWeek(int $seasonId, int $wn, array $teamIds, array $userIds, array $hitRates): int
+    {
+        $weekStart = Carbon::parse('2025-08-28')->addWeeks($wn - 1);
+        $week = $this->createFakeWeek($seasonId, $wn, $weekStart);
+
+        $results = $this->createFakeEvents($week->id, $weekStart, $teamIds);
+
+        $weekPickRows = $this->fakePickRows($results, $userIds, $hitRates);
+
+        // Bulk-insert this week's picks in chunks instead of one INSERT per
+        // row, then roll up scores once the rows exist.
+        $this->insertPicks($weekPickRows);
+
+        $this->scoreScope($userIds, $week->id, $seasonId);
+
+        return count($weekPickRows);
+    }
+
+    /**
+     * Roll up season + all-time.
+     *
+     * @param int[] $userIds
+     * @param int[] $weekIds
+     */
+    private function rollUpSeasonAndAllTime(array $userIds, array $weekIds): void
+    {
+        $season2026Id = Week::query()->whereIn('id', $weekIds)->value('season_id');
+        if ($season2026Id) {
+            $this->scoreScope($userIds, null, $season2026Id);
+        }
+        $this->scoreScope($userIds, null, null);
+    }
+
+    /**
+     * Preload every existing (user_id, event_id) pair in ONE query, keyed
+     * "userId:eventId", so we don't fire an exists() per combination.
+     *
+     * @param int[] $eventIds
+     * @return array<string, true>
+     */
+    private function existingPairs(array $eventIds): array
+    {
+        $existingPairs = [];
+        foreach (
+            Pick::query()
+                ->whereIn('event_id', $eventIds)
+                ->get(['user_id', 'event_id']) as $existing
+        ) {
+            $existingPairs[$existing->user_id.':'.$existing->event_id] = true;
+        }
+
+        return $existingPairs;
+    }
+
+    /**
+     * One week's pick rows for the real schedule, skipping pairs that exist.
+     *
+     * @param iterable<PickEvent> $weekEvents
+     * @param int[] $userIds
+     * @param array<int, float> $hitRates
+     * @param array<string, true> $existingPairs
+     * @return list<array<string, mixed>>
+     */
+    private function realPickRows(iterable $weekEvents, array $userIds, array $hitRates, array $existingPairs): array
+    {
+        $weekPickRows = [];
+
+        foreach ($userIds as $userId) {
+            foreach ($weekEvents as $event) {
+                if (isset($existingPairs[$userId.':'.$event->id])) {
+                    continue;
+                }
+
+                $weekPickRows[] = $this->realPickRow($userId, $event, $hitRates[$userId]);
+            }
+        }
+
+        return $weekPickRows;
+    }
+
+    /** @return array<string, mixed> */
+    private function realPickRow(int $userId, PickEvent $event, float $hitRate): array
+    {
+        $isCorrect = null;
+        $outcome = $this->randomOutcome();
+
+        if ($event->status === PickEvent::STATUS_FINISHED && $event->result) {
+            $correct = $this->rollCorrect($hitRate);
+            $outcome = $correct ? $event->result : ($event->result === 'home' ? 'away' : 'home');
+            $isCorrect = ($outcome === $event->result);
+        }
+
+        return [
+            'user_id' => $userId,
+            'event_id' => $event->id,
+            'selected_outcome' => $outcome,
+            'is_correct' => $isCorrect,
+            'confidence' => null,
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
+        ];
+    }
+
+    /** @param list<array<string, mixed>> $rows */
+    private function insertPicks(array $rows): void
+    {
+        foreach (array_chunk($rows, self::INSERT_CHUNK) as $chunk) {
+            Pick::query()->insert($chunk);
+        }
+    }
+
+    private function createFakeSeason(): Season
+    {
+        $season = new Season();
+        $season->name = '2025 Season';
+        $season->slug = self::FAKE_SLUG;
+        $season->year = self::FAKE_YEAR;
+        $season->start_date = '2025-08-28';
+        $season->end_date = '2025-12-06';
+        $season->save();
+
+        return $season;
+    }
+
+    private function createFakeWeek(int $seasonId, int $wn, Carbon $weekStart): Week
+    {
+        $weekEnd = $weekStart->copy()->addDays(6);
+
+        $week = new Week();
+        $week->season_id = $seasonId;
+        $week->name = 'Week '.$wn;
+        $week->week_number = $wn;
+        $week->season_type = 'regular';
+        $week->start_date = $weekStart->toDateString();
+        $week->end_date = $weekEnd->toDateString();
+        $week->is_open = false;
+        $week->save();
+
+        return $week;
+    }
+
+    /**
+     * Insert one fake week's finished fixtures.
+     *
+     * @param int[] $teamIds
+     * @return array<int, string> event id => result, in insertion order
+     */
+    private function createFakeEvents(int $weekId, Carbon $weekStart, array $teamIds): array
+    {
+        $usedTeams = [];
+        $results = [];
+        $gameDate = $weekStart->copy()->addDays(5)->setTime(15, 0);
+
+        for ($e = 0; $e < self::EVENTS_PER_WEEK; $e++) {
+            [$homeId, $awayId] = $this->pickTeamPair($teamIds, $usedTeams);
+            if (! $homeId || ! $awayId) {
+                break;
+            }
+
+            $usedTeams[] = $homeId;
+            $usedTeams[] = $awayId;
+            $result = $this->randomOutcome();
+
+            $eventId = PickEvent::query()->insertGetId([
+                'week_id' => $weekId,
+                'home_team_id' => $homeId,
+                'away_team_id' => $awayId,
+                'cfbd_id' => null,
+                'neutral_site' => false,
+                'match_date' => $gameDate->copy(),
+                'cutoff_date' => $gameDate->copy()->subMinutes(30),
+                'status' => PickEvent::STATUS_FINISHED,
+                'home_score' => $result === 'home' ? rand(21, 42) : rand(7, 20),
+                'away_score' => $result === 'away' ? rand(21, 42) : rand(7, 20),
+                'result' => $result,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ]);
+
+            $results[$eventId] = $result;
+            $gameDate->addHours(2);
+        }
+
+        return $results;
+    }
+
+    /**
+     * @param array<int, string> $results event id => result
+     * @param int[] $userIds
+     * @param array<int, float> $hitRates
+     * @return list<array<string, mixed>>
+     */
+    private function fakePickRows(array $results, array $userIds, array $hitRates): array
+    {
+        $weekPickRows = [];
+
+        foreach ($userIds as $userId) {
+            $hitRate = $hitRates[$userId];
+
+            foreach ($results as $eventId => $result) {
+                $correct = $this->rollCorrect($hitRate);
+                $outcome = $correct
+                    ? $result
+                    : ($result === 'home' ? 'away' : 'home');
+
+                $weekPickRows[] = [
+                    'user_id' => $userId,
+                    'event_id' => $eventId,
+                    'selected_outcome' => $outcome,
+                    'is_correct' => $correct,
+                    'confidence' => null,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now(),
+                ];
+            }
+        }
+
+        return $weekPickRows;
     }
 
     /** @return array{status: string, message: string} */

@@ -73,6 +73,17 @@ class EventResource extends AbstractDatabaseResource
     public function fields(): array
     {
         return [
+            ...$this->idFields(),
+            ...$this->scheduleFields(),
+            ...$this->resultFields(),
+            ...$this->relationshipFields(),
+        ];
+    }
+
+    /** The game's ids and its teams. */
+    private function idFields(): array
+    {
+        return [
             Schema\Integer::make('weekId')
                 ->nullable()
                 ->get(fn (PickEvent $e) => $e->week_id),
@@ -89,7 +100,13 @@ class EventResource extends AbstractDatabaseResource
 
             Schema\Boolean::make('neutralSite')
                 ->get(fn (PickEvent $e) => $e->neutral_site),
+        ];
+    }
 
+    /** When the game is played and where it stands. */
+    private function scheduleFields(): array
+    {
+        return [
             Schema\DateTime::make('matchDate')
                 ->get(fn (PickEvent $e) => $e->match_date),
             Schema\Boolean::make('timeTbd')
@@ -103,7 +120,13 @@ class EventResource extends AbstractDatabaseResource
                 ->writable()
                 ->in(['scheduled', 'in_progress', 'closed', PickEvent::STATUS_FINISHED])
                 ->get(fn (PickEvent $e) => $e->status),
+        ];
+    }
 
+    /** Scores, result and ranks: read-only. */
+    private function resultFields(): array
+    {
+        return [
             // Scores are READ-ONLY on this resource by design. Entering a
             // result is more than persisting two integers — it must also
             // recompute the event's `result`, flip status to FINISHED, and
@@ -144,7 +167,13 @@ class EventResource extends AbstractDatabaseResource
             Schema\Integer::make('awayRank')
                 ->nullable()
                 ->get(fn (PickEvent $e) => (int) $e->away_rank ?: null),
+        ];
+    }
 
+    /** Whether it can be picked, and its relationships. */
+    private function relationshipFields(): array
+    {
+        return [
             Schema\Boolean::make('canPick')
                 ->get(fn (PickEvent $e) => $e->canPick()),
 

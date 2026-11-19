@@ -74,73 +74,102 @@ class EspnSyncService
         $offset = (int) $this->settings->get('ernestdefoe-picks.picks_lock_offset_minutes');
 
         foreach ($games as $game) {
-            if ($game['external_id'] === '' || $game['home'] === '' || $game['away'] === '') {
-                $summary['skipped']++;
-                continue;
-            }
-
-            $home = $this->team($teams, $game['home'], $game['home_team'] ?? [], $summary);
-            $away = $this->team($teams, $game['away'], $game['away_team'] ?? [], $summary);
-
-            $start = $this->when($game['start']);
-
-            if ($start === null) {
-                $summary['skipped']++;
-                continue;
-            }
-
-            $week = $this->week($season, $league, $game, $start, $weeks, $summary);
-
-            $event = $events->get($game['external_id']);
-
-            $attributes = [
-                'week_id' => $week->id,
-                'home_team_id' => $home->id,
-                'away_team_id' => $away->id,
-                'external_id' => $game['external_id'],
-                'neutral_site' => $game['neutral_site'],
-                'match_date' => $start,
-                /*
-                 * 🚨 The deadline is kickoff, not the start of the week. In a
-                 * league played across seven days, one deadline for the whole
-                 * round would either close Monday's game on Saturday morning or
-                 * leave Saturday's open until Monday night — and the second of
-                 * those lets somebody pick a game they have already watched.
-                 *
-                 * Less the board's lock offset, which this sync used to ignore:
-                 * "lock 30 minutes before kickoff" held for college football
-                 * and nowhere else.
-                 */
-                'cutoff_date' => Kickoff::cutoff($start, false, $offset),
-                'status' => $this->status($game),
-                'home_score' => $game['home_score'],
-                'away_score' => $game['away_score'],
-                'result' => $this->result($game),
-            ] + $this->liveState($game) + $this->leadIn($game);
-
-            if ($event === null) {
-                PickEvent::query()->create($attributes);
-                $summary['created']++;
-                continue;
-            }
-
-            /*
-             * 🚨 A finished game is never rewritten. The scoreboard keeps
-             * answering for weeks afterwards, and a provider correction that
-             * flipped a result after picks were scored would leave the standings
-             * disagreeing with the game everybody watched. A correction is a
-             * moderator's job, not a scheduled job's.
-             */
-            if ($event->status === 'finished') {
-                $summary['skipped']++;
-                continue;
-            }
-
-            $event->fill($attributes)->save();
-            $summary['updated']++;
+            $this->syncGame($season, $league, $game, $teams, $events, $offset, $weeks, $summary);
         }
 
         return $summary;
+    }
+
+    /**
+     * Create or update one fixture from the feed.
+     *
+     * @param array<string, mixed>                                $game
+     * @param \Illuminate\Support\Collection<string, Team>        $teams
+     * @param \Illuminate\Support\Collection<string, PickEvent>   $events
+     * @param array<string, Week>                                 $weeks
+     * @param array<string, int>                                  $summary
+     */
+    protected function syncGame(Season $season, League $league, array $game, $teams, $events, int $offset, array &$weeks, array &$summary): void
+    {
+        if ($game['external_id'] === '' || $game['home'] === '' || $game['away'] === '') {
+            $summary['skipped']++;
+
+            return;
+        }
+
+        $home = $this->team($teams, $game['home'], $game['home_team'] ?? [], $summary);
+        $away = $this->team($teams, $game['away'], $game['away_team'] ?? [], $summary);
+
+        $start = $this->when($game['start']);
+
+        if ($start === null) {
+            $summary['skipped']++;
+
+            return;
+        }
+
+        $week = $this->week($season, $league, $game, $start, $weeks, $summary);
+
+        $event = $events->get($game['external_id']);
+
+        $attributes = $this->attributes($game, $week, $home, $away, $start, $offset);
+
+        if ($event === null) {
+            PickEvent::query()->create($attributes);
+            $summary['created']++;
+
+            return;
+        }
+
+        /*
+         * 🚨 A finished game is never rewritten. The scoreboard keeps
+         * answering for weeks afterwards, and a provider correction that
+         * flipped a result after picks were scored would leave the standings
+         * disagreeing with the game everybody watched. A correction is a
+         * moderator's job, not a scheduled job's.
+         */
+        if ($event->status === 'finished') {
+            $summary['skipped']++;
+
+            return;
+        }
+
+        $event->fill($attributes)->save();
+        $summary['updated']++;
+    }
+
+    /**
+     * The columns one fixture is written with.
+     *
+     * @param  array<string, mixed> $game
+     * @return array<string, mixed>
+     */
+    protected function attributes(array $game, Week $week, Team $home, Team $away, Carbon $start, int $offset): array
+    {
+        return [
+            'week_id' => $week->id,
+            'home_team_id' => $home->id,
+            'away_team_id' => $away->id,
+            'external_id' => $game['external_id'],
+            'neutral_site' => $game['neutral_site'],
+            'match_date' => $start,
+            /*
+             * 🚨 The deadline is kickoff, not the start of the week. In a
+             * league played across seven days, one deadline for the whole
+             * round would either close Monday's game on Saturday morning or
+             * leave Saturday's open until Monday night — and the second of
+             * those lets somebody pick a game they have already watched.
+             *
+             * Less the board's lock offset, which this sync used to ignore:
+             * "lock 30 minutes before kickoff" held for college football
+             * and nowhere else.
+             */
+            'cutoff_date' => Kickoff::cutoff($start, false, $offset),
+            'status' => $this->status($game),
+            'home_score' => $game['home_score'],
+            'away_score' => $game['away_score'],
+            'result' => $this->result($game),
+        ] + $this->liveState($game) + $this->leadIn($game);
     }
 
     /* --------------------------------------------------------------- teams */
@@ -153,6 +182,41 @@ class EspnSyncService
     {
         $slug = $this->slug($name);
 
+        $crest = $this->crest($club, $slug);
+
+        if ($teams->has($slug)) {
+            $team = $teams->get($slug);
+
+            /*
+             * 🚨 A crest an operator chose is never overwritten. `logo_custom`
+             * is the only way to keep a hand-picked one through a sync, and a
+             * sync that ignored it would undo the same piece of work every hour.
+             */
+            if ($crest['logo_path'] !== '' && ! $team->logo_custom && (string) $team->logo_path === '') {
+                $team->logo_path = $crest['logo_path'];
+                $team->espn_id = $crest['espn_id'];
+                $team->save();
+            }
+
+            return $team;
+        }
+
+        $team = $this->createTeam($name, $slug, $crest);
+
+        $teams->put($slug, $team);
+        $summary['teams']++;
+
+        return $team;
+    }
+
+    /**
+     * The crest a fixture carried for one club.
+     *
+     * @param  array<string, mixed> $club
+     * @return array{espn_id: int|null, abbreviation: string, logo_path: string}
+     */
+    protected function crest(array $club, string $slug): array
+    {
         $crest = [
             'espn_id' => ($club['external_id'] ?? '') !== '' ? (int) $club['external_id'] : null,
             'abbreviation' => (string) ($club['abbreviation'] ?? ''),
@@ -176,23 +240,12 @@ class EspnSyncService
             }
         }
 
-        if ($teams->has($slug)) {
-            $team = $teams->get($slug);
+        return $crest;
+    }
 
-            /*
-             * 🚨 A crest an operator chose is never overwritten. `logo_custom`
-             * is the only way to keep a hand-picked one through a sync, and a
-             * sync that ignored it would undo the same piece of work every hour.
-             */
-            if ($crest['logo_path'] !== '' && ! $team->logo_custom && (string) $team->logo_path === '') {
-                $team->logo_path = $crest['logo_path'];
-                $team->espn_id = $crest['espn_id'];
-                $team->save();
-            }
-
-            return $team;
-        }
-
+    /** @param array{espn_id: int|null, abbreviation: string, logo_path: string} $crest */
+    protected function createTeam(string $name, string $slug, array $crest): Team
+    {
         /*
          * 🚨 Created rather than skipped. ESPN answers no separate team list
          * for most of these leagues, and a fixture whose clubs are not already
@@ -214,9 +267,6 @@ class EspnSyncService
             'espn_id' => $crest['espn_id'],
             'logo_path' => $crest['logo_path'] ?: null,
         ]);
-
-        $teams->put($slug, $team);
-        $summary['teams']++;
 
         return $team;
     }

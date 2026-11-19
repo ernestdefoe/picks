@@ -133,26 +133,13 @@ export default class MatchesTab extends Component<TabAttrs> {
 
     const rank = side === 'home' ? game.home_rank : game.away_rank;
 
-    const logoUrl = team?.logo_url;
-    const logoDarkUrl = team?.logo_dark_url || logoUrl;
-
     return (
       <button
         className={cls}
         disabled={(!game.can_pick && !openToGuest) || state.submitting[game.id] || undefined}
         onclick={() => (game.can_pick || openToGuest) && state.submitPick(game, side)}
       >
-        <div className="PicksTeamBtn-logo">
-          {logoUrl ? (
-            <>
-              {/* Lazy, so the variant CSS hides is never fetched at all. */}
-              <img src={crestUrl(logoUrl, 96)} alt={team?.name || ''} className="PicksTeamBtn-logo-light" loading="lazy" decoding="async" />
-              <img src={crestUrl(logoDarkUrl!, 96)} alt={team?.name || ''} className="PicksTeamBtn-logo-dark" loading="lazy" decoding="async" />
-            </>
-          ) : (
-            <span>{(team?.abbreviation || team?.name || '?').charAt(0)}</span>
-          )}
-        </div>
+        {this.teamLogo(team)}
         <div className="PicksTeamBtn-name">
           {/* 🚨 Inside the name, not above it. These buttons are a fixed grid —
               logo, name, conference — and a rank on a line of its own would
@@ -166,8 +153,26 @@ export default class MatchesTab extends Component<TabAttrs> {
     );
   }
 
+  private teamLogo(team: Game['home_team']): Mithril.Children {
+    const logoUrl = team?.logo_url;
+    const logoDarkUrl = team?.logo_dark_url || logoUrl;
+
+    return (
+      <div className="PicksTeamBtn-logo">
+        {logoUrl ? (
+          <>
+            {/* Lazy, so the variant CSS hides is never fetched at all. */}
+            <img src={crestUrl(logoUrl, 96)} alt={team?.name || ''} className="PicksTeamBtn-logo-light" loading="lazy" decoding="async" />
+            <img src={crestUrl(logoDarkUrl!, 96)} alt={team?.name || ''} className="PicksTeamBtn-logo-dark" loading="lazy" decoding="async" />
+          </>
+        ) : (
+          <span>{(team?.abbreviation || team?.name || '?').charAt(0)}</span>
+        )}
+      </div>
+    );
+  }
+
   private renderGameCard(game: Game): Mithril.Children {
-    const state = this.attrs.state;
     const isFinished = game.status === 'finished';
     const isCorrect = game.my_pick?.is_correct === true;
     const isIncorrect = game.my_pick?.is_correct === false;
@@ -202,36 +207,52 @@ export default class MatchesTab extends Component<TabAttrs> {
           {this.renderTeamButton(game, second)}
         </div>
 
-        {(game.my_pick || (!game.can_pick && game.status === 'scheduled')) && (
-          <div className="PicksGameCard-result">
-            {isCorrect && <span className="PicksTag PicksTag--correct">✓ {t('correct', { count: game.my_pick?.confidence ?? 1 })}</span>}
-            {isIncorrect && <span className="PicksTag PicksTag--incorrect">✗ {t('incorrect')}</span>}
-            {game.my_pick && !isFinished && <span className="PicksTag PicksTag--pending">{t('pending')}</span>}
-            {!game.can_pick && game.status === 'scheduled' && !game.my_pick && <span className="PicksTag PicksTag--locked">{t('no_pick')}</span>}
-          </div>
-        )}
+        {this.renderResult(game)}
 
         {/* Confidence selector — shown when mode is on, pick is made, game is open */}
-        {app.forum.attribute('picksConfidenceMode') && game.my_pick && game.can_pick && !isFinished && (
-          <div className="PicksConfidence">
-            <span className="PicksConfidence-label">{t('confidence_label')}</span>
-            <div className="PicksConfidence-buttons">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                <button
-                  key={n}
-                  className={`PicksConfidence-btn ${game.my_pick?.confidence === n ? 'PicksConfidence-btn--active' : ''}`}
-                  onclick={() => state.submitConfidence(game, n)}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-            {app.forum.attribute('picksConfidencePenalty') !== 'none' && (
-              <span className="PicksConfidence-hint">
-                {app.forum.attribute('picksConfidencePenalty') === 'full' ? t('confidence_hint_full') : t('confidence_hint_half')}
-              </span>
-            )}
-          </div>
+        {app.forum.attribute('picksConfidenceMode') && game.my_pick && game.can_pick && !isFinished && this.renderConfidence(game)}
+      </div>
+    );
+  }
+
+  private renderResult(game: Game): Mithril.Children {
+    const isFinished = game.status === 'finished';
+    const isCorrect = game.my_pick?.is_correct === true;
+    const isIncorrect = game.my_pick?.is_correct === false;
+
+    if (!(game.my_pick || (!game.can_pick && game.status === 'scheduled'))) return false;
+
+    return (
+      <div className="PicksGameCard-result">
+        {isCorrect && <span className="PicksTag PicksTag--correct">✓ {t('correct', { count: game.my_pick?.confidence ?? 1 })}</span>}
+        {isIncorrect && <span className="PicksTag PicksTag--incorrect">✗ {t('incorrect')}</span>}
+        {game.my_pick && !isFinished && <span className="PicksTag PicksTag--pending">{t('pending')}</span>}
+        {!game.can_pick && game.status === 'scheduled' && !game.my_pick && <span className="PicksTag PicksTag--locked">{t('no_pick')}</span>}
+      </div>
+    );
+  }
+
+  private renderConfidence(game: Game): Mithril.Children {
+    const state = this.attrs.state;
+
+    return (
+      <div className="PicksConfidence">
+        <span className="PicksConfidence-label">{t('confidence_label')}</span>
+        <div className="PicksConfidence-buttons">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+            <button
+              key={n}
+              className={`PicksConfidence-btn ${game.my_pick?.confidence === n ? 'PicksConfidence-btn--active' : ''}`}
+              onclick={() => state.submitConfidence(game, n)}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+        {app.forum.attribute('picksConfidencePenalty') !== 'none' && (
+          <span className="PicksConfidence-hint">
+            {app.forum.attribute('picksConfidencePenalty') === 'full' ? t('confidence_hint_full') : t('confidence_hint_half')}
+          </span>
         )}
       </div>
     );

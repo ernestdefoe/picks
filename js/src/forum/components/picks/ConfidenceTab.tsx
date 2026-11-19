@@ -94,34 +94,7 @@ export default class ConfidenceTab extends Component<TabAttrs> {
           {board.penalty === 'full' && t('penalty_full')}
         </p>
 
-        <div className="PicksStatusBar C10-status" aria-live="polite">
-          {playing && (
-            <span>
-              {app.translator.trans('ernestdefoe-picks.lib.common.picked')}:{' '}
-              <strong>
-                {c10.pickedCount()} / {board.games.length}
-              </strong>
-            </span>
-          )}
-          {board.my_score && (
-            <span>
-              {app.translator.trans('ernestdefoe-picks.lib.common.points')}: <strong>{board.my_score.total_points}</strong>
-            </span>
-          )}
-          <span className="C10-saveState">
-            {c10.saving ? (
-              t('saving')
-            ) : c10.error ? (
-              <span className="C10-error" role="alert">
-                {t('errors.' + (ERRORS.includes(c10.error) ? c10.error : 'generic'))}
-              </span>
-            ) : c10.saved ? (
-              t('saved')
-            ) : (
-              ''
-            )}
-          </span>
-        </div>
+        {this.statusBar(playing)}
 
         {!playing && <div className="PicksWeekLocked">{t(app.session.user ? 'no_permission' : 'log_in')}</div>}
         {!board.week_open && (
@@ -130,28 +103,73 @@ export default class ConfidenceTab extends Component<TabAttrs> {
           </div>
         )}
 
-        {c10.order.length > 0 && (
-          <div>
-            <h4 className="C10-heading">
-              {t('your_ranking')}
-              {playing && c10.order.length > 1 && <span className="C10-hint">{t('drag_hint')}</span>}
-            </h4>
-            <ol className="C10-list" aria-label={ts('your_ranking')}>
-              {c10.order.map((id, index) => this.row(c10.game(id)!, index, false))}
-            </ol>
-          </div>
-        )}
-
-        {locked.length > 0 && (
-          <div>
-            <h4 className="C10-heading">{t('locked_heading')}</h4>
-            <ol className="C10-list C10-list--locked">{locked.map((g, index) => this.row(g, index, true))}</ol>
-          </div>
-        )}
+        {this.lists(playing, locked)}
 
         {this.tiebreaker()}
       </div>
     );
+  }
+
+  private statusBar(playing: boolean): Mithril.Children {
+    const c10 = this.attrs.state.c10;
+    const board = c10.board!;
+
+    return (
+      <div className="PicksStatusBar C10-status" aria-live="polite">
+        {playing && (
+          <span>
+            {app.translator.trans('ernestdefoe-picks.lib.common.picked')}:{' '}
+            <strong>
+              {c10.pickedCount()} / {board.games.length}
+            </strong>
+          </span>
+        )}
+        {board.my_score && (
+          <span>
+            {app.translator.trans('ernestdefoe-picks.lib.common.points')}: <strong>{board.my_score.total_points}</strong>
+          </span>
+        )}
+        <span className="C10-saveState">{this.saveState()}</span>
+      </div>
+    );
+  }
+
+  private saveState(): Mithril.Children {
+    const c10 = this.attrs.state.c10;
+
+    if (c10.saving) return t('saving');
+    if (c10.error) {
+      return (
+        <span className="C10-error" role="alert">
+          {t('errors.' + (ERRORS.includes(c10.error) ? c10.error : 'generic'))}
+        </span>
+      );
+    }
+    return c10.saved ? t('saved') : '';
+  }
+
+  private lists(playing: boolean, locked: C10Game[]): Mithril.Children {
+    const c10 = this.attrs.state.c10;
+
+    return [
+      c10.order.length > 0 && (
+        <div>
+          <h4 className="C10-heading">
+            {t('your_ranking')}
+            {playing && c10.order.length > 1 && <span className="C10-hint">{t('drag_hint')}</span>}
+          </h4>
+          <ol className="C10-list" aria-label={ts('your_ranking')}>
+            {c10.order.map((id, index) => this.row(c10.game(id)!, index, false))}
+          </ol>
+        </div>
+      ),
+      locked.length > 0 && (
+        <div>
+          <h4 className="C10-heading">{t('locked_heading')}</h4>
+          <ol className="C10-list C10-list--locked">{locked.map((g, index) => this.row(g, index, true))}</ol>
+        </div>
+      ),
+    ];
   }
 
   private row(game: C10Game, index: number, locked: boolean): Mithril.Children {
@@ -161,7 +179,6 @@ export default class ConfidenceTab extends Component<TabAttrs> {
     const value = locked ? (game.my_pick?.confidence ?? null) : c10.values[game.id];
     const outcome = locked ? (game.my_pick?.selected_outcome ?? null) : c10.outcomes[game.id];
     const result = game.my_pick?.is_correct;
-    const penalty = c10.board!.penalty;
 
     let cls = 'C10Row';
     if (outcome) cls += ' C10Row--picked';
@@ -170,89 +187,115 @@ export default class ConfidenceTab extends Component<TabAttrs> {
     if (locked) cls += ' C10Row--locked';
 
     const label = this.matchup(game);
-    const [first, second] = sides();
 
     return (
       <li className={cls} key={String(game.id)} data-c10-row={String(game.id)}>
-        {playing ? (
-          <button
-            type="button"
-            className="C10Row-handle"
-            data-c10-handle={String(game.id)}
-            aria-label={ts('handle_label', { game: label, value: String(value) })}
-            title={ts('handle_title')}
-            onpointerdown={(e: PointerEvent) =>
-              startDrag(e, {
-                list: (e.currentTarget as HTMLElement).closest('.C10-list') as HTMLElement,
-                rowSelector: '.C10Row',
-                from: index,
-                onDrop: (from, to) => {
-                  c10.move(from, to);
-                  this.refocus(game.id);
-                },
-              })
-            }
-            onkeydown={(e: KeyboardEvent) => {
-              if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
-              e.preventDefault();
-              c10.move(index, index + (e.key === 'ArrowUp' ? -1 : 1));
-              this.refocus(game.id);
-            }}
-          >
-            <i className="fas fa-grip-vertical" aria-hidden="true" />
-          </button>
-        ) : (
-          <span className="C10Row-handle C10Row-handle--static" aria-hidden="true">
-            <i className={locked ? 'fas fa-lock' : 'fas fa-grip-vertical'} />
-          </span>
-        )}
+        {playing ? this.handle(game, index, value, label) : this.staticHandle(locked)}
 
         <span className="C10Row-value" aria-hidden="true">
           {value ?? '–'}
         </span>
 
-        <div className="C10Row-body">
-          <div className="C10Row-meta">
-            <span>{this.when(game)}</span>
-            {game.broadcast && <span>· {game.broadcast}</span>}
-            {game.is_tiebreaker && <span className="C10Row-tb">{t('tiebreaker_tag')}</span>}
-          </div>
-          <div className="C10Row-teams" role="group" aria-label={label}>
-            {this.team(game, first, outcome, playing)}
-            <span className={`C10Row-vs ${game.status === 'finished' && game.home_score !== null ? 'C10Row-vs--score' : ''}`}>
-              {game.home_score !== null && game.status === 'finished' ? score(game.home_score, game.away_score) : separator(game.neutral_site)}
-            </span>
-            {this.team(game, second, outcome, playing)}
-          </div>
-          {locked && !game.my_pick && <span className="PicksTag PicksTag--locked">{t('no_pick')}</span>}
-          {result === true && <span className="PicksTag PicksTag--correct">{t('correct', { points: value })}</span>}
-          {result === false && (
-            <span className="PicksTag PicksTag--incorrect">
-              {penalty === 'none' ? t('incorrect') : t('incorrect_penalty', { points: penalty === 'full' ? value : Math.floor((value || 0) / 2) })}
-            </span>
-          )}
-        </div>
+        {this.rowBody(game, locked, value, outcome, playing, label)}
 
-        {playing && (
-          // Core's Select markup, so the menu carries the theme's caret and
-          // reads as a menu rather than a grey box with a number in it.
-          <span className="Select C10Row-select">
-            <select
-              className="Select-input FormControl C10Row-selectInput"
-              aria-label={ts('value_label', { game: label })}
-              value={String(value)}
-              onchange={(e: Event) => c10.setValue(game.id, parseInt((e.target as HTMLSelectElement).value, 10))}
-            >
-              {c10.freeValues().map((v) => (
-                <option value={String(v)} selected={v === value}>
-                  {v}
-                </option>
-              ))}
-            </select>
-            <i className="icon fas fa-sort Select-caret" aria-hidden="true" />
+        {playing && this.valueSelect(game, value, label)}
+      </li>
+    );
+  }
+
+  /** The drag handle: pointer drag, or Alt+Arrow from the keyboard. */
+  private handle(game: C10Game, index: number, value: number | null, label: string): Mithril.Children {
+    const c10 = this.attrs.state.c10;
+
+    return (
+      <button
+        type="button"
+        className="C10Row-handle"
+        data-c10-handle={String(game.id)}
+        aria-label={ts('handle_label', { game: label, value: String(value) })}
+        title={ts('handle_title')}
+        onpointerdown={(e: PointerEvent) =>
+          startDrag(e, {
+            list: (e.currentTarget as HTMLElement).closest('.C10-list') as HTMLElement,
+            rowSelector: '.C10Row',
+            from: index,
+            onDrop: (from, to) => {
+              c10.move(from, to);
+              this.refocus(game.id);
+            },
+          })
+        }
+        onkeydown={(e: KeyboardEvent) => {
+          if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+          e.preventDefault();
+          c10.move(index, index + (e.key === 'ArrowUp' ? -1 : 1));
+          this.refocus(game.id);
+        }}
+      >
+        <i className="fas fa-grip-vertical" aria-hidden="true" />
+      </button>
+    );
+  }
+
+  private staticHandle(locked: boolean): Mithril.Children {
+    return (
+      <span className="C10Row-handle C10Row-handle--static" aria-hidden="true">
+        <i className={locked ? 'fas fa-lock' : 'fas fa-grip-vertical'} />
+      </span>
+    );
+  }
+
+  private rowBody(game: C10Game, locked: boolean, value: number | null, outcome: string | null, playing: boolean, label: string): Mithril.Children {
+    const result = game.my_pick?.is_correct;
+    const penalty = this.attrs.state.c10.board!.penalty;
+    const [first, second] = sides();
+
+    return (
+      <div className="C10Row-body">
+        <div className="C10Row-meta">
+          <span>{this.when(game)}</span>
+          {game.broadcast && <span>· {game.broadcast}</span>}
+          {game.is_tiebreaker && <span className="C10Row-tb">{t('tiebreaker_tag')}</span>}
+        </div>
+        <div className="C10Row-teams" role="group" aria-label={label}>
+          {this.team(game, first, outcome, playing)}
+          <span className={`C10Row-vs ${game.status === 'finished' && game.home_score !== null ? 'C10Row-vs--score' : ''}`}>
+            {game.home_score !== null && game.status === 'finished' ? score(game.home_score, game.away_score) : separator(game.neutral_site)}
+          </span>
+          {this.team(game, second, outcome, playing)}
+        </div>
+        {locked && !game.my_pick && <span className="PicksTag PicksTag--locked">{t('no_pick')}</span>}
+        {result === true && <span className="PicksTag PicksTag--correct">{t('correct', { points: value })}</span>}
+        {result === false && (
+          <span className="PicksTag PicksTag--incorrect">
+            {penalty === 'none' ? t('incorrect') : t('incorrect_penalty', { points: penalty === 'full' ? value : Math.floor((value || 0) / 2) })}
           </span>
         )}
-      </li>
+      </div>
+    );
+  }
+
+  private valueSelect(game: C10Game, value: number | null, label: string): Mithril.Children {
+    const c10 = this.attrs.state.c10;
+
+    return (
+      // Core's Select markup, so the menu carries the theme's caret and
+      // reads as a menu rather than a grey box with a number in it.
+      <span className="Select C10Row-select">
+        <select
+          className="Select-input FormControl C10Row-selectInput"
+          aria-label={ts('value_label', { game: label })}
+          value={String(value)}
+          onchange={(e: Event) => c10.setValue(game.id, parseInt((e.target as HTMLSelectElement).value, 10))}
+        >
+          {c10.freeValues().map((v) => (
+            <option value={String(v)} selected={v === value}>
+              {v}
+            </option>
+          ))}
+        </select>
+        <i className="icon fas fa-sort Select-caret" aria-hidden="true" />
+      </span>
     );
   }
 

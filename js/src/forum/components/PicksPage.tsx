@@ -36,10 +36,21 @@ export default class PicksPage extends Page {
   }
 
   view() {
-    const state = this.picksState;
-    const canView = app.forum.attribute('picksCanView') || app.session.user?.isAdmin();
+    return (
+      <PageStructure className="PicksPage" sidebar={() => <IndexSidebar />}>
+        <div className="PicksPage-inner">
+          {waymark([{ label: this.title() }])}
 
-    const tabs = [
+          <div className="PicksPage-tabs">{this.tabs().map((tab) => this.tabButton(tab))}</div>
+
+          {this.content()}
+        </div>
+      </PageStructure>
+    );
+  }
+
+  private tabs(): { key: string; label: Mithril.Children; icon: string }[] {
+    return [
       {
         key: 'matches',
         label: app.translator.trans('ernestdefoe-picks.lib.nav.matches'),
@@ -74,57 +85,68 @@ export default class PicksPage extends Page {
         icon: 'fas fa-history',
       },
     ];
+  }
+
+  private tabButton(tab: { key: string; label: Mithril.Children; icon: string }): Mithril.Children {
+    const state = this.picksState;
 
     return (
-      <PageStructure className="PicksPage" sidebar={() => <IndexSidebar />}>
-        <div className="PicksPage-inner">
-          {waymark([{ label: this.title() }])}
+      <button
+        key={tab.key}
+        className={`PicksPage-tab ${state.activeTab === tab.key ? 'PicksPage-tab--active' : ''}`}
+        onclick={() => this.selectTab(tab.key)}
+      >
+        <i className={tab.icon} /> {tab.label}
+      </button>
+    );
+  }
 
-          <div className="PicksPage-tabs">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                className={`PicksPage-tab ${state.activeTab === tab.key ? 'PicksPage-tab--active' : ''}`}
-                onclick={() => {
-                  state.activeTab = tab.key;
-                  if (tab.key === 'leaderboard' && state.leaderboard.length === 0) {
-                    state.loadLeaderboard();
-                  }
-                  if (tab.key === 'history') {
-                    state.loadLeaderboardHistory();
-                  }
-                  if (tab.key === 'confidence' && state.c10.weekId !== state.currentWeekId) {
-                    state.c10.load(state.currentWeekId);
-                  }
-                  m.redraw();
-                }}
-              >
-                <i className={tab.icon} /> {tab.label}
-              </button>
-            ))}
-          </div>
+  private selectTab(key: string): void {
+    const state = this.picksState;
 
-          {!canView ? (
-            <div className="PicksEmpty">{app.translator.trans('ernestdefoe-picks.lib.messages.login_required')}</div>
-          ) : !state.weeksLoaded ? (
-            <PicksSkeleton surface="page" fallback={430} rows={4} />
-          ) : state.weeks.length === 0 && state.activeTab !== 'history' ? (
-            <div className="PicksEmpty PicksEmpty--noSchedule">
-              <i className="fas fa-football" />
-              <p>{app.translator.trans('ernestdefoe-picks.lib.messages.no_schedule')}</p>
-              <p>{app.translator.trans('ernestdefoe-picks.lib.messages.check_back')}</p>
-            </div>
-          ) : (
-            <>
-              {state.activeTab === 'matches' && MatchesTab.component({ state })}
-              {state.activeTab === 'confidence' && ConfidenceTab.component({ state })}
-              {state.activeTab === 'mypicks' && MyPicksTab.component({ state })}
-              {state.activeTab === 'leaderboard' && LeaderboardTab.component({ state })}
-              {state.activeTab === 'history' && HistoryTab.component({ state })}
-            </>
-          )}
+    state.activeTab = key;
+    if (key === 'leaderboard' && state.leaderboard.length === 0) {
+      state.loadLeaderboard();
+    }
+    if (key === 'history') {
+      state.loadLeaderboardHistory();
+    }
+    if (key === 'confidence' && state.c10.weekId !== state.currentWeekId) {
+      state.c10.load(state.currentWeekId);
+    }
+    m.redraw();
+  }
+
+  private content(): Mithril.Children {
+    const state = this.picksState;
+    const canView = app.forum.attribute('picksCanView') || app.session.user?.isAdmin();
+
+    if (!canView) {
+      return <div className="PicksEmpty">{app.translator.trans('ernestdefoe-picks.lib.messages.login_required')}</div>;
+    }
+
+    if (!state.weeksLoaded) {
+      return <PicksSkeleton surface="page" fallback={430} rows={4} />;
+    }
+
+    if (state.weeks.length === 0 && state.activeTab !== 'history') {
+      return (
+        <div className="PicksEmpty PicksEmpty--noSchedule">
+          <i className="fas fa-football" />
+          <p>{app.translator.trans('ernestdefoe-picks.lib.messages.no_schedule')}</p>
+          <p>{app.translator.trans('ernestdefoe-picks.lib.messages.check_back')}</p>
         </div>
-      </PageStructure>
+      );
+    }
+
+    return (
+      <>
+        {state.activeTab === 'matches' && MatchesTab.component({ state })}
+        {state.activeTab === 'confidence' && ConfidenceTab.component({ state })}
+        {state.activeTab === 'mypicks' && MyPicksTab.component({ state })}
+        {state.activeTab === 'leaderboard' && LeaderboardTab.component({ state })}
+        {state.activeTab === 'history' && HistoryTab.component({ state })}
+      </>
     );
   }
 }

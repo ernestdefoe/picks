@@ -33,11 +33,30 @@ final class Profile
         ?int $currentSeasonId,
         ?int $currentWeekId
     ): array {
-        $alltime = null;
+        [$seasonRows, $weekRows] = self::splitRows($rows, $weeks);
 
+        $out = [];
+
+        foreach ($seasons as $season) {
+            $id = (int) $season['id'];
+            $stats = $seasonRows[$id] ?? null;
+
+            if ($stats === null) {
+                continue;
+            }
+
+            $out[] = self::season($season, $stats, $weekRows[$id] ?? [], $weeks, $players, $currentSeasonId, $currentWeekId);
+        }
+
+        return ['alltime' => self::allTimeLine($userId, $allTime), 'seasons' => $out];
+    }
+
+    /** The member's all-time line and rank, or null when they have none. */
+    private static function allTimeLine(int $userId, array $allTime): ?array
+    {
         foreach ($allTime as $index => $line) {
             if ($line['user_id'] === $userId) {
-                $alltime = [
+                return [
                     'total_points' => $line['points'],
                     'total_picks' => $line['picks'],
                     'correct_picks' => $line['correct'],
@@ -45,10 +64,20 @@ final class Profile
                     'rank' => $index + 1,
                     'total_players' => count($allTime),
                 ];
-                break;
             }
         }
 
+        return null;
+    }
+
+    /**
+     * The member's played rows, split into season lines (keyed by season id)
+     * and week lines (grouped by season id).
+     *
+     * @return array{0: array<int, array>, 1: array<int, array<int, array>>}
+     */
+    private static function splitRows(array $rows, array $weeks): array
+    {
         $seasonRows = [];
         $weekRows = [];
 
@@ -64,42 +93,42 @@ final class Profile
             }
         }
 
-        $out = [];
+        return [$seasonRows, $weekRows];
+    }
 
-        foreach ($seasons as $season) {
-            $id = (int) $season['id'];
-            $stats = $seasonRows[$id] ?? null;
+    /** One season block, its played weeks underneath. */
+    private static function season(
+        array $season,
+        array $stats,
+        array $played,
+        array $weeks,
+        array $players,
+        ?int $currentSeasonId,
+        ?int $currentWeekId
+    ): array {
+        $id = (int) $season['id'];
 
-            if ($stats === null) {
-                continue;
-            }
+        // Newest first, the regular season before the postseason — the
+        // order the full board's history uses.
+        usort($played, function (array $a, array $b) use ($weeks) {
+            $wa = $weeks[$a['week_id']];
+            $wb = $weeks[$b['week_id']];
 
-            $played = $weekRows[$id] ?? [];
+            return [$wa['type'] === 'regular' ? 0 : 1, $wb['number']] <=> [$wb['type'] === 'regular' ? 0 : 1, $wa['number']];
+        });
 
-            // Newest first, the regular season before the postseason — the
-            // order the full board's history uses.
-            usort($played, function (array $a, array $b) use ($weeks) {
-                $wa = $weeks[$a['week_id']];
-                $wb = $weeks[$b['week_id']];
-
-                return [$wa['type'] === 'regular' ? 0 : 1, $wb['number']] <=> [$wb['type'] === 'regular' ? 0 : 1, $wa['number']];
-            });
-
-            $out[] = [
-                'season_id' => $id,
-                'name' => $season['name'],
-                'year' => (int) $season['year'],
-                'is_current' => $id === $currentSeasonId,
-                'stats' => self::line($stats, $players),
-                'weeks' => array_map(fn (array $row) => [
-                    'week_id' => (int) $row['week_id'],
-                    'week_name' => $weeks[$row['week_id']]['name'],
-                    'is_current' => (int) $row['week_id'] === $currentWeekId,
-                ] + self::line($row, $players), $played),
-            ];
-        }
-
-        return ['alltime' => $alltime, 'seasons' => $out];
+        return [
+            'season_id' => $id,
+            'name' => $season['name'],
+            'year' => (int) $season['year'],
+            'is_current' => $id === $currentSeasonId,
+            'stats' => self::line($stats, $players),
+            'weeks' => array_map(fn (array $row) => [
+                'week_id' => (int) $row['week_id'],
+                'week_name' => $weeks[$row['week_id']]['name'],
+                'is_current' => (int) $row['week_id'] === $currentWeekId,
+            ] + self::line($row, $players), $played),
+        ];
     }
 
     /** One scored row, as the profile draws it. */

@@ -188,31 +188,9 @@ export default class ConfidenceTab extends Component {
   }
 
   private body(v: View): Mithril.Children {
-    const full = v.selection.length >= v.size;
-    const needle = this.filter.trim().toLowerCase();
-    const candidates = v.candidates.filter((g) => !needle || `${g.home_team?.name ?? ''} ${g.away_team?.name ?? ''}`.toLowerCase().includes(needle));
-
     return (
       <div>
-        <div className="PicksC10Admin-bar">
-          <span className={`PicksBadge ${v.frozen ? 'PicksBadge--closed' : 'PicksBadge--scheduled'}`}>
-            {v.frozen ? t('frozen_badge') : t('open_badge')}
-          </span>
-          <span className="PicksC10Admin-count">{t('count', { chosen: v.selection.length, count: v.size })}</span>
-          {!v.week_open && <span className="PicksC10Admin-note">{t('week_not_open')}</span>}
-          <Button
-            className="Button"
-            icon="fas fa-wand-magic-sparkles"
-            loading={this.busy}
-            disabled={v.frozen}
-            onclick={() => {
-              if (v.selection.length && !confirm(extractText(t('auto_confirm')))) return;
-              this.send(null, '/auto', t('auto_done'));
-            }}
-          >
-            {v.selection.length ? t('auto_again') : t('auto')}
-          </Button>
-        </div>
+        {this.renderBar(v)}
 
         {v.frozen && <p className="helpText">{t('frozen_help')}</p>}
         {this.message && <div className="PicksAlert PicksAlert--info">{this.message}</div>}
@@ -223,87 +201,10 @@ export default class ConfidenceTab extends Component {
         {v.selection.length === 0 ? (
           <div className="PicksEmptyState">{t('none_chosen')}</div>
         ) : (
-          <ol className="PicksC10Admin-list">
-            {v.selection.map((g, i) => (
-              <li className="PicksC10Admin-row" key={String(g.id)}>
-                {v.frozen ? (
-                  <span className="PicksC10Admin-handle PicksC10Admin-handle--static" aria-hidden="true">
-                    <i className="fas fa-lock" />
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    className="PicksC10Admin-handle"
-                    aria-label={extractText(t('handle_label', { game: this.matchup(g) }))}
-                    onpointerdown={(e: PointerEvent) =>
-                      startDrag(e, {
-                        list: (e.currentTarget as HTMLElement).closest('.PicksC10Admin-list') as HTMLElement,
-                        rowSelector: '.PicksC10Admin-row',
-                        from: i,
-                        onDrop: (from, to) => this.save(moveItem(this.ids(), from, to)),
-                      })
-                    }
-                    onkeydown={(e: KeyboardEvent) => {
-                      if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
-                      e.preventDefault();
-                      const to = i + (e.key === 'ArrowUp' ? -1 : 1);
-                      if (to >= 0 && to < v.selection.length) this.save(moveItem(this.ids(), i, to));
-                    }}
-                  >
-                    <i className="fas fa-grip-vertical" aria-hidden="true" />
-                  </button>
-                )}
-                <span className="PicksC10Admin-pos">{i + 1}</span>
-                {this.game(g)}
-                {i === 0 && <span className="PicksC10Admin-tb">{t('tiebreaker')}</span>}
-                {!v.frozen && (
-                  <Button
-                    className="Button Button--icon PicksC10Admin-remove"
-                    icon="fas fa-times"
-                    aria-label={extractText(t('remove_label', { game: this.matchup(g) }))}
-                    title={extractText(t('remove'))}
-                    disabled={this.busy}
-                    onclick={() => this.save(this.ids().filter((id) => id !== g.id))}
-                  />
-                )}
-              </li>
-            ))}
-          </ol>
+          <ol className="PicksC10Admin-list">{v.selection.map((g, i) => this.renderChosenRow(v, g, i))}</ol>
         )}
 
-        {!v.frozen && (
-          <div className="PicksC10Admin-add">
-            <h4 className="PicksC10Admin-heading">{t('add_heading')}</h4>
-            <p className="helpText">{full ? t('full_help', { count: v.size }) : t('add_help')}</p>
-            <input
-              className="FormControl PicksC10Admin-filter"
-              type="search"
-              placeholder={extractText(t('filter_placeholder'))}
-              value={this.filter}
-              oninput={(e: InputEvent) => (this.filter = (e.target as HTMLInputElement).value)}
-            />
-            <ul className="PicksC10Admin-list PicksC10Admin-list--candidates">
-              {candidates.map((g) => (
-                <li className={`PicksC10Admin-row ${g.pickable ? '' : 'PicksC10Admin-row--started'}`} key={String(g.id)}>
-                  {this.game(g)}
-                  {g.pickable ? (
-                    <Button
-                      className="Button PicksC10Admin-addBtn"
-                      icon="fas fa-plus"
-                      disabled={full || this.busy}
-                      aria-label={extractText(t('add_label', { game: this.matchup(g) }))}
-                      onclick={() => this.save([...this.ids(), g.id])}
-                    >
-                      {t('add')}
-                    </Button>
-                  ) : (
-                    <span className="PicksC10Admin-note">{t('started')}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {this.renderAddSection(v)}
       </div>
     );
   }
@@ -353,5 +254,124 @@ export default class ConfidenceTab extends Component {
     } catch (e) {
       return '';
     }
+  }
+
+  private renderBar(v: View) {
+    return (
+      <div className="PicksC10Admin-bar">
+        <span className={`PicksBadge ${v.frozen ? 'PicksBadge--closed' : 'PicksBadge--scheduled'}`}>
+          {v.frozen ? t('frozen_badge') : t('open_badge')}
+        </span>
+        <span className="PicksC10Admin-count">{t('count', { chosen: v.selection.length, count: v.size })}</span>
+        {!v.week_open && <span className="PicksC10Admin-note">{t('week_not_open')}</span>}
+        <Button
+          className="Button"
+          icon="fas fa-wand-magic-sparkles"
+          loading={this.busy}
+          disabled={v.frozen}
+          onclick={() => {
+            if (v.selection.length && !confirm(extractText(t('auto_confirm')))) return;
+            this.send(null, '/auto', t('auto_done'));
+          }}
+        >
+          {v.selection.length ? t('auto_again') : t('auto')}
+        </Button>
+      </div>
+    );
+  }
+
+  private renderHandle(v: View, g: Game, i: number) {
+    return v.frozen ? (
+      <span className="PicksC10Admin-handle PicksC10Admin-handle--static" aria-hidden="true">
+        <i className="fas fa-lock" />
+      </span>
+    ) : (
+      <button
+        type="button"
+        className="PicksC10Admin-handle"
+        aria-label={extractText(t('handle_label', { game: this.matchup(g) }))}
+        onpointerdown={(e: PointerEvent) =>
+          startDrag(e, {
+            list: (e.currentTarget as HTMLElement).closest('.PicksC10Admin-list') as HTMLElement,
+            rowSelector: '.PicksC10Admin-row',
+            from: i,
+            onDrop: (from, to) => this.save(moveItem(this.ids(), from, to)),
+          })
+        }
+        onkeydown={(e: KeyboardEvent) => {
+          if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+          e.preventDefault();
+          const to = i + (e.key === 'ArrowUp' ? -1 : 1);
+          if (to >= 0 && to < v.selection.length) this.save(moveItem(this.ids(), i, to));
+        }}
+      >
+        <i className="fas fa-grip-vertical" aria-hidden="true" />
+      </button>
+    );
+  }
+
+  private renderCandidate(g: Game, full: boolean) {
+    return (
+      <li className={`PicksC10Admin-row ${g.pickable ? '' : 'PicksC10Admin-row--started'}`} key={String(g.id)}>
+        {this.game(g)}
+        {g.pickable ? (
+          <Button
+            className="Button PicksC10Admin-addBtn"
+            icon="fas fa-plus"
+            disabled={full || this.busy}
+            aria-label={extractText(t('add_label', { game: this.matchup(g) }))}
+            onclick={() => this.save([...this.ids(), g.id])}
+          >
+            {t('add')}
+          </Button>
+        ) : (
+          <span className="PicksC10Admin-note">{t('started')}</span>
+        )}
+      </li>
+    );
+  }
+
+  private renderChosenRow(v: View, g: Game, i: number) {
+    return (
+      <li className="PicksC10Admin-row" key={String(g.id)}>
+        {this.renderHandle(v, g, i)}
+        <span className="PicksC10Admin-pos">{i + 1}</span>
+        {this.game(g)}
+        {i === 0 && <span className="PicksC10Admin-tb">{t('tiebreaker')}</span>}
+        {!v.frozen && (
+          <Button
+            className="Button Button--icon PicksC10Admin-remove"
+            icon="fas fa-times"
+            aria-label={extractText(t('remove_label', { game: this.matchup(g) }))}
+            title={extractText(t('remove'))}
+            disabled={this.busy}
+            onclick={() => this.save(this.ids().filter((id) => id !== g.id))}
+          />
+        )}
+      </li>
+    );
+  }
+
+  private renderAddSection(v: View) {
+    const full = v.selection.length >= v.size;
+    const needle = this.filter.trim().toLowerCase();
+    const candidates = v.candidates.filter((g) => !needle || `${g.home_team?.name ?? ''} ${g.away_team?.name ?? ''}`.toLowerCase().includes(needle));
+
+    return (
+      !v.frozen && (
+        <div className="PicksC10Admin-add">
+          <h4 className="PicksC10Admin-heading">{t('add_heading')}</h4>
+          <p className="helpText">{full ? t('full_help', { count: v.size }) : t('add_help')}</p>
+          <input
+            className="FormControl PicksC10Admin-filter"
+            type="search"
+            placeholder={extractText(t('filter_placeholder'))}
+            value={this.filter}
+            oninput={(e: InputEvent) => (this.filter = (e.target as HTMLInputElement).value)}
+          />
+          <ul className="PicksC10Admin-list PicksC10Admin-list--candidates">{candidates.map((g) => this.renderCandidate(g, full))}</ul>
+        </div>
+      )
+    );
   }
 }

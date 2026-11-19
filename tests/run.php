@@ -22,6 +22,8 @@ require __DIR__.'/../src/Service/Leagues/League.php';
 require __DIR__.'/../src/Service/Leagues/Leagues.php';
 require __DIR__.'/../src/Service/Providers/Provider.php';
 require __DIR__.'/../src/Service/Providers/EspnProvider.php';
+require __DIR__.'/../src/Service/Providers/Espn/BoxScoreParser.php';
+require __DIR__.'/../src/Service/Providers/Espn/FixtureParser.php';
 require __DIR__.'/../src/Service/CurrentWeek.php';
 require __DIR__.'/../src/Confidence/Selector.php';
 require __DIR__.'/../src/Confidence/Rules.php';

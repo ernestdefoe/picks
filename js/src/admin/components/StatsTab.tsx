@@ -137,114 +137,153 @@ export default class StatsTab extends Component {
   }
 
   view() {
-    const weeks = this.sortedWeeks();
-    const s = this.stats;
-
     return (
       <div className="PicksStatsTab">
-        <div className="PicksTab-header">
-          <div>
-            <h3>
-              <i className="fas fa-chart-bar" /> {t('title')}
-            </h3>
-            <p className="PicksTab-meta">{t('intro')}</p>
-          </div>
-          <div className="PicksTab-actions">
-            <select
-              className="FormControl"
-              value={this.selectedWeekId}
-              onchange={(e: Event) => {
-                this.selectedWeekId = (e.target as HTMLSelectElement).value;
-                this.load();
-              }}
-            >
-              {weeks.map((w) => (
-                <option key={String(w.id())} value={String(w.id())}>
-                  {w.name()}
-                </option>
-              ))}
-            </select>
-            <Button className="Button" icon="fas fa-sync" loading={this.loading} onclick={() => this.load()}>
-              {t('refresh')}
-            </Button>
-          </div>
+        {this.renderHeader()}
+
+        {this.renderError()}
+
+        {this.renderBody()}
+      </div>
+    );
+  }
+
+  private renderHeader() {
+    const weeks = this.sortedWeeks();
+
+    return (
+      <div className="PicksTab-header">
+        <div>
+          <h3>
+            <i className="fas fa-chart-bar" /> {t('title')}
+          </h3>
+          <p className="PicksTab-meta">{t('intro')}</p>
         </div>
+        <div className="PicksTab-actions">
+          <select
+            className="FormControl"
+            value={this.selectedWeekId}
+            onchange={(e: Event) => {
+              this.selectedWeekId = (e.target as HTMLSelectElement).value;
+              this.load();
+            }}
+          >
+            {weeks.map((w) => (
+              <option key={String(w.id())} value={String(w.id())}>
+                {w.name()}
+              </option>
+            ))}
+          </select>
+          <Button className="Button" icon="fas fa-sync" loading={this.loading} onclick={() => this.load()}>
+            {t('refresh')}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-        {this.error && <div className="PicksAlert PicksAlert--error">{this.error}</div>}
+  private renderError() {
+    return this.error && <div className="PicksAlert PicksAlert--error">{this.error}</div>;
+  }
 
-        {this.loading ? (
-          <LoadingIndicator />
-        ) : !this.selectedWeekId ? (
-          <div className="PicksEmptyState">{app.translator.trans('ernestdefoe-picks.admin.common.no_schedule')}</div>
-        ) : !s ? null : (
-          <>
-            {/* Participation */}
-            <div className="PicksStatsSection">
-              <div className="PicksStatsSection-title">
-                <i className="fas fa-users" /> {t('participation')}
-              </div>
-              <div className="PicksStats-cards">
-                {this.statCard('fas fa-users', 'total_players', s.participation.total_players)}
-                {this.statCard('fas fa-check-circle', 'picked_this_week', s.participation.unique_pickers_this_week)}
-                {this.statCard('fas fa-percentage', 'participation_rate', s.participation.participation_rate, '%')}
-                {this.statCard('fas fa-user-clock', 'yet_to_pick', s.participation.users_not_picked_this_week)}
-              </div>
-            </div>
+  private renderParticipation(s: StatsData) {
+    return (
+      <div className="PicksStatsSection">
+        <div className="PicksStatsSection-title">
+          <i className="fas fa-users" /> {t('participation')}
+        </div>
+        <div className="PicksStats-cards">
+          {this.statCard('fas fa-users', 'total_players', s.participation.total_players)}
+          {this.statCard('fas fa-check-circle', 'picked_this_week', s.participation.unique_pickers_this_week)}
+          {this.statCard('fas fa-percentage', 'participation_rate', s.participation.participation_rate, '%')}
+          {this.statCard('fas fa-user-clock', 'yet_to_pick', s.participation.users_not_picked_this_week)}
+        </div>
+      </div>
+    );
+  }
 
-            {/* Accuracy & Scoring */}
-            <div className="PicksStatsSection">
-              <div className="PicksStatsSection-title">
-                <i className="fas fa-bullseye" /> {t('accuracy_title')}
-              </div>
-              <div className="PicksStats-cards">
-                {this.statCard('fas fa-chart-line', 'avg_accuracy_season', s.accuracy.avg_accuracy_all_time, '%')}
-                {this.statCard('fas fa-calendar-week', 'avg_accuracy_week', s.accuracy.avg_accuracy_this_week, '%')}
-                {this.statCard('fas fa-bolt', 'upset_rate', s.accuracy.upset_rate, '%')}
-                {this.statCard('fas fa-football', 'most_picked', s.accuracy.most_picked_team?.abbreviation ?? null)}
-              </div>
-              {s.accuracy.most_picked_team && (
-                <p className="PicksStats-footnote">
-                  <i className="fas fa-football" />{' '}
-                  {t('most_picked_note', { team: s.accuracy.most_picked_team.name, count: s.accuracy.most_picked_team.picks })}
-                </p>
-              )}
-            </div>
-
-            {/* Game Coverage */}
-            <div className="PicksStatsSection">
-              <div className="PicksStatsSection-title">
-                <i className="fas fa-clipboard-list" /> {t('coverage')}
-              </div>
-              <div className="PicksStats-cards">
-                {this.statCard('fas fa-flag-checkered', 'results_entered', s.coverage.total_finished)}
-                {this.statCard('fas fa-clock', 'awaiting_results', s.coverage.total_scheduled)}
-                {this.statCard('fas fa-ghost', 'no_picks', s.coverage.games_no_picks)}
-                {this.statCard('fas fa-handshake', 'consensus', s.coverage.consensus_games)}
-              </div>
-
-              {s.coverage.most_contested.length > 0 && (
-                <div className="PicksStats-contestedList">
-                  <div className="PicksStats-contestedTitle">{t('most_contested')}</div>
-                  {s.coverage.most_contested.map((g) => (
-                    <div className="PicksStats-contestedRow" key={String(g.event_id)}>
-                      <span className="PicksStats-contestedMatchup">{matchupText(g.home_team, g.away_team, g.neutral_site)}</span>
-                      <div className="PicksStats-contestedBar">
-                        {awayFirst()
-                          ? [this.contestedFill('away', g.away_pct), this.contestedFill('home', g.home_pct)]
-                          : [this.contestedFill('home', g.home_pct), this.contestedFill('away', g.away_pct)]}
-                      </div>
-                      <span className="PicksStats-contestedSplit">
-                        {awayFirst() ? `${g.away_pct}% / ${g.home_pct}%` : `${g.home_pct}% / ${g.away_pct}%`}
-                      </span>
-                      <span className="PicksStats-contestedTotal">{t('picks_count', { count: g.total })}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
+  private renderAccuracy(s: StatsData) {
+    return (
+      <div className="PicksStatsSection">
+        <div className="PicksStatsSection-title">
+          <i className="fas fa-bullseye" /> {t('accuracy_title')}
+        </div>
+        <div className="PicksStats-cards">
+          {this.statCard('fas fa-chart-line', 'avg_accuracy_season', s.accuracy.avg_accuracy_all_time, '%')}
+          {this.statCard('fas fa-calendar-week', 'avg_accuracy_week', s.accuracy.avg_accuracy_this_week, '%')}
+          {this.statCard('fas fa-bolt', 'upset_rate', s.accuracy.upset_rate, '%')}
+          {this.statCard('fas fa-football', 'most_picked', s.accuracy.most_picked_team?.abbreviation ?? null)}
+        </div>
+        {s.accuracy.most_picked_team && (
+          <p className="PicksStats-footnote">
+            <i className="fas fa-football" />{' '}
+            {t('most_picked_note', { team: s.accuracy.most_picked_team.name, count: s.accuracy.most_picked_team.picks })}
+          </p>
         )}
       </div>
+    );
+  }
+
+  private renderContestedRow(g: ContestledGame) {
+    return (
+      <div className="PicksStats-contestedRow" key={String(g.event_id)}>
+        <span className="PicksStats-contestedMatchup">{matchupText(g.home_team, g.away_team, g.neutral_site)}</span>
+        <div className="PicksStats-contestedBar">
+          {awayFirst()
+            ? [this.contestedFill('away', g.away_pct), this.contestedFill('home', g.home_pct)]
+            : [this.contestedFill('home', g.home_pct), this.contestedFill('away', g.away_pct)]}
+        </div>
+        <span className="PicksStats-contestedSplit">{awayFirst() ? `${g.away_pct}% / ${g.home_pct}%` : `${g.home_pct}% / ${g.away_pct}%`}</span>
+        <span className="PicksStats-contestedTotal">{t('picks_count', { count: g.total })}</span>
+      </div>
+    );
+  }
+
+  private renderCoverage(s: StatsData) {
+    return (
+      <div className="PicksStatsSection">
+        <div className="PicksStatsSection-title">
+          <i className="fas fa-clipboard-list" /> {t('coverage')}
+        </div>
+        <div className="PicksStats-cards">
+          {this.statCard('fas fa-flag-checkered', 'results_entered', s.coverage.total_finished)}
+          {this.statCard('fas fa-clock', 'awaiting_results', s.coverage.total_scheduled)}
+          {this.statCard('fas fa-ghost', 'no_picks', s.coverage.games_no_picks)}
+          {this.statCard('fas fa-handshake', 'consensus', s.coverage.consensus_games)}
+        </div>
+
+        {s.coverage.most_contested.length > 0 && (
+          <div className="PicksStats-contestedList">
+            <div className="PicksStats-contestedTitle">{t('most_contested')}</div>
+            {s.coverage.most_contested.map((g) => this.renderContestedRow(g))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  private renderBody() {
+    const s = this.stats;
+
+    if (this.loading) return <LoadingIndicator />;
+
+    if (!this.selectedWeekId) {
+      return <div className="PicksEmptyState">{app.translator.trans('ernestdefoe-picks.admin.common.no_schedule')}</div>;
+    }
+
+    if (!s) return null;
+
+    return (
+      <>
+        {/* Participation */}
+        {this.renderParticipation(s)}
+
+        {/* Accuracy & Scoring */}
+        {this.renderAccuracy(s)}
+
+        {/* Game Coverage */}
+        {this.renderCoverage(s)}
+      </>
     );
   }
 }

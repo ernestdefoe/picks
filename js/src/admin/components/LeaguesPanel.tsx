@@ -68,27 +68,7 @@ export default class LeaguesPanel extends Component<Attrs> {
 
     return (
       <div className="PicksLeagues">
-        <div className="PicksTab-header">
-          <div>
-            <h3>
-              <i className="fas fa-trophy" /> {t('title')}
-            </h3>
-            <p className="PicksTab-meta">{t('description')}</p>
-          </div>
-          <div className="PicksTab-actions">
-            <Button
-              className="Button"
-              icon={this.adding ? 'fas fa-times' : 'fas fa-plus'}
-              onclick={() => {
-                this.adding = !this.adding;
-                this.message = null;
-                m.redraw();
-              }}
-            >
-              {this.adding ? t('cancel') : t('add')}
-            </Button>
-          </div>
-        </div>
+        {this.renderHeader()}
 
         {this.message ? <div className={`PicksAlert PicksAlert--${this.error ? 'error' : 'info'}`}>{this.message}</div> : null}
 
@@ -98,22 +78,7 @@ export default class LeaguesPanel extends Component<Attrs> {
 
         {this.adding ? this.form(registry) : null}
 
-        {this.attrs.loading ? (
-          <LoadingIndicator />
-        ) : seasons.length === 0 ? (
-          <div className="PicksEmptyState">{t('no_seasons')}</div>
-        ) : (
-          <div className="PicksCardList">
-            <div className="PicksCardList-header PicksCardList-header--leagues">
-              <div>{t('col_season')}</div>
-              <div>{t('col_league')}</div>
-              <div>{t('col_sport')}</div>
-              <div />
-            </div>
-
-            {seasons.map((season) => this.row(season, registry))}
-          </div>
-        )}
+        {this.renderSeasons(seasons, registry)}
       </div>
     );
   }
@@ -127,20 +92,7 @@ export default class LeaguesPanel extends Component<Attrs> {
       <div key={String(season.id())} className="PicksCardList-row PicksCardList-row--leagues">
         <div className="PicksCardList-cell PicksCardList-cell--primary">{season.name()}</div>
 
-        <div className="PicksCardList-cell">
-          <select
-            className="FormControl FormControl--small"
-            value={key}
-            disabled={busy}
-            onchange={(e: Event) => this.setLeague(season, (e.target as HTMLSelectElement).value)}
-          >
-            {Object.keys(registry).map((k) => (
-              <option key={k} value={k}>
-                {registry[k].name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {this.renderLeagueSelect(season, key, busy, registry)}
 
         <div className="PicksCardList-cell PicksCardList-cell--muted">
           {/* The server's own word for it, so the sport a season is scored and
@@ -175,30 +127,9 @@ export default class LeaguesPanel extends Component<Attrs> {
   private form(registry: Record<string, LeagueDef>) {
     return (
       <div className="PicksLeagues-form">
-        <div className="Form-group">
-          <label>{t('field_name')}</label>
-          <input
-            className="FormControl"
-            type="text"
-            placeholder={t('name_placeholder') as unknown as string}
-            value={this.draft.name}
-            oninput={(e: InputEvent) => {
-              this.draft.name = (e.target as HTMLInputElement).value;
-            }}
-          />
-        </div>
+        {this.renderNameField()}
 
-        <div className="Form-group">
-          <label>{t('field_year')}</label>
-          <input
-            className="FormControl"
-            type="number"
-            value={this.draft.year}
-            oninput={(e: InputEvent) => {
-              this.draft.year = parseInt((e.target as HTMLInputElement).value, 10) || 0;
-            }}
-          />
-        </div>
+        {this.renderYearField()}
 
         <div className="Form-group">
           <label>{t('field_league')}</label>
@@ -311,5 +242,102 @@ export default class LeaguesPanel extends Component<Attrs> {
     this.message = message;
     this.error = error;
     m.redraw();
+  }
+
+  private renderHeader() {
+    return (
+      <div className="PicksTab-header">
+        <div>
+          <h3>
+            <i className="fas fa-trophy" /> {t('title')}
+          </h3>
+          <p className="PicksTab-meta">{t('description')}</p>
+        </div>
+        <div className="PicksTab-actions">
+          <Button
+            className="Button"
+            icon={this.adding ? 'fas fa-times' : 'fas fa-plus'}
+            onclick={() => {
+              this.adding = !this.adding;
+              this.message = null;
+              m.redraw();
+            }}
+          >
+            {this.adding ? t('cancel') : t('add')}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  private renderLeagueSelect(season: Season, key: string, busy: boolean, registry: Record<string, LeagueDef>) {
+    return (
+      <div className="PicksCardList-cell">
+        <select
+          className="FormControl FormControl--small"
+          value={key}
+          disabled={busy}
+          onchange={(e: Event) => this.setLeague(season, (e.target as HTMLSelectElement).value)}
+        >
+          {Object.keys(registry).map((k) => (
+            <option key={k} value={k}>
+              {registry[k].name}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }
+
+  private renderNameField() {
+    return (
+      <div className="Form-group">
+        <label>{t('field_name')}</label>
+        <input
+          className="FormControl"
+          type="text"
+          placeholder={t('name_placeholder') as unknown as string}
+          value={this.draft.name}
+          oninput={(e: InputEvent) => {
+            this.draft.name = (e.target as HTMLInputElement).value;
+          }}
+        />
+      </div>
+    );
+  }
+
+  private renderYearField() {
+    return (
+      <div className="Form-group">
+        <label>{t('field_year')}</label>
+        <input
+          className="FormControl"
+          type="number"
+          value={this.draft.year}
+          oninput={(e: InputEvent) => {
+            this.draft.year = parseInt((e.target as HTMLInputElement).value, 10) || 0;
+          }}
+        />
+      </div>
+    );
+  }
+
+  private renderSeasons(seasons: Season[], registry: Record<string, LeagueDef>) {
+    if (this.attrs.loading) return <LoadingIndicator />;
+
+    if (seasons.length === 0) return <div className="PicksEmptyState">{t('no_seasons')}</div>;
+
+    return (
+      <div className="PicksCardList">
+        <div className="PicksCardList-header PicksCardList-header--leagues">
+          <div>{t('col_season')}</div>
+          <div>{t('col_league')}</div>
+          <div>{t('col_sport')}</div>
+          <div />
+        </div>
+
+        {seasons.map((season) => this.row(season, registry))}
+      </div>
+    );
   }
 }

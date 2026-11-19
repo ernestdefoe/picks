@@ -142,65 +142,19 @@ export default class LeaderboardTab extends Component {
   }
 
   view() {
-    const weeks = this.sortedWeeks();
-
     return (
       <div className="PicksLeaderboardTab">
-        <div className="PicksTab-header">
-          <div>
-            <h3>
-              <i className="fas fa-trophy" /> {app.translator.trans('ernestdefoe-picks.admin.nav.scores')}
-            </h3>
-          </div>
-        </div>
+        {this.renderHeader()}
 
         <div className="PicksTab-filters">
-          {this.c10Enabled() && (
-            <select
-              className="FormControl"
-              value={this.contest}
-              onchange={(e: Event) => {
-                this.contest = (e.target as HTMLSelectElement).value as 'main' | 'c10';
-                this.load();
-              }}
-            >
-              <option value="main">{t('leaderboard.contest_main')}</option>
-              <option value="c10">{t('leaderboard.contest_c10', { count: this.c10Games() })}</option>
-            </select>
-          )}
+          {this.renderContestSelect()}
 
-          <select
-            className="FormControl"
-            value={this.scope}
-            onchange={(e: Event) => {
-              this.scope = (e.target as HTMLSelectElement).value;
-              this.load();
-            }}
-          >
-            <option value="week">{t('leaderboard.scope_week')}</option>
-            <option value="season">{t('leaderboard.scope_season')}</option>
-            <option value="alltime">{t('leaderboard.scope_alltime')}</option>
-          </select>
+          {this.renderScopeSelect()}
 
-          {this.scope === 'week' && (
-            <select
-              className="FormControl"
-              value={this.selectedWeekId}
-              onchange={(e: Event) => {
-                this.selectedWeekId = (e.target as HTMLSelectElement).value;
-                this.load();
-              }}
-            >
-              {weeks.map((w) => (
-                <option key={String(w.id())} value={String(w.id())}>
-                  {w.name()}
-                </option>
-              ))}
-            </select>
-          )}
+          {this.renderWeekSelect()}
         </div>
 
-        {this.error && <div className="PicksAlert PicksAlert--error">{this.error}</div>}
+        {this.renderError()}
 
         {this.loading ? (
           <LoadingIndicator />
@@ -208,52 +162,136 @@ export default class LeaderboardTab extends Component {
           <div className="PicksEmptyState">{!this.selectedWeekId && this.scope === 'week' ? t('common.no_schedule') : t('leaderboard.empty')}</div>
         ) : (
           <div className={`PicksAdminLeaderboard ${this.showsTiebreaker() ? 'PicksAdminLeaderboard--tb' : ''}`}>
-            <div className="PicksAdminLeaderboard-head">
-              <div>#</div>
-              <div>{t('common.col_player')}</div>
-              <div className="PicksAdminLeaderboard-right">{t('common.col_points')}</div>
-              <div className="PicksAdminLeaderboard-right">{t('common.col_won')}</div>
-              <div className="PicksAdminLeaderboard-right">{t('common.col_lost')}</div>
-              <div className="PicksAdminLeaderboard-right">{t('common.col_picks')}</div>
-              <div className="PicksAdminLeaderboard-right">{t('common.col_accuracy')}</div>
-              {this.showsTiebreaker() && (
-                <div className="PicksAdminLeaderboard-right" title={extractText(t('leaderboard.col_tiebreaker_title'))}>
-                  {t('leaderboard.col_tiebreaker')}
-                </div>
-              )}
-            </div>
+            {this.renderBoardHead()}
 
-            {this.entries.map((entry) => (
-              <div
-                key={String(entry.user_id)}
-                className={`PicksAdminLeaderboard-row
+            {this.entries.map((entry) => this.renderEntryRow(entry))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  private renderHeader() {
+    return (
+      <div className="PicksTab-header">
+        <div>
+          <h3>
+            <i className="fas fa-trophy" /> {app.translator.trans('ernestdefoe-picks.admin.nav.scores')}
+          </h3>
+        </div>
+      </div>
+    );
+  }
+
+  private renderContestSelect() {
+    return (
+      this.c10Enabled() && (
+        <select
+          className="FormControl"
+          value={this.contest}
+          onchange={(e: Event) => {
+            this.contest = (e.target as HTMLSelectElement).value as 'main' | 'c10';
+            this.load();
+          }}
+        >
+          <option value="main">{t('leaderboard.contest_main')}</option>
+          <option value="c10">{t('leaderboard.contest_c10', { count: this.c10Games() })}</option>
+        </select>
+      )
+    );
+  }
+
+  private renderScopeSelect() {
+    return (
+      <select
+        className="FormControl"
+        value={this.scope}
+        onchange={(e: Event) => {
+          this.scope = (e.target as HTMLSelectElement).value;
+          this.load();
+        }}
+      >
+        <option value="week">{t('leaderboard.scope_week')}</option>
+        <option value="season">{t('leaderboard.scope_season')}</option>
+        <option value="alltime">{t('leaderboard.scope_alltime')}</option>
+      </select>
+    );
+  }
+
+  private renderWeekSelect() {
+    const weeks = this.sortedWeeks();
+
+    return (
+      this.scope === 'week' && (
+        <select
+          className="FormControl"
+          value={this.selectedWeekId}
+          onchange={(e: Event) => {
+            this.selectedWeekId = (e.target as HTMLSelectElement).value;
+            this.load();
+          }}
+        >
+          {weeks.map((w) => (
+            <option key={String(w.id())} value={String(w.id())}>
+              {w.name()}
+            </option>
+          ))}
+        </select>
+      )
+    );
+  }
+
+  private renderError() {
+    return this.error && <div className="PicksAlert PicksAlert--error">{this.error}</div>;
+  }
+
+  private renderBoardHead() {
+    return (
+      <div className="PicksAdminLeaderboard-head">
+        <div>#</div>
+        <div>{t('common.col_player')}</div>
+        <div className="PicksAdminLeaderboard-right">{t('common.col_points')}</div>
+        <div className="PicksAdminLeaderboard-right">{t('common.col_won')}</div>
+        <div className="PicksAdminLeaderboard-right">{t('common.col_lost')}</div>
+        <div className="PicksAdminLeaderboard-right">{t('common.col_picks')}</div>
+        <div className="PicksAdminLeaderboard-right">{t('common.col_accuracy')}</div>
+        {this.showsTiebreaker() && (
+          <div className="PicksAdminLeaderboard-right" title={extractText(t('leaderboard.col_tiebreaker_title'))}>
+            {t('leaderboard.col_tiebreaker')}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  private renderEntryRow(entry: LeaderboardEntry) {
+    return (
+      <div
+        key={String(entry.user_id)}
+        className={`PicksAdminLeaderboard-row
                   ${entry.rank === 1 ? 'PicksAdminLeaderboard-row--gold' : ''}
                   ${entry.rank === 2 ? 'PicksAdminLeaderboard-row--silver' : ''}
                   ${entry.rank === 3 ? 'PicksAdminLeaderboard-row--bronze' : ''}
                 `}
-              >
-                <div className="PicksAdminLeaderboard-rank">{this.rankMedal(entry.rank)}</div>
-                <div className="PicksAdminLeaderboard-user">
-                  {entry.avatar_url ? (
-                    <img src={entry.avatar_url} alt={entry.display_name} className="PicksAdminAvatar" />
-                  ) : (
-                    <div className="PicksAdminAvatar PicksAdminAvatar--initials">{(entry.display_name || '?').charAt(0)}</div>
-                  )}
-                  <span className="PicksAdminLeaderboard-name">{entry.display_name}</span>
-                  {this.movement(entry)}
-                </div>
-                <div className="PicksAdminLeaderboard-right PicksAdminLeaderboard-pts">{entry.total_points}</div>
-                <div className="PicksAdminLeaderboard-right">{entry.correct_picks}</div>
-                <div className="PicksAdminLeaderboard-right">{entry.total_picks - entry.correct_picks}</div>
-                <div className="PicksAdminLeaderboard-right">{entry.total_picks}</div>
-                <div className="PicksAdminLeaderboard-right">{entry.accuracy.toFixed(1)}%</div>
-                {this.showsTiebreaker() && (
-                  <div className="PicksAdminLeaderboard-right">
-                    {entry.tiebreak_diff === null || entry.tiebreak_diff === undefined ? '–' : `±${entry.tiebreak_diff}`}
-                  </div>
-                )}
-              </div>
-            ))}
+      >
+        <div className="PicksAdminLeaderboard-rank">{this.rankMedal(entry.rank)}</div>
+        <div className="PicksAdminLeaderboard-user">
+          {entry.avatar_url ? (
+            <img src={entry.avatar_url} alt={entry.display_name} className="PicksAdminAvatar" />
+          ) : (
+            <div className="PicksAdminAvatar PicksAdminAvatar--initials">{(entry.display_name || '?').charAt(0)}</div>
+          )}
+          <span className="PicksAdminLeaderboard-name">{entry.display_name}</span>
+          {this.movement(entry)}
+        </div>
+        <div className="PicksAdminLeaderboard-right PicksAdminLeaderboard-pts">{entry.total_points}</div>
+        <div className="PicksAdminLeaderboard-right">{entry.correct_picks}</div>
+        <div className="PicksAdminLeaderboard-right">{entry.total_picks - entry.correct_picks}</div>
+        <div className="PicksAdminLeaderboard-right">{entry.total_picks}</div>
+        <div className="PicksAdminLeaderboard-right">{entry.accuracy.toFixed(1)}%</div>
+        {this.showsTiebreaker() && (
+          <div className="PicksAdminLeaderboard-right">
+            {entry.tiebreak_diff === null || entry.tiebreak_diff === undefined ? '–' : `±${entry.tiebreak_diff}`}
           </div>
         )}
       </div>

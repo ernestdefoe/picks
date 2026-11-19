@@ -83,16 +83,7 @@ class BackfillLeadInCommand extends AbstractCommand
         $weeks = $this->weeks($year, $postseason, $upcoming);
 
         if ($weeks === []) {
-            // On the schedule, no unplayed fixtures is nothing to do, not a failure.
-            if ($upcoming) {
-                $this->info('No upcoming fixtures for '.$year.'.');
-
-                return 0;
-            }
-
-            $this->error('No weeks with fixtures for '.$year.'. Sync the schedule first.');
-
-            return 1;
+            return $this->noWeeks($year, $upcoming);
         }
 
         $this->info(sprintf(
@@ -103,9 +94,7 @@ class BackfillLeadInCommand extends AbstractCommand
             implode(', ', $weeks)
         ));
 
-        $filled = 0;
-        $skipped = 0;
-        $unmatched = 0;
+        $tally = ['filled' => 0, 'skipped' => 0, 'unmatched' => 0];
 
         foreach ($weeks as $week) {
             if ($this->requests >= self::MAX_REQUESTS) {
@@ -114,92 +103,121 @@ class BackfillLeadInCommand extends AbstractCommand
                 break;
             }
 
-            $payload = $this->week($year, $week, $postseason);
-
-            if ($payload === null) {
-                $this->error('  week '.$week.': the feed did not answer.');
-
-                continue;
-            }
-
-            $events = (array) ($payload['events'] ?? []);
-
-            /*
-             * 🚨 Matched on `cfbd_id`, which on this board holds the ESPN event
-             * id — the same join the live poll uses. A fixture the feed has no
-             * row for is counted and left alone rather than guessed at from the
-             * team names, which is how two different games between the same two
-             * sides end up sharing a rank.
-             */
-            $ids = [];
-
-            foreach ($events as $event) {
-                if (isset($event['id'])) {
-                    $ids[] = (int) $event['id'];
-                }
-            }
-
-            $rows = PickEvent::query()->whereIn('cfbd_id', $ids)->get()->keyBy('cfbd_id');
-
-            $weekFilled = 0;
-
-            foreach ($events as $event) {
-                $row = $rows->get((int) ($event['id'] ?? 0));
-
-                if ($row === null) {
-                    $unmatched++;
-
-                    continue;
-                }
-
-                /*
-                 * 🚨 A finished game keeps the lead-in it was played under.
-                 *
-                 * The rank and record ESPN reports for a past fixture are the
-                 * ones each side carried INTO it, and that is what the board
-                 * should keep showing. Rewriting them later with today's poll
-                 * would quietly restate every result on the board.
-                 */
-                if ($upcoming && $row->status === 'finished') {
-                    $skipped++;
-
-                    continue;
-                }
-
-                if (! $force && trim((string) $row->venue) !== '') {
-                    $skipped++;
-
-                    continue;
-                }
-
-                $this->apply($row, (array) (($event['competitions'] ?? [[]])[0] ?? []), (array) $event);
-
-                if (! $row->isDirty()) {
-                    $skipped++;
-
-                    continue;
-                }
-
-                if (! $dry) {
-                    $row->save();
-                }
-
-                $filled++;
-                $weekFilled++;
-            }
-
-            $this->info(sprintf('  week %-3s %3d games, %3d filled.', $week, count($events), $weekFilled));
+            $this->backfillWeek($year, $week, $postseason, $upcoming, $force, $dry, $tally);
         }
 
         $this->info(sprintf(
             '%s %d fixtures. %d already had one, %d in the feed matched nothing here.',
             $dry ? 'Would have filled' : 'Filled',
-            $filled,
-            $skipped,
-            $unmatched
+            $tally['filled'],
+            $tally['skipped'],
+            $tally['unmatched']
         ));
 
         return 0;
+    }
+
+    /** The exit code when there are no weeks to walk. */
+    private function noWeeks(int $year, bool $upcoming): int
+    {
+        // On the schedule, no unplayed fixtures is nothing to do, not a failure.
+        if ($upcoming) {
+            $this->info('No upcoming fixtures for '.$year.'.');
+
+            return 0;
+        }
+
+        $this->error('No weeks with fixtures for '.$year.'. Sync the schedule first.');
+
+        return 1;
+    }
+
+    /**
+     * Fetch one week from the feed and fill its fixtures.
+     *
+     * @param array{filled: int, skipped: int, unmatched: int} $tally
+     */
+    private function backfillWeek(int $year, int $week, bool $postseason, bool $upcoming, bool $force, bool $dry, array &$tally): void
+    {
+        $payload = $this->week($year, $week, $postseason);
+
+        if ($payload === null) {
+            $this->error('  week '.$week.': the feed did not answer.');
+
+            return;
+        }
+
+        $events = (array) ($payload['events'] ?? []);
+
+        /*
+         * 🚨 Matched on `cfbd_id`, which on this board holds the ESPN event
+         * id — the same join the live poll uses. A fixture the feed has no
+         * row for is counted and left alone rather than guessed at from the
+         * team names, which is how two different games between the same two
+         * sides end up sharing a rank.
+         */
+        $ids = [];
+
+        foreach ($events as $event) {
+            if (isset($event['id'])) {
+                $ids[] = (int) $event['id'];
+            }
+        }
+
+        $rows = PickEvent::query()->whereIn('cfbd_id', $ids)->get()->keyBy('cfbd_id');
+
+        $weekFilled = 0;
+
+        foreach ($events as $event) {
+            $outcome = $this->backfillEvent($rows->get((int) ($event['id'] ?? 0)), $event, $upcoming, $force, $dry);
+            $tally[$outcome]++;
+
+            if ($outcome === 'filled') {
+                $weekFilled++;
+            }
+        }
+
+        $this->info(sprintf('  week %-3s %3d games, %3d filled.', $week, count($events), $weekFilled));
+    }
+
+    /**
+     * Fill one fixture from its feed event.
+     *
+     * @return 'filled'|'skipped'|'unmatched'
+     */
+    private function backfillEvent(?PickEvent $row, mixed $event, bool $upcoming, bool $force, bool $dry): string
+    {
+        if ($row === null) {
+            return 'unmatched';
+        }
+
+        /*
+         * 🚨 A finished game keeps the lead-in it was played under.
+         *
+         * The rank and record ESPN reports for a past fixture are the
+         * ones each side carried INTO it, and that is what the board
+         * should keep showing. Rewriting them later with today's poll
+         * would quietly restate every result on the board.
+         */
+        if ($upcoming && $row->status === 'finished') {
+            return 'skipped';
+        }
+
+        if (! $force && trim((string) $row->venue) !== '') {
+            return 'skipped';
+        }
+
+        $this->apply($row, (array) (($event['competitions'] ?? [[]])[0] ?? []), (array) $event);
+
+        if (! $row->isDirty()) {
+            return 'skipped';
+        }
+
+        if (! $dry) {
+            $row->save();
+        }
+
+        return 'filled';
     }
 
     /**

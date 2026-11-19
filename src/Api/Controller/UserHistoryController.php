@@ -55,72 +55,89 @@ class UserHistoryController implements RequestHandlerInterface
         }
 
         try {
-            // ── All seasons, newest first ─────────────────────────────────────
-            $seasons = Season::query()
-                ->orderByDesc('year')
-                ->get();
-
-            // ── Current week (shared via CurrentSeasonService) ───────────────
-            $currentWeek = $this->currentSeason->getCurrentWeek();
-            $currentSeasonId = $currentWeek?->season_id;
-            $currentWeekId = $currentWeek?->id;
-
-            // This user's own season/week score rows — defines the only scopes
-            // we need rank data for. Loading these first lets us bound every
-            // rank query to the weeks/seasons the user actually played, instead
-            // of pulling every player's every-week row into memory.
-            $userSeasonScores = UserScore::query()
-                ->where('user_id', $userId)
-                ->whereNull('week_id')->whereNotNull('season_id')
-                ->get()->keyBy('season_id');
-
-            $userWeekScores = UserScore::query()
-                ->where('user_id', $userId)
-                ->whereNotNull('week_id')
-                ->get()->keyBy('week_id');
-
-            // All-time rank set: one row per player (bounded by player count, not
-            // by weeks) — needed to rank the user against the whole board.
-            $alltimeScores = UserScore::query()
-                ->whereNull('week_id')->whereNull('season_id')
-                ->where('total_picks', '>', 0)
-                ->get(['user_id', 'total_points']);
-
-            // Season/week rank sets, scoped to ONLY the seasons/weeks this user
-            // participated in (was: every season and every week for every player).
-            $seasonIds = $userSeasonScores->keys()->all();
-            $weekIds = $userWeekScores->keys()->all();
-
-            $seasonScoresBySeason = empty($seasonIds) ? collect() : UserScore::query()
-                ->whereNull('week_id')->whereIn('season_id', $seasonIds)
-                ->where('total_picks', '>', 0)
-                ->get(['season_id', 'user_id', 'total_points'])
-                ->groupBy('season_id');
-
-            $weekScoresByWeek = empty($weekIds) ? collect() : UserScore::query()
-                ->whereIn('week_id', $weekIds)
-                ->where('total_picks', '>', 0)
-                ->get(['week_id', 'user_id', 'total_points'])
-                ->groupBy('week_id');
-
-            return new JsonResponse([
-                'alltime' => $this->buildAlltimeBlock($userId, $alltimeScores),
-                'seasons' => $this->buildSeasonsBlock(
-                    $userId,
-                    $seasons,
-                    $userSeasonScores,
-                    $userWeekScores,
-                    $seasonScoresBySeason,
-                    $weekScoresByWeek,
-                    $currentSeasonId,
-                    $currentWeekId
-                ),
-            ]);
+            return new JsonResponse($this->history($userId));
         } catch (\Exception $e) {
             $this->log->error('[Picks] UserHistory failed: '.$e->getMessage(), ['exception' => $e]);
 
             return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-picks.api.errors.history_failed')], 500);
         }
+    }
+
+    /** The whole history payload: the all-time block and every season. */
+    private function history(int $userId): array
+    {
+        // ── All seasons, newest first ─────────────────────────────────────
+        $seasons = Season::query()
+            ->orderByDesc('year')
+            ->get();
+
+        // ── Current week (shared via CurrentSeasonService) ───────────────
+        $currentWeek = $this->currentSeason->getCurrentWeek();
+        $currentSeasonId = $currentWeek?->season_id;
+        $currentWeekId = $currentWeek?->id;
+
+        // This user's own season/week score rows — defines the only scopes
+        // we need rank data for. Loading these first lets us bound every
+        // rank query to the weeks/seasons the user actually played, instead
+        // of pulling every player's every-week row into memory.
+        $userSeasonScores = UserScore::query()
+            ->where('user_id', $userId)
+            ->whereNull('week_id')->whereNotNull('season_id')
+            ->get()->keyBy('season_id');
+
+        $userWeekScores = UserScore::query()
+            ->where('user_id', $userId)
+            ->whereNotNull('week_id')
+            ->get()->keyBy('week_id');
+
+        // All-time rank set: one row per player (bounded by player count, not
+        // by weeks) — needed to rank the user against the whole board.
+        $alltimeScores = UserScore::query()
+            ->whereNull('week_id')->whereNull('season_id')
+            ->where('total_picks', '>', 0)
+            ->get(['user_id', 'total_points']);
+
+        [$seasonScoresBySeason, $weekScoresByWeek] = $this->rankSets($userSeasonScores, $userWeekScores);
+
+        return [
+            'alltime' => $this->buildAlltimeBlock($userId, $alltimeScores),
+            'seasons' => $this->buildSeasonsBlock(
+                $userId,
+                $seasons,
+                $userSeasonScores,
+                $userWeekScores,
+                $seasonScoresBySeason,
+                $weekScoresByWeek,
+                $currentSeasonId,
+                $currentWeekId
+            ),
+        ];
+    }
+
+    /**
+     * Season/week rank sets, scoped to ONLY the seasons/weeks this user
+     * participated in (was: every season and every week for every player).
+     *
+     * @return array{0: Collection, 1: Collection}
+     */
+    private function rankSets(Collection $userSeasonScores, Collection $userWeekScores): array
+    {
+        $seasonIds = $userSeasonScores->keys()->all();
+        $weekIds = $userWeekScores->keys()->all();
+
+        $seasonScoresBySeason = empty($seasonIds) ? collect() : UserScore::query()
+            ->whereNull('week_id')->whereIn('season_id', $seasonIds)
+            ->where('total_picks', '>', 0)
+            ->get(['season_id', 'user_id', 'total_points'])
+            ->groupBy('season_id');
+
+        $weekScoresByWeek = empty($weekIds) ? collect() : UserScore::query()
+            ->whereIn('week_id', $weekIds)
+            ->where('total_picks', '>', 0)
+            ->get(['week_id', 'user_id', 'total_points'])
+            ->groupBy('week_id');
+
+        return [$seasonScoresBySeason, $weekScoresByWeek];
     }
 
     /**
@@ -227,67 +244,88 @@ class UserHistoryController implements RequestHandlerInterface
         foreach ($seasons as $season) {
             $seasonScore = $userSeasonScores->get($season->id);
 
-            // Season rank — from the pre-loaded collection (no per-season query)
-            $seasonRank = null;
-            $seasonTotalPlayers = 0;
-            $seasonScopeScores = $seasonScoresBySeason->get($season->id, collect());
-
-            if ($seasonScore && $seasonScore->total_picks > 0) {
-                $seasonRank = UserScore::rankIn($seasonScopeScores, $seasonScore->total_points);
-                $seasonTotalPlayers = $seasonScopeScores->count();
-            }
-
-            // All weeks in this season (from the preloaded set), each merged
-            // with the user's score for that week — or zeros when they haven't
-            // picked it yet — so every week still appears.
-            $weeksData = [];
-            foreach ($weeksBySeason->get($season->id, collect()) as $week) {
-                $userWeek = $userWeekScores->get($week->id);
-                $totalPicks = (int) ($userWeek->total_picks ?? 0);
-                $totalPoints = (int) ($userWeek->total_points ?? 0);
-
-                // Week rank — from the pre-loaded collection (no per-week query)
-                $weekRank = null;
-                if ($totalPicks > 0) {
-                    $weekRank = UserScore::rankIn(
-                        $weekScoresByWeek->get($week->id, collect()),
-                        $totalPoints
-                    );
-                }
-
-                $weeksData[] = [
-                    'week_id' => (int) $week->id,
-                    'week_name' => $week->name,
-                    'week_number' => (int) $week->week_number,
-                    'is_current' => ((int) $week->id === (int) $currentWeekId),
-                    'total_picks' => $totalPicks,
-                    'correct_picks' => (int) ($userWeek->correct_picks ?? 0),
-                    'total_points' => $totalPoints,
-                    // Nothing decided yet (an unplayed week): no accuracy at
-                    // all, rather than a 0% that reads as every pick lost.
-                    'accuracy' => $totalPicks > 0 ? (float) $userWeek->accuracy : null,
-                    'rank' => $weekRank,
-                ];
-            }
-
             $seasonsData[] = [
                 'season_id' => (int) $season->id,
                 'name' => $season->name,
                 'year' => (int) $season->year,
                 'is_current' => ((int) $season->id === (int) $currentSeasonId),
-                'stats' => $seasonScore ? [
-                    'total_picks' => (int) $seasonScore->total_picks,
-                    'correct_picks' => (int) $seasonScore->correct_picks,
-                    'total_points' => (int) $seasonScore->total_points,
-                    'accuracy' => (float) $seasonScore->accuracy,
-                    'rank' => $seasonRank,
-                    'total_players' => $seasonTotalPlayers,
-                ] : null,
-                'weeks' => $weeksData,
+                'stats' => $this->seasonStats($seasonScore, $seasonScoresBySeason->get($season->id, collect())),
+                'weeks' => $this->seasonWeeks(
+                    $weeksBySeason->get($season->id, collect()),
+                    $userWeekScores,
+                    $weekScoresByWeek,
+                    $currentWeekId
+                ),
             ];
         }
 
         return $seasonsData;
+    }
+
+    /** The user's line for one season, ranked, or null when they have none. */
+    private function seasonStats(?UserScore $seasonScore, Collection $seasonScopeScores): ?array
+    {
+        // Season rank — from the pre-loaded collection (no per-season query)
+        $seasonRank = null;
+        $seasonTotalPlayers = 0;
+
+        if ($seasonScore && $seasonScore->total_picks > 0) {
+            $seasonRank = UserScore::rankIn($seasonScopeScores, $seasonScore->total_points);
+            $seasonTotalPlayers = $seasonScopeScores->count();
+        }
+
+        return $seasonScore ? [
+            'total_picks' => (int) $seasonScore->total_picks,
+            'correct_picks' => (int) $seasonScore->correct_picks,
+            'total_points' => (int) $seasonScore->total_points,
+            'accuracy' => (float) $seasonScore->accuracy,
+            'rank' => $seasonRank,
+            'total_players' => $seasonTotalPlayers,
+        ] : null;
+    }
+
+    /**
+     * All weeks in this season (from the preloaded set), each merged
+     * with the user's score for that week — or zeros when they haven't
+     * picked it yet — so every week still appears.
+     */
+    private function seasonWeeks(
+        Collection $weeks,
+        Collection $userWeekScores,
+        Collection $weekScoresByWeek,
+        ?int $currentWeekId
+    ): array {
+        $weeksData = [];
+        foreach ($weeks as $week) {
+            $userWeek = $userWeekScores->get($week->id);
+            $totalPicks = (int) ($userWeek->total_picks ?? 0);
+            $totalPoints = (int) ($userWeek->total_points ?? 0);
+
+            // Week rank — from the pre-loaded collection (no per-week query)
+            $weekRank = null;
+            if ($totalPicks > 0) {
+                $weekRank = UserScore::rankIn(
+                    $weekScoresByWeek->get($week->id, collect()),
+                    $totalPoints
+                );
+            }
+
+            $weeksData[] = [
+                'week_id' => (int) $week->id,
+                'week_name' => $week->name,
+                'week_number' => (int) $week->week_number,
+                'is_current' => ((int) $week->id === (int) $currentWeekId),
+                'total_picks' => $totalPicks,
+                'correct_picks' => (int) ($userWeek->correct_picks ?? 0),
+                'total_points' => $totalPoints,
+                // Nothing decided yet (an unplayed week): no accuracy at
+                // all, rather than a 0% that reads as every pick lost.
+                'accuracy' => $totalPicks > 0 ? (float) $userWeek->accuracy : null,
+                'rank' => $weekRank,
+            ];
+        }
+
+        return $weeksData;
     }
 
     /**

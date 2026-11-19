@@ -45,49 +45,28 @@ export default class ResultModal extends Modal<ResultModalAttrs> {
     return app.translator.trans('ernestdefoe-picks.admin.games.enter_result');
   }
 
-  content() {
+  /** Who the entered score says won, or null until both scores are in. */
+  private resultPreview(): Mithril.Children {
+    if (this.homeScore === '' || this.awayScore === '') return null;
+
     const home = Number(this.homeScore);
     const away = Number(this.awayScore);
-    let resultPreview: Mithril.Children = null;
+    const homeName = this.game.home_team?.name || extractText(t('home_team'));
+    const awayName = this.game.away_team?.name || extractText(t('away_team'));
+    if (home > away) return t('wins', { team: homeName });
+    if (away > home) return t('wins', { team: awayName });
+    return t('tied');
+  }
 
-    if (this.homeScore !== '' && this.awayScore !== '') {
-      const homeName = this.game.home_team?.name || extractText(t('home_team'));
-      const awayName = this.game.away_team?.name || extractText(t('away_team'));
-      if (home > away) resultPreview = t('wins', { team: homeName });
-      else if (away > home) resultPreview = t('wins', { team: awayName });
-      else resultPreview = t('tied');
-    }
+  content() {
+    const resultPreview = this.resultPreview();
 
     return (
       <div className="Modal-body">
         <div className="Form">
-          <div className="Form-group">
-            <label>{t('home_label', { team: this.game.home_team?.name ?? extractText(t('home_team')) })}</label>
-            <input
-              className="FormControl"
-              type="number"
-              min="0"
-              placeholder="0"
-              value={this.homeScore}
-              oninput={(e: InputEvent) => {
-                this.homeScore = (e.target as HTMLInputElement).value;
-              }}
-            />
-          </div>
+          {this.renderHomeField()}
 
-          <div className="Form-group">
-            <label>{t('away_label', { team: this.game.away_team?.name ?? extractText(t('away_team')) })}</label>
-            <input
-              className="FormControl"
-              type="number"
-              min="0"
-              placeholder="0"
-              value={this.awayScore}
-              oninput={(e: InputEvent) => {
-                this.awayScore = (e.target as HTMLInputElement).value;
-              }}
-            />
-          </div>
+          {this.renderAwayField()}
 
           {resultPreview && (
             <div className="Form-group">
@@ -130,5 +109,41 @@ export default class ResultModal extends Modal<ResultModalAttrs> {
       this.alertAttrs = error.alert;
       m.redraw();
     }
+  }
+
+  private renderHomeField() {
+    return (
+      <div className="Form-group">
+        <label>{t('home_label', { team: this.game.home_team?.name ?? extractText(t('home_team')) })}</label>
+        <input
+          className="FormControl"
+          type="number"
+          min="0"
+          placeholder="0"
+          value={this.homeScore}
+          oninput={(e: InputEvent) => {
+            this.homeScore = (e.target as HTMLInputElement).value;
+          }}
+        />
+      </div>
+    );
+  }
+
+  private renderAwayField() {
+    return (
+      <div className="Form-group">
+        <label>{t('away_label', { team: this.game.away_team?.name ?? extractText(t('away_team')) })}</label>
+        <input
+          className="FormControl"
+          type="number"
+          min="0"
+          placeholder="0"
+          value={this.awayScore}
+          oninput={(e: InputEvent) => {
+            this.awayScore = (e.target as HTMLInputElement).value;
+          }}
+        />
+      </div>
+    );
   }
 }

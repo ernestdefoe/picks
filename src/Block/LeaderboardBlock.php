@@ -9,6 +9,8 @@ use Flarum\Foundation\Config;
 use Flarum\Locale\TranslatorInterface;
 use Flarum\User\User;
 use Illuminate\Database\ConnectionInterface;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Collection;
 use Resofire\Picks\Service\CurrentSeasonService;
 
 /**
@@ -101,28 +103,10 @@ class LeaderboardBlock extends AbstractBlock
         $limit = max(3, min((int) ($settings['limit'] ?? 10), 25));
         $season = ($settings['scope'] ?? 'alltime') === 'season';
 
-        $query = $this->db->table('picks_user_scores as s')
-            ->join('users as u', 'u.id', '=', 's.user_id')
-            /*
-             * 🚨 Week rows are excluded on both paths. The table holds a row per
-             * week AS WELL as the totals, and a leaderboard that swept them all
-             * up would list the same person once per week they played.
-             */
-            ->whereNull('s.week_id');
+        $query = $this->scopedQuery($season);
 
-        if ($season) {
-            // This season's rows only: every season keeps its own totals, and
-            // sweeping them all up lists a member once per season played.
-            $seasonId = $this->currentSeason->getCurrentSeasonId();
-
-            if ($seasonId === null) {
-                return ['rows' => []];
-            }
-
-            $query->where('s.season_id', $seasonId);
-        } else {
-            // All-time is the row belonging to no season in particular.
-            $query->whereNull('s.season_id');
+        if ($query === null) {
+            return ['rows' => []];
         }
 
         $rows = $query
@@ -139,16 +123,56 @@ class LeaderboardBlock extends AbstractBlock
                 's.accuracy',
             ]);
 
-        /*
-         * 🚨 `display_name` is NOT a column — it is an accessor, and what backs
-         * it depends on which extensions are installed (Nicknames supplies a
-         * `nickname`; without it the accessor falls back to the username).
-         * Selecting it in SQL is an "Unknown column" the moment this block is
-         * placed on a page, which is how it took the whole front page down.
-         *
-         * One extra query for the whole table, resolved through the model so
-         * whatever the site uses for display names is what appears.
-         */
+        return ['rows' => $this->formatRows($rows, $this->displayNames($rows))];
+    }
+
+    /**
+     * The score rows for the chosen scope, or null when the season scope has
+     * no current season.
+     */
+    private function scopedQuery(bool $season): ?Builder
+    {
+        $query = $this->db->table('picks_user_scores as s')
+            ->join('users as u', 'u.id', '=', 's.user_id')
+            /*
+             * 🚨 Week rows are excluded on both paths. The table holds a row per
+             * week AS WELL as the totals, and a leaderboard that swept them all
+             * up would list the same person once per week they played.
+             */
+            ->whereNull('s.week_id');
+
+        if ($season) {
+            // This season's rows only: every season keeps its own totals, and
+            // sweeping them all up lists a member once per season played.
+            $seasonId = $this->currentSeason->getCurrentSeasonId();
+
+            if ($seasonId === null) {
+                return null;
+            }
+
+            $query->where('s.season_id', $seasonId);
+        } else {
+            // All-time is the row belonging to no season in particular.
+            $query->whereNull('s.season_id');
+        }
+
+        return $query;
+    }
+
+    /**
+     * 🚨 `display_name` is NOT a column — it is an accessor, and what backs
+     * it depends on which extensions are installed (Nicknames supplies a
+     * `nickname`; without it the accessor falls back to the username).
+     * Selecting it in SQL is an "Unknown column" the moment this block is
+     * placed on a page, which is how it took the whole front page down.
+     *
+     * One extra query for the whole table, resolved through the model so
+     * whatever the site uses for display names is what appears.
+     *
+     * @return array<int, string>
+     */
+    private function displayNames(Collection $rows): array
+    {
         $names = [];
 
         if (count($rows)) {
@@ -157,6 +181,12 @@ class LeaderboardBlock extends AbstractBlock
             }
         }
 
+        return $names;
+    }
+
+    /** @param array<int, string> $names */
+    private function formatRows(Collection $rows, array $names): array
+    {
         $out = [];
         $rank = 0;
 
@@ -176,7 +206,7 @@ class LeaderboardBlock extends AbstractBlock
             ];
         }
 
-        return ['rows' => $out];
+        return $out;
     }
 
     /**

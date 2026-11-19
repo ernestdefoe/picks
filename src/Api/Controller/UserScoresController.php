@@ -5,6 +5,7 @@ namespace Resofire\Picks\Api\Controller;
 use Flarum\Http\RequestUtil;
 use Flarum\Locale\TranslatorInterface;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -54,101 +55,15 @@ class UserScoresController implements RequestHandlerInterface
             $currentSeasonId = $currentWeek?->season_id;
             $currentWeekName = $currentWeek?->name;
 
-            // Preload each scope's scored rows once (one query per scope) so the
-            // rank and the player total are derived in PHP — matching
-            // UserHistoryController::rankIn — instead of firing a separate COUNT
-            // for the rank and another for the total in every scope.
-            $alltimeScores = UserScore::query()
-                ->whereNull('week_id')->whereNull('season_id')
-                ->where('total_picks', '>', 0)
-                ->get(['user_id', 'total_points']);
+            [$alltimeScores, $seasonScores, $weekScores] = $this->scopeScores($currentSeasonId, $currentWeekId);
 
-            $seasonScores = $currentSeasonId
-                ? UserScore::query()
-                    ->where('season_id', $currentSeasonId)->whereNull('week_id')
-                    ->where('total_picks', '>', 0)
-                    ->get(['user_id', 'total_points'])
-                : collect();
-
-            $weekScores = $currentWeekId
-                ? UserScore::query()
-                    ->where('week_id', $currentWeekId)
-                    ->where('total_picks', '>', 0)
-                    ->get(['user_id', 'total_points'])
-                : collect();
-
-            // ── All-time scores ───────────────────────────────────────────────
-            $alltime = UserScore::query()
-                ->where('user_id', $userId)
-                ->whereNull('week_id')
-                ->whereNull('season_id')
-                ->first();
-
-            $alltimeRank = null;
-            $totalAlltime = $alltimeScores->count();
-            if ($alltime && $alltime->total_picks > 0) {
-                $alltimeRank = UserScore::rankIn($alltimeScores, $alltime->total_points);
-            }
-
-            // ── Season scores ─────────────────────────────────────────────────
-            $season = null;
-            $seasonRank = null;
-            $totalSeason = $seasonScores->count();
-
-            if ($currentSeasonId) {
-                $season = UserScore::query()
-                    ->where('user_id', $userId)
-                    ->where('season_id', $currentSeasonId)
-                    ->whereNull('week_id')
-                    ->first();
-
-                if ($season && $season->total_picks > 0) {
-                    $seasonRank = UserScore::rankIn($seasonScores, $season->total_points);
-                }
-            }
-
-            // ── Week scores ───────────────────────────────────────────────────
-            $week = null;
-            $weekRank = null;
-            $totalWeek = $weekScores->count();
-
-            if ($currentWeekId) {
-                $week = UserScore::query()
-                    ->where('user_id', $userId)
-                    ->where('week_id', $currentWeekId)
-                    ->first();
-
-                if ($week && $week->total_picks > 0) {
-                    $weekRank = UserScore::rankIn($weekScores, $week->total_points);
-                }
-            }
+            [$alltime, $season, $week] = $this->userRows($userId, $currentSeasonId, $currentWeekId);
 
             return new JsonResponse([
                 'current_week_name' => $currentWeekName,
-                'alltime' => $alltime ? [
-                    'total_picks' => (int) $alltime->total_picks,
-                    'correct_picks' => (int) $alltime->correct_picks,
-                    'total_points' => (int) $alltime->total_points,
-                    'accuracy' => (float) $alltime->accuracy,
-                    'rank' => $alltimeRank,
-                    'total_players' => $totalAlltime,
-                ] : null,
-                'season' => $season ? [
-                    'total_picks' => (int) $season->total_picks,
-                    'correct_picks' => (int) $season->correct_picks,
-                    'total_points' => (int) $season->total_points,
-                    'accuracy' => (float) $season->accuracy,
-                    'rank' => $seasonRank,
-                    'total_players' => $totalSeason,
-                ] : null,
-                'week' => $week ? [
-                    'total_picks' => (int) $week->total_picks,
-                    'correct_picks' => (int) $week->correct_picks,
-                    'total_points' => (int) $week->total_points,
-                    'accuracy' => (float) $week->accuracy,
-                    'rank' => $weekRank,
-                    'total_players' => $totalWeek,
-                ] : null,
+                'alltime' => $this->block($alltime, $alltimeScores),
+                'season' => $this->block($season, $seasonScores),
+                'week' => $this->block($week, $weekScores),
             ]);
         } catch (\Exception $e) {
             // A query failure is a real error — return 500 so the client (and
@@ -158,5 +73,97 @@ class UserScoresController implements RequestHandlerInterface
 
             return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-picks.api.errors.user_scores_failed')], 500);
         }
+    }
+
+    /**
+     * The member's own all-time, season and week rows.
+     *
+     * @return array{0: UserScore|null, 1: UserScore|null, 2: UserScore|null}
+     */
+    private function userRows(int $userId, ?int $currentSeasonId, ?int $currentWeekId): array
+    {
+        // ── All-time scores ───────────────────────────────────────────────
+        $alltime = UserScore::query()
+            ->where('user_id', $userId)
+            ->whereNull('week_id')
+            ->whereNull('season_id')
+            ->first();
+
+        // ── Season scores ─────────────────────────────────────────────────
+        $season = null;
+
+        if ($currentSeasonId) {
+            $season = UserScore::query()
+                ->where('user_id', $userId)
+                ->where('season_id', $currentSeasonId)
+                ->whereNull('week_id')
+                ->first();
+        }
+
+        // ── Week scores ───────────────────────────────────────────────────
+        $week = null;
+
+        if ($currentWeekId) {
+            $week = UserScore::query()
+                ->where('user_id', $userId)
+                ->where('week_id', $currentWeekId)
+                ->first();
+        }
+
+        return [$alltime, $season, $week];
+    }
+
+    /**
+     * Preload each scope's scored rows once (one query per scope) so the
+     * rank and the player total are derived in PHP — matching
+     * UserHistoryController::rankIn — instead of firing a separate COUNT
+     * for the rank and another for the total in every scope.
+     *
+     * @return array{0: Collection<int, UserScore>, 1: Collection<int, UserScore>, 2: Collection<int, UserScore>}
+     */
+    private function scopeScores(?int $currentSeasonId, ?int $currentWeekId): array
+    {
+        $alltimeScores = UserScore::query()
+            ->whereNull('week_id')->whereNull('season_id')
+            ->where('total_picks', '>', 0)
+            ->get(['user_id', 'total_points']);
+
+        $seasonScores = $currentSeasonId
+            ? UserScore::query()
+                ->where('season_id', $currentSeasonId)->whereNull('week_id')
+                ->where('total_picks', '>', 0)
+                ->get(['user_id', 'total_points'])
+            : collect();
+
+        $weekScores = $currentWeekId
+            ? UserScore::query()
+                ->where('week_id', $currentWeekId)
+                ->where('total_picks', '>', 0)
+                ->get(['user_id', 'total_points'])
+            : collect();
+
+        return [$alltimeScores, $seasonScores, $weekScores];
+    }
+
+    /**
+     * One scope's stat block, ranked among that scope's scored rows.
+     *
+     * @param Collection<int, UserScore> $scores
+     * @return array<string, mixed>|null
+     */
+    private function block(?UserScore $row, Collection $scores): ?array
+    {
+        if (! $row) {
+            return null;
+        }
+
+        return [
+            'total_picks' => (int) $row->total_picks,
+            'correct_picks' => (int) $row->correct_picks,
+            'total_points' => (int) $row->total_points,
+            'accuracy' => (float) $row->accuracy,
+            'rank' => $row->total_picks > 0 ? UserScore::rankIn($scores, $row->total_points) : null,
+            'total_players' => $scores->count(),
+        ];
     }
 }

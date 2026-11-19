@@ -190,31 +190,31 @@ export default class PicksState {
     // Resolve which IDs to use — active season or off-season retained IDs
     const weekId = this.currentWeekId ?? this.lbContext?.last_week_id ?? null;
     const seasonId = this.seasonId ?? this.lbContext?.last_season_id ?? null;
+
+    if (this.leaderboardHasNoData(weekId, seasonId)) {
+      this.leaderboard = [];
+      this.lbLoading = false;
+      m.redraw();
+      return;
+    }
+
+    this.fetchLeaderboard(weekId, seasonId);
+  }
+
+  /** Whether the chosen scope has nothing to ask the server for. */
+  private leaderboardHasNoData(weekId: number | null, seasonId: number | null): boolean {
     const isOffSeason = this.lbContext?.is_off_season ?? false;
     const retentionExpired = this.lbContext?.retention_expired ?? false;
 
     // Week/season scopes with no IDs and retention expired — show off-season state
-    if ((this.lbScope === 'week' || this.lbScope === 'season') && isOffSeason && retentionExpired) {
-      this.leaderboard = [];
-      this.lbLoading = false;
-      m.redraw();
-      return;
-    }
+    if ((this.lbScope === 'week' || this.lbScope === 'season') && isOffSeason && retentionExpired) return true;
 
     // Week/season scopes with no IDs and no off-season data — no schedule yet
-    if (this.lbScope === 'week' && !weekId) {
-      this.leaderboard = [];
-      this.lbLoading = false;
-      m.redraw();
-      return;
-    }
-    if (this.lbScope === 'season' && !seasonId) {
-      this.leaderboard = [];
-      this.lbLoading = false;
-      m.redraw();
-      return;
-    }
+    if (this.lbScope === 'week' && !weekId) return true;
+    return this.lbScope === 'season' && !seasonId;
+  }
 
+  private fetchLeaderboard(weekId: number | null, seasonId: number | null): void {
     this.lbLoading = true;
     m.redraw();
 
@@ -288,35 +288,7 @@ export default class PicksState {
 
   submitPick(game: Game, outcome: 'home' | 'away'): void {
     if (!app.session.user) {
-      /*
-       * 🚨 This threw. `app.route('login')` is a route name Flarum 2 does not
-       * have, so clicking a team as a guest raised "Route 'login' does not
-       * exist" and the page showed the generic "something went wrong" banner.
-       * The single moment the pick'em has to turn a visitor into a member was
-       * a JavaScript error.
-       *
-       * 🚨 The pick is KEPT across the sign-up. Flarum reloads the page once an
-       * account is made, so an in-memory choice would be gone and the new
-       * member would land on a board that had forgotten what they came to do.
-       * sessionStorage survives that one reload and nothing more, which is
-       * exactly as long as it is wanted.
-       */
-      try {
-        sessionStorage.setItem(PicksState.PENDING, JSON.stringify({ game: game.id, outcome, week: this.currentWeekId }));
-      } catch (e) {
-        // A browser refusing storage is not a reason to refuse the sign-up.
-      }
-
-      /*
-       * 🚨 A lazy import, which is how core itself opens this. Flarum 2 ships
-       * its modals as separate chunks, so a static `import SignUpModal from
-       * 'flarum/forum/components/SignUpModal'` resolves to undefined and the
-       * click dies on "Cannot read properties of undefined (reading
-       * 'prototype')" — measured, after the first fix had already stashed the
-       * pick and looked like it worked.
-       */
-      app.modal.show(() => import('flarum/forum/components/SignUpModal'));
-
+      this.signUpToPick(game, outcome);
       return;
     }
     if (!game.can_pick) return;
@@ -328,17 +300,7 @@ export default class PicksState {
       return;
     }
 
-    const prev = game.my_pick ? game.my_pick.selected_outcome : null;
-    if (!game.my_pick) {
-      game.my_pick = {
-        id: 0,
-        selected_outcome: outcome,
-        is_correct: null,
-        confidence: null,
-      };
-    } else {
-      game.my_pick.selected_outcome = outcome;
-    }
+    const prev = this.applyPick(game, outcome);
     this.submitting[game.id] = true;
     m.redraw();
 
@@ -359,6 +321,54 @@ export default class PicksState {
         this.submitting[game.id] = false;
         m.redraw();
       });
+  }
+
+  /** A guest's click: keep the choice and offer the sign-up. */
+  private signUpToPick(game: Game, outcome: 'home' | 'away'): void {
+    /*
+     * 🚨 This threw. `app.route('login')` is a route name Flarum 2 does not
+     * have, so clicking a team as a guest raised "Route 'login' does not
+     * exist" and the page showed the generic "something went wrong" banner.
+     * The single moment the pick'em has to turn a visitor into a member was
+     * a JavaScript error.
+     *
+     * 🚨 The pick is KEPT across the sign-up. Flarum reloads the page once an
+     * account is made, so an in-memory choice would be gone and the new
+     * member would land on a board that had forgotten what they came to do.
+     * sessionStorage survives that one reload and nothing more, which is
+     * exactly as long as it is wanted.
+     */
+    try {
+      sessionStorage.setItem(PicksState.PENDING, JSON.stringify({ game: game.id, outcome, week: this.currentWeekId }));
+    } catch (e) {
+      // A browser refusing storage is not a reason to refuse the sign-up.
+    }
+
+    /*
+     * 🚨 A lazy import, which is how core itself opens this. Flarum 2 ships
+     * its modals as separate chunks, so a static `import SignUpModal from
+     * 'flarum/forum/components/SignUpModal'` resolves to undefined and the
+     * click dies on "Cannot read properties of undefined (reading
+     * 'prototype')" — measured, after the first fix had already stashed the
+     * pick and looked like it worked.
+     */
+    app.modal.show(() => import('flarum/forum/components/SignUpModal'));
+  }
+
+  /** Shows the pick at once, before the server answers; returns the side picked before, or null. */
+  private applyPick(game: Game, outcome: 'home' | 'away'): 'home' | 'away' | null {
+    const prev = game.my_pick ? game.my_pick.selected_outcome : null;
+    if (!game.my_pick) {
+      game.my_pick = {
+        id: 0,
+        selected_outcome: outcome,
+        is_correct: null,
+        confidence: null,
+      };
+    } else {
+      game.my_pick.selected_outcome = outcome;
+    }
+    return prev;
   }
 
   deletePick(game: Game): void {

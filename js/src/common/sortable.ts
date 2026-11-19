@@ -38,11 +38,7 @@ export function startDrag(event: PointerEvent, opts: DragOptions): void {
 
   let to = opts.from;
 
-  try {
-    handle?.setPointerCapture(event.pointerId);
-  } catch (e) {
-    // A pointer that cannot be captured still drags while it stays over the handle.
-  }
+  capture(handle, event.pointerId);
 
   dragged.classList.add('is-dragging');
   opts.list.classList.add('is-sorting');
@@ -53,20 +49,8 @@ export function startDrag(event: PointerEvent, opts: DragOptions): void {
 
     const centre = rects[opts.from].top + rects[opts.from].height / 2 + dy;
 
-    // Where it would land: past every other row whose middle it has crossed.
-    let target = 0;
-    rects.forEach((r, i) => {
-      if (i !== opts.from && centre > r.top + r.height / 2) target++;
-    });
-    to = target;
-
-    rows.forEach((row, i) => {
-      if (i === opts.from) return;
-      let shift = 0;
-      if (opts.from < to && i > opts.from && i <= to) shift = -step;
-      if (opts.from > to && i >= to && i < opts.from) shift = step;
-      row.style.transform = shift ? `translateY(${shift}px)` : '';
-    });
+    to = landingIndex(rects, opts.from, centre);
+    shiftRows(rows, opts.from, to, step);
   };
 
   const end = () => {
@@ -84,6 +68,34 @@ export function startDrag(event: PointerEvent, opts: DragOptions): void {
   handle?.addEventListener('pointermove', move);
   handle?.addEventListener('pointerup', end);
   handle?.addEventListener('pointercancel', end);
+}
+
+function capture(handle: HTMLElement | null, pointerId: number): void {
+  try {
+    handle?.setPointerCapture(pointerId);
+  } catch (e) {
+    // A pointer that cannot be captured still drags while it stays over the handle.
+  }
+}
+
+/** Where it would land: past every other row whose middle it has crossed. */
+function landingIndex(rects: DOMRect[], from: number, centre: number): number {
+  let target = 0;
+  rects.forEach((r, i) => {
+    if (i !== from && centre > r.top + r.height / 2) target++;
+  });
+  return target;
+}
+
+/** Slides the rows between the old and new place out of the dragged row's way. */
+function shiftRows(rows: HTMLElement[], from: number, to: number, step: number): void {
+  rows.forEach((row, i) => {
+    if (i === from) return;
+    let shift = 0;
+    if (from < to && i > from && i <= to) shift = -step;
+    if (from > to && i >= to && i < from) shift = step;
+    row.style.transform = shift ? `translateY(${shift}px)` : '';
+  });
 }
 
 /** The array with one item moved, for an onDrop callback. */

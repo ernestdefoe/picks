@@ -46,92 +46,17 @@ export default class TeamEditModal extends FormModal<TeamEditModalAttrs> {
     return (
       <div className="Modal-body">
         <div className="Form">
-          <div className="Form-group">
-            <label>{app.translator.trans('ernestdefoe-picks.admin.teams.fields.name')}</label>
-            <input
-              className="FormControl"
-              type="text"
-              value={this.name}
-              oninput={(e: InputEvent) => {
-                this.name = (e.target as HTMLInputElement).value;
-              }}
-            />
-          </div>
+          {this.renderNameField()}
 
-          <div className="Form-group">
-            <label>{app.translator.trans('ernestdefoe-picks.admin.teams.fields.abbreviation')}</label>
-            <input
-              className="FormControl"
-              type="text"
-              maxlength="10"
-              value={this.abbreviation}
-              oninput={(e: InputEvent) => {
-                this.abbreviation = (e.target as HTMLInputElement).value;
-              }}
-            />
-          </div>
+          {this.renderAbbreviationField()}
 
-          <div className="Form-group">
-            <label>{app.translator.trans('ernestdefoe-picks.admin.teams.fields.conference')}</label>
-            <input
-              className="FormControl"
-              type="text"
-              value={this.conference}
-              oninput={(e: InputEvent) => {
-                this.conference = (e.target as HTMLInputElement).value;
-              }}
-            />
-          </div>
+          {this.renderConferenceField()}
 
-          <div className="Form-group">
-            <label>{app.translator.trans('ernestdefoe-picks.admin.teams.fields.logo_standard')}</label>
-            {logoUrl && (
-              <div className="TeamEditModal-logoPreview">
-                <img src={logoUrl} alt={this.name} />
-              </div>
-            )}
-            <input
-              className="FormControl"
-              type="text"
-              placeholder="https://..."
-              value={this.logoPath}
-              oninput={(e: InputEvent) => {
-                this.logoPath = (e.target as HTMLInputElement).value;
-              }}
-            />
-          </div>
+          {this.renderLogoField(logoUrl)}
 
-          <div className="Form-group">
-            <label>{app.translator.trans('ernestdefoe-picks.admin.teams.fields.logo_dark')}</label>
-            {logoDarkUrl && (
-              <div className="TeamEditModal-logoPreview TeamEditModal-logoPreview--dark">
-                <img src={logoDarkUrl} alt={extractText(app.translator.trans('ernestdefoe-picks.admin.teams.dark_logo_alt', { name: this.name }))} />
-              </div>
-            )}
-            <input
-              className="FormControl"
-              type="text"
-              placeholder="https://..."
-              value={this.logoDarkPath}
-              oninput={(e: InputEvent) => {
-                this.logoDarkPath = (e.target as HTMLInputElement).value;
-              }}
-            />
-          </div>
+          {this.renderLogoDarkField(logoDarkUrl)}
 
-          <div className="Form-group">
-            <label className="checkbox">
-              <input
-                type="checkbox"
-                checked={this.logoCustom}
-                onchange={(e: InputEvent) => {
-                  this.logoCustom = (e.target as HTMLInputElement).checked;
-                }}
-              />
-              {app.translator.trans('ernestdefoe-picks.admin.teams.fields.logo_custom')}
-            </label>
-            <p className="helpText">{app.translator.trans('ernestdefoe-picks.admin.teams.fields.logo_custom_help')}</p>
-          </div>
+          {this.renderLogoCustomField()}
 
           <div className="Form-group">
             <Button className="Button Button--primary" type="submit" loading={this.loading}>
@@ -165,5 +90,116 @@ export default class TeamEditModal extends FormModal<TeamEditModalAttrs> {
       this.alertAttrs = error.alert;
       m.redraw();
     }
+  }
+
+  private renderNameField() {
+    return (
+      <div className="Form-group">
+        <label>{app.translator.trans('ernestdefoe-picks.admin.teams.fields.name')}</label>
+        <input
+          className="FormControl"
+          type="text"
+          value={this.name}
+          oninput={(e: InputEvent) => {
+            this.name = (e.target as HTMLInputElement).value;
+          }}
+        />
+      </div>
+    );
+  }
+
+  private renderAbbreviationField() {
+    return (
+      <div className="Form-group">
+        <label>{app.translator.trans('ernestdefoe-picks.admin.teams.fields.abbreviation')}</label>
+        <input
+          className="FormControl"
+          type="text"
+          maxlength="10"
+          value={this.abbreviation}
+          oninput={(e: InputEvent) => {
+            this.abbreviation = (e.target as HTMLInputElement).value;
+          }}
+        />
+      </div>
+    );
+  }
+
+  private renderConferenceField() {
+    return (
+      <div className="Form-group">
+        <label>{app.translator.trans('ernestdefoe-picks.admin.teams.fields.conference')}</label>
+        <input
+          className="FormControl"
+          type="text"
+          value={this.conference}
+          oninput={(e: InputEvent) => {
+            this.conference = (e.target as HTMLInputElement).value;
+          }}
+        />
+      </div>
+    );
+  }
+
+  private renderLogoField(logoUrl: string | null | undefined) {
+    return (
+      <div className="Form-group">
+        <label>{app.translator.trans('ernestdefoe-picks.admin.teams.fields.logo_standard')}</label>
+        {logoUrl && (
+          <div className="TeamEditModal-logoPreview">
+            <img src={logoUrl} alt={this.name} />
+          </div>
+        )}
+        <input
+          className="FormControl"
+          type="text"
+          placeholder="https://..."
+          value={this.logoPath}
+          oninput={(e: InputEvent) => {
+            this.logoPath = (e.target as HTMLInputElement).value;
+          }}
+        />
+      </div>
+    );
+  }
+
+  private renderLogoDarkField(logoDarkUrl: string | null | undefined) {
+    return (
+      <div className="Form-group">
+        <label>{app.translator.trans('ernestdefoe-picks.admin.teams.fields.logo_dark')}</label>
+        {logoDarkUrl && (
+          <div className="TeamEditModal-logoPreview TeamEditModal-logoPreview--dark">
+            <img src={logoDarkUrl} alt={extractText(app.translator.trans('ernestdefoe-picks.admin.teams.dark_logo_alt', { name: this.name }))} />
+          </div>
+        )}
+        <input
+          className="FormControl"
+          type="text"
+          placeholder="https://..."
+          value={this.logoDarkPath}
+          oninput={(e: InputEvent) => {
+            this.logoDarkPath = (e.target as HTMLInputElement).value;
+          }}
+        />
+      </div>
+    );
+  }
+
+  private renderLogoCustomField() {
+    return (
+      <div className="Form-group">
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={this.logoCustom}
+            onchange={(e: InputEvent) => {
+              this.logoCustom = (e.target as HTMLInputElement).checked;
+            }}
+          />
+          {app.translator.trans('ernestdefoe-picks.admin.teams.fields.logo_custom')}
+        </label>
+        <p className="helpText">{app.translator.trans('ernestdefoe-picks.admin.teams.fields.logo_custom_help')}</p>
+      </div>
+    );
   }
 }

@@ -283,52 +283,58 @@ export default class ConfidenceState {
         body,
         errorHandler: () => {},
       })
-      .then((r) => {
-        if (next()) return;
-        this.saving = false;
-        this.saved = true;
-        this.error = null;
-        // Keep the member's layout; take only what the server counts — and
-        // only for the week it was saved for, if the member has moved on.
-        if (this.board && r.data && this.board.week_id === weekId) {
-          this.board.my_score = r.data.my_score;
-          this.board.picked = r.data.picked;
-          this.board.frozen = r.data.frozen;
-          r.data.games.forEach((g) => {
-            const mine = this.game(g.id);
-            if (mine) mine.my_pick = g.my_pick;
-          });
-        }
-        m.redraw();
-      })
-      .catch((e: any) => {
-        const code = e?.response?.code;
+      .then((r) => this.applySaved(r.data, weekId, next))
+      .catch((e: any) => this.saveFailed(e, weekId, next));
+  }
 
-        /*
-         * 🚨 No answer, or not one of ours (a dropped phone connection, a
-         * server error): the board on screen is still what the member wants.
-         * Reloading here threw their change away and showed the old board.
-         * Keep it, and send it again in a few seconds.
-         */
-        if (!code) {
-          if (next()) return;
-          this.saving = false;
-          this.error = 'offline';
-          if (!this.timer && this.board?.week_id === weekId) this.timer = setTimeout(() => this.save(), 4000);
-          m.redraw();
-          return;
-        }
-
-        this.inFlight = false;
-        this.queued = null;
-        this.saving = false;
-        this.error = code;
-        m.redraw();
-        // The week as it really is — a game may have locked under the member.
-        // Not for a bad tiebreaker: nothing else changed, and a reload would
-        // throw away the ranking they just made.
-        if (this.weekId && this.error !== 'bad_tiebreaker') this.load(this.weekId);
+  /** The server took the board. */
+  private applySaved(data: C10Board, weekId: number, next: () => boolean): void {
+    if (next()) return;
+    this.saving = false;
+    this.saved = true;
+    this.error = null;
+    // Keep the member's layout; take only what the server counts — and
+    // only for the week it was saved for, if the member has moved on.
+    if (this.board && data && this.board.week_id === weekId) {
+      this.board.my_score = data.my_score;
+      this.board.picked = data.picked;
+      this.board.frozen = data.frozen;
+      data.games.forEach((g) => {
+        const mine = this.game(g.id);
+        if (mine) mine.my_pick = g.my_pick;
       });
+    }
+    m.redraw();
+  }
+
+  /** The server refused the board, or never answered. */
+  private saveFailed(e: any, weekId: number, next: () => boolean): void {
+    const code = e?.response?.code;
+
+    /*
+     * 🚨 No answer, or not one of ours (a dropped phone connection, a
+     * server error): the board on screen is still what the member wants.
+     * Reloading here threw their change away and showed the old board.
+     * Keep it, and send it again in a few seconds.
+     */
+    if (!code) {
+      if (next()) return;
+      this.saving = false;
+      this.error = 'offline';
+      if (!this.timer && this.board?.week_id === weekId) this.timer = setTimeout(() => this.save(), 4000);
+      m.redraw();
+      return;
+    }
+
+    this.inFlight = false;
+    this.queued = null;
+    this.saving = false;
+    this.error = code;
+    m.redraw();
+    // The week as it really is — a game may have locked under the member.
+    // Not for a bad tiebreaker: nothing else changed, and a reload would
+    // throw away the ranking they just made.
+    if (this.weekId && this.error !== 'bad_tiebreaker') this.load(this.weekId);
   }
 
   loadLeaderboard(scope: string, weekId: number | null, seasonId: number | null): void {

@@ -39,10 +39,7 @@ class ScheduleSyncService
 
         $season = $this->syncSeason($year);
 
-        $weeksCreated = 0;
-        $weeksUpdated = 0;
-        $gamesCreated = 0;
-        $gamesUpdated = 0;
+        $tally = ['weeksCreated' => 0, 'weeksUpdated' => 0, 'gamesCreated' => 0, 'gamesUpdated' => 0];
 
         // Build the cfbd_id => local team id map ONCE for the whole sync and
         // pass it into syncGames(), rather than re-scanning picks_teams on
@@ -55,80 +52,12 @@ class ScheduleSyncService
         // created during this sync are added to the map as we go (see syncGames).
         $existingEventsByCfbdId = PickEvent::whereNotNull('cfbd_id')->get()->keyBy('cfbd_id');
 
-        // ------------------------------------------------------------------
-        // Regular season
-        // ------------------------------------------------------------------
         if ($syncRegular) {
-            $calendarWeeks = $this->cfbd->fetchCalendar($year);
-
-            // Filter to regular season only from the calendar
-            $regularWeeks = array_filter($calendarWeeks, function (array $w) {
-                return strtolower($w['seasonType'] ?? '') === 'regular';
-            });
-
-            foreach ($regularWeeks as $calWeek) {
-                $weekNumber = (int) $calWeek['week'];
-                $startDate = $this->parseDate($calWeek['startDate'] ?? null);
-                $endDate = $this->parseDate($calWeek['endDate'] ?? null);
-
-                $week = $this->syncWeek(
-                    season:     $season,
-                    weekNumber: $weekNumber,
-                    seasonType: 'regular',
-                    name:       $this->translator->trans('ernestdefoe-picks.api.weeks.week', ['number' => $weekNumber]),
-                    startDate:  $startDate,
-                    endDate:    $endDate
-                );
-
-                if ($week->wasRecentlyCreated) {
-                    $weeksCreated++;
-                } else {
-                    $weeksUpdated++;
-                }
-
-                // Fetch and sync games for this week
-                $apiGames = $this->cfbd->fetchGames($year, 'regular', $weekNumber);
-                [$gc, $gu] = $this->syncGames($apiGames, $week, $teamMap, $existingEventsByCfbdId);
-                $gamesCreated += $gc;
-                $gamesUpdated += $gu;
-            }
+            $this->syncRegularSeason($year, $season, $teamMap, $existingEventsByCfbdId, $tally);
         }
 
-        // ------------------------------------------------------------------
-        // Postseason — all games in one "Bowl Season" week
-        // ------------------------------------------------------------------
         if ($syncPostseason) {
-            $apiGames = $this->cfbd->fetchGames($year, 'postseason');
-
-            if (! empty($apiGames)) {
-                // Determine date range from actual game dates
-                $dates = array_filter(array_map(
-                    fn ($g) => $this->parseDate($g['startDate'] ?? null),
-                    $apiGames
-                ));
-
-                $startDate = ! empty($dates) ? min($dates) : null;
-                $endDate = ! empty($dates) ? max($dates) : null;
-
-                $week = $this->syncWeek(
-                    season:     $season,
-                    weekNumber: 1,
-                    seasonType: 'postseason',
-                    name:       $this->translator->trans('ernestdefoe-picks.api.weeks.bowl_season'),
-                    startDate:  $startDate,
-                    endDate:    $endDate
-                );
-
-                if ($week->wasRecentlyCreated) {
-                    $weeksCreated++;
-                } else {
-                    $weeksUpdated++;
-                }
-
-                [$gc, $gu] = $this->syncGames($apiGames, $week, $teamMap, $existingEventsByCfbdId);
-                $gamesCreated += $gc;
-                $gamesUpdated += $gu;
-            }
+            $this->syncPostseason($year, $season, $teamMap, $existingEventsByCfbdId, $tally);
         }
 
         $this->settings->set(
@@ -136,7 +65,104 @@ class ScheduleSyncService
             Carbon::now()->toIso8601String()
         );
 
-        return compact('weeksCreated', 'weeksUpdated', 'gamesCreated', 'gamesUpdated');
+        return $tally;
+    }
+
+    /**
+     * Regular season: weeks from the CFBD calendar, games fetched per week.
+     *
+     * @param array<int|string, int> $teamMap
+     * @param \Illuminate\Support\Collection<int|string, PickEvent> $existingEventsByCfbdId
+     * @param array{weeksCreated: int, weeksUpdated: int, gamesCreated: int, gamesUpdated: int} $tally
+     */
+    private function syncRegularSeason(int $year, Season $season, array $teamMap, $existingEventsByCfbdId, array &$tally): void
+    {
+        $calendarWeeks = $this->cfbd->fetchCalendar($year);
+
+        // Filter to regular season only from the calendar
+        $regularWeeks = array_filter($calendarWeeks, function (array $w) {
+            return strtolower($w['seasonType'] ?? '') === 'regular';
+        });
+
+        foreach ($regularWeeks as $calWeek) {
+            $weekNumber = (int) $calWeek['week'];
+            $startDate = $this->parseDate($calWeek['startDate'] ?? null);
+            $endDate = $this->parseDate($calWeek['endDate'] ?? null);
+
+            $week = $this->syncWeek(
+                season:     $season,
+                weekNumber: $weekNumber,
+                seasonType: 'regular',
+                name:       $this->translator->trans('ernestdefoe-picks.api.weeks.week', ['number' => $weekNumber]),
+                startDate:  $startDate,
+                endDate:    $endDate
+            );
+
+            $this->countWeek($week, $tally);
+
+            // Fetch and sync games for this week
+            $apiGames = $this->cfbd->fetchGames($year, 'regular', $weekNumber);
+            $this->countGames($this->syncGames($apiGames, $week, $teamMap, $existingEventsByCfbdId), $tally);
+        }
+    }
+
+    /**
+     * Postseason — all games in one "Bowl Season" week.
+     *
+     * @param array<int|string, int> $teamMap
+     * @param \Illuminate\Support\Collection<int|string, PickEvent> $existingEventsByCfbdId
+     * @param array{weeksCreated: int, weeksUpdated: int, gamesCreated: int, gamesUpdated: int} $tally
+     */
+    private function syncPostseason(int $year, Season $season, array $teamMap, $existingEventsByCfbdId, array &$tally): void
+    {
+        $apiGames = $this->cfbd->fetchGames($year, 'postseason');
+
+        if (empty($apiGames)) {
+            return;
+        }
+
+        // Determine date range from actual game dates
+        $dates = array_filter(array_map(
+            fn ($g) => $this->parseDate($g['startDate'] ?? null),
+            $apiGames
+        ));
+
+        $startDate = ! empty($dates) ? min($dates) : null;
+        $endDate = ! empty($dates) ? max($dates) : null;
+
+        $week = $this->syncWeek(
+            season:     $season,
+            weekNumber: 1,
+            seasonType: 'postseason',
+            name:       $this->translator->trans('ernestdefoe-picks.api.weeks.bowl_season'),
+            startDate:  $startDate,
+            endDate:    $endDate
+        );
+
+        $this->countWeek($week, $tally);
+
+        $this->countGames($this->syncGames($apiGames, $week, $teamMap, $existingEventsByCfbdId), $tally);
+    }
+
+    /** @param array{weeksCreated: int, weeksUpdated: int, gamesCreated: int, gamesUpdated: int} $tally */
+    private function countWeek(Week $week, array &$tally): void
+    {
+        if ($week->wasRecentlyCreated) {
+            $tally['weeksCreated']++;
+        } else {
+            $tally['weeksUpdated']++;
+        }
+    }
+
+    /**
+     * @param array{0: int, 1: int} $counts [created, updated]
+     * @param array{weeksCreated: int, weeksUpdated: int, gamesCreated: int, gamesUpdated: int} $tally
+     */
+    private function countGames(array $counts, array &$tally): void
+    {
+        [$gc, $gu] = $counts;
+        $tally['gamesCreated'] += $gc;
+        $tally['gamesUpdated'] += $gu;
     }
 
     /**
@@ -231,76 +257,122 @@ class ScheduleSyncService
         $updated = 0;
 
         foreach ($apiGames as $apiGame) {
-            $cfbdGameId = Arr::get($apiGame, 'id');
-            $homeId = Arr::get($apiGame, 'homeId');
-            $awayId = Arr::get($apiGame, 'awayId');
+            $isNew = $this->syncGame($apiGame, $week, $teamMap, $existingEventsByCfbdId);
 
-            if (! $cfbdGameId || ! $homeId || ! $awayId) {
-                continue;
-            }
-
-            $homeTeamId = $teamMap[$homeId] ?? null;
-            $awayTeamId = $teamMap[$awayId] ?? null;
-
-            // Skip games where either team isn't in our database
-            if (! $homeTeamId || ! $awayTeamId) {
-                continue;
-            }
-
-            $startDateRaw = Arr::get($apiGame, 'startDate');
-            $startTimeTbd = (bool) Arr::get($apiGame, 'startTimeTBD', false);
-            $neutralSite = (bool) Arr::get($apiGame, 'neutralSite', false);
-            $completed = (bool) Arr::get($apiGame, 'completed', false);
-            $homePoints = Arr::get($apiGame, 'homePoints');
-            $awayPoints = Arr::get($apiGame, 'awayPoints');
-
-            $matchDate = $startDateRaw ? Carbon::parse($startDateRaw) : null;
-            $cutoffDate = $this->calculateCutoffDate($matchDate, $startTimeTbd);
-
-            if (! $matchDate || ! $cutoffDate) {
-                continue;
-            }
-
-            $event = $existingEventsByCfbdId->get($cfbdGameId);
-
-            $isNew = $event === null;
-
-            if ($isNew) {
-                $event = new PickEvent();
-                $event->cfbd_id = $cfbdGameId;
-            }
-
-            $event->week_id = $week->id;
-            $event->home_team_id = $homeTeamId;
-            $event->away_team_id = $awayTeamId;
-            $event->neutral_site = $neutralSite;
-            $event->match_date = $matchDate;
-            $event->time_tbd = $startTimeTbd;
-            $event->cutoff_date = $cutoffDate;
-
-            // Only update scores/status if the game is completed
-            if ($completed && $homePoints !== null && $awayPoints !== null) {
-                $event->home_score = (int) $homePoints;
-                $event->away_score = (int) $awayPoints;
-                $event->status = PickEvent::STATUS_FINISHED;
-                $event->result = $event->calculateResult();
-            } elseif ($isNew) {
-                $event->status = PickEvent::STATUS_SCHEDULED;
-            }
-
-            $event->save();
-
-            if ($isNew) {
+            if ($isNew === true) {
                 $created++;
-                // Keep the in-memory map in sync so a cfbd_id that recurs later
-                // in the same run resolves to this row instead of re-inserting.
-                $existingEventsByCfbdId->put($cfbdGameId, $event);
-            } else {
+            } elseif ($isNew === false) {
                 $updated++;
             }
         }
 
         return [$created, $updated];
+    }
+
+    /**
+     * Sync one CFBD game. True when created, false when updated, null when skipped.
+     *
+     * @param array<string, mixed> $apiGame
+     * @param array<int|string, int> $teamMap
+     * @param \Illuminate\Support\Collection<int|string, PickEvent> $existingEventsByCfbdId
+     */
+    private function syncGame(array $apiGame, Week $week, array $teamMap, $existingEventsByCfbdId): ?bool
+    {
+        $ids = $this->gameTeamIds($apiGame, $teamMap);
+
+        if ($ids === null) {
+            return null;
+        }
+
+        [$cfbdGameId, $homeTeamId, $awayTeamId] = $ids;
+
+        $startDateRaw = Arr::get($apiGame, 'startDate');
+        $startTimeTbd = (bool) Arr::get($apiGame, 'startTimeTBD', false);
+
+        $matchDate = $startDateRaw ? Carbon::parse($startDateRaw) : null;
+        $cutoffDate = $this->calculateCutoffDate($matchDate, $startTimeTbd);
+
+        if (! $matchDate || ! $cutoffDate) {
+            return null;
+        }
+
+        $event = $existingEventsByCfbdId->get($cfbdGameId);
+
+        $isNew = $event === null;
+
+        if ($isNew) {
+            $event = new PickEvent();
+            $event->cfbd_id = $cfbdGameId;
+        }
+
+        $event->week_id = $week->id;
+        $event->home_team_id = $homeTeamId;
+        $event->away_team_id = $awayTeamId;
+        $event->neutral_site = (bool) Arr::get($apiGame, 'neutralSite', false);
+        $event->match_date = $matchDate;
+        $event->time_tbd = $startTimeTbd;
+        $event->cutoff_date = $cutoffDate;
+
+        $this->applyResult($event, $apiGame, $isNew);
+
+        $event->save();
+
+        if ($isNew) {
+            // Keep the in-memory map in sync so a cfbd_id that recurs later
+            // in the same run resolves to this row instead of re-inserting.
+            $existingEventsByCfbdId->put($cfbdGameId, $event);
+        }
+
+        return $isNew;
+    }
+
+    /**
+     * The game's CFBD id and both local team ids, or null when any is missing.
+     *
+     * @param array<string, mixed> $apiGame
+     * @param array<int|string, int> $teamMap
+     * @return array{0: mixed, 1: int, 2: int}|null
+     */
+    private function gameTeamIds(array $apiGame, array $teamMap): ?array
+    {
+        $cfbdGameId = Arr::get($apiGame, 'id');
+        $homeId = Arr::get($apiGame, 'homeId');
+        $awayId = Arr::get($apiGame, 'awayId');
+
+        if (! $cfbdGameId || ! $homeId || ! $awayId) {
+            return null;
+        }
+
+        $homeTeamId = $teamMap[$homeId] ?? null;
+        $awayTeamId = $teamMap[$awayId] ?? null;
+
+        // Skip games where either team isn't in our database
+        if (! $homeTeamId || ! $awayTeamId) {
+            return null;
+        }
+
+        return [$cfbdGameId, $homeTeamId, $awayTeamId];
+    }
+
+    /**
+     * Only update scores/status if the game is completed.
+     *
+     * @param array<string, mixed> $apiGame
+     */
+    private function applyResult(PickEvent $event, array $apiGame, bool $isNew): void
+    {
+        $completed = (bool) Arr::get($apiGame, 'completed', false);
+        $homePoints = Arr::get($apiGame, 'homePoints');
+        $awayPoints = Arr::get($apiGame, 'awayPoints');
+
+        if ($completed && $homePoints !== null && $awayPoints !== null) {
+            $event->home_score = (int) $homePoints;
+            $event->away_score = (int) $awayPoints;
+            $event->status = PickEvent::STATUS_FINISHED;
+            $event->result = $event->calculateResult();
+        } elseif ($isNew) {
+            $event->status = PickEvent::STATUS_SCHEDULED;
+        }
     }
 
     /**

@@ -152,164 +152,197 @@ export default class TeamsTab extends Component {
   }
 
   view() {
-    const filtered = this.filteredTeams();
-    const conferences = this.conferences();
-    const missingLogos = this.missingLogoCount();
-
     return (
       <div className="PicksTeamsTab">
-        <div className="PicksTab-header">
-          <div>
-            <h3>
-              <i className="fas fa-users" /> {app.translator.trans('ernestdefoe-picks.admin.nav.teams')}
-            </h3>
-            <p className="PicksTab-meta">
-              {this.teams.length} {app.translator.trans('ernestdefoe-picks.admin.teams.total_label')}
-              {this.lastSync && (
-                <span>
-                  {' · '}
-                  {app.translator.trans('ernestdefoe-picks.admin.common.last_sync')}: {new Date(this.lastSync).toLocaleString()}
-                </span>
-              )}
-            </p>
-          </div>
-          <div className="PicksTab-actions">
-            <Button className="Button Button--primary" icon="fas fa-sync" loading={this.syncing} onclick={() => this.syncTeams()}>
-              {app.translator.trans('ernestdefoe-picks.admin.teams.sync_button')}
-            </Button>
-            {missingLogos > 0 && (
-              <Button className="Button" icon="fas fa-images" loading={this.syncingLogos} onclick={() => this.syncLogosBatch()}>
-                {app.translator.trans('ernestdefoe-picks.admin.teams.sync_logos_button')} ({missingLogos})
-              </Button>
-            )}
-          </div>
-        </div>
+        {this.renderHeader()}
 
-        {this.syncResult && <div className="PicksAlert PicksAlert--info">{this.syncResult}</div>}
+        {this.renderSyncResult()}
 
-        {(this.syncingLogos || this.logoSyncResult) && (
-          <div className="PicksAlert PicksAlert--info">
-            {this.syncingLogos ? (
+        {this.renderLogoSyncResult()}
+
+        {this.renderFilters()}
+
+        {this.loading ? <LoadingIndicator /> : this.renderList()}
+      </div>
+    );
+  }
+
+  private renderHeader() {
+    const missingLogos = this.missingLogoCount();
+    return (
+      <div className="PicksTab-header">
+        <div>
+          <h3>
+            <i className="fas fa-users" /> {app.translator.trans('ernestdefoe-picks.admin.nav.teams')}
+          </h3>
+          <p className="PicksTab-meta">
+            {this.teams.length} {app.translator.trans('ernestdefoe-picks.admin.teams.total_label')}
+            {this.lastSync && (
               <span>
-                <i className="fas fa-spinner fa-spin" /> {t('logos_working')}
+                {' · '}
+                {app.translator.trans('ernestdefoe-picks.admin.common.last_sync')}: {new Date(this.lastSync).toLocaleString()}
               </span>
-            ) : (
-              this.logoSyncResult
             )}
-          </div>
-        )}
+          </p>
+        </div>
+        <div className="PicksTab-actions">
+          <Button className="Button Button--primary" icon="fas fa-sync" loading={this.syncing} onclick={() => this.syncTeams()}>
+            {app.translator.trans('ernestdefoe-picks.admin.teams.sync_button')}
+          </Button>
+          {missingLogos > 0 && (
+            <Button className="Button" icon="fas fa-images" loading={this.syncingLogos} onclick={() => this.syncLogosBatch()}>
+              {app.translator.trans('ernestdefoe-picks.admin.teams.sync_logos_button')} ({missingLogos})
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
-        <div className="PicksTab-filters">
-          <input
-            className="FormControl"
-            type="text"
-            placeholder={app.translator.trans('ernestdefoe-picks.admin.teams.search_placeholder')}
-            value={this.search}
-            oninput={(e: InputEvent) => {
-              this.search = (e.target as HTMLInputElement).value;
-            }}
+  private renderSyncResult() {
+    return this.syncResult && <div className="PicksAlert PicksAlert--info">{this.syncResult}</div>;
+  }
+
+  private renderLogoSyncResult() {
+    return (
+      (this.syncingLogos || this.logoSyncResult) && (
+        <div className="PicksAlert PicksAlert--info">
+          {this.syncingLogos ? (
+            <span>
+              <i className="fas fa-spinner fa-spin" /> {t('logos_working')}
+            </span>
+          ) : (
+            this.logoSyncResult
+          )}
+        </div>
+      )
+    );
+  }
+
+  private renderFilters() {
+    const conferences = this.conferences();
+    return (
+      <div className="PicksTab-filters">
+        <input
+          className="FormControl"
+          type="text"
+          placeholder={app.translator.trans('ernestdefoe-picks.admin.teams.search_placeholder')}
+          value={this.search}
+          oninput={(e: InputEvent) => {
+            this.search = (e.target as HTMLInputElement).value;
+          }}
+        />
+        <select
+          className="FormControl"
+          value={this.filterConference}
+          onchange={(e: Event) => {
+            this.filterConference = (e.target as HTMLSelectElement).value;
+          }}
+        >
+          <option value="all">{app.translator.trans('ernestdefoe-picks.admin.teams.all_conferences')}</option>
+          {conferences.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        <select
+          className="FormControl"
+          value={this.filterLogo}
+          onchange={(e: Event) => {
+            this.filterLogo = (e.target as HTMLSelectElement).value;
+          }}
+        >
+          <option value="all">{app.translator.trans('ernestdefoe-picks.admin.teams.logo_filter_all')}</option>
+          <option value="has">{app.translator.trans('ernestdefoe-picks.admin.teams.logo_filter_has')}</option>
+          <option value="missing">{app.translator.trans('ernestdefoe-picks.admin.teams.logo_filter_missing')}</option>
+          <option value="custom">{app.translator.trans('ernestdefoe-picks.admin.teams.logo_filter_custom')}</option>
+        </select>
+      </div>
+    );
+  }
+
+  private renderLogoCell(team: Team) {
+    const logoUrl = team.logoUrl();
+    const logoDarkUrl = team.logoDarkUrl() || logoUrl;
+
+    return (
+      <div className="PicksCardList-cell">
+        {logoUrl ? (
+          <>
+            <img src={crestUrl(logoUrl, 36)} alt={team.name() || ''} className="PicksTeamLogo PicksTeamLogo--light" loading="lazy" decoding="async" />
+            <img
+              src={crestUrl(logoDarkUrl!, 36)}
+              alt={team.name() || ''}
+              className="PicksTeamLogo PicksTeamLogo--dark"
+              loading="lazy"
+              decoding="async"
+            />
+          </>
+        ) : (
+          <div className="PicksTeamLogo PicksTeamLogo--placeholder">{(team.abbreviation() || team.name() || '?').charAt(0)}</div>
+        )}
+      </div>
+    );
+  }
+
+  private renderActionsCell(team: Team, id: number) {
+    return (
+      <div className="PicksCardList-cell PicksCardList-cell--actions">
+        <Button
+          className="Button Button--icon"
+          icon="fas fa-edit"
+          title={app.translator.trans('ernestdefoe-picks.admin.common.edit')}
+          onclick={() => app.modal.show(TeamEditModal, { team, onsave: () => this.loadTeams() })}
+        />
+        {!team.logoCustom() && team.espnId() && (
+          <Button
+            className="Button Button--icon"
+            icon="fas fa-sync"
+            title={app.translator.trans('ernestdefoe-picks.admin.teams.refresh_logo')}
+            loading={this.refreshingId === id}
+            onclick={() => this.refreshLogo(team)}
           />
-          <select
-            className="FormControl"
-            value={this.filterConference}
-            onchange={(e: Event) => {
-              this.filterConference = (e.target as HTMLSelectElement).value;
-            }}
-          >
-            <option value="all">{app.translator.trans('ernestdefoe-picks.admin.teams.all_conferences')}</option>
-            {conferences.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-          <select
-            className="FormControl"
-            value={this.filterLogo}
-            onchange={(e: Event) => {
-              this.filterLogo = (e.target as HTMLSelectElement).value;
-            }}
-          >
-            <option value="all">{app.translator.trans('ernestdefoe-picks.admin.teams.logo_filter_all')}</option>
-            <option value="has">{app.translator.trans('ernestdefoe-picks.admin.teams.logo_filter_has')}</option>
-            <option value="missing">{app.translator.trans('ernestdefoe-picks.admin.teams.logo_filter_missing')}</option>
-            <option value="custom">{app.translator.trans('ernestdefoe-picks.admin.teams.logo_filter_custom')}</option>
-          </select>
+        )}
+      </div>
+    );
+  }
+
+  private renderList() {
+    const filtered = this.filteredTeams();
+
+    return (
+      <div className="PicksCardList">
+        <div className="PicksCardList-header">
+          <div>{app.translator.trans('ernestdefoe-picks.admin.teams.col_logo')}</div>
+          <div>{app.translator.trans('ernestdefoe-picks.admin.teams.col_name')}</div>
+          <div>{app.translator.trans('ernestdefoe-picks.admin.teams.col_conference')}</div>
+          <div>{app.translator.trans('ernestdefoe-picks.admin.teams.col_abbrev')}</div>
+          <div>{app.translator.trans('ernestdefoe-picks.admin.teams.col_logo_status')}</div>
+          <div></div>
         </div>
 
-        {this.loading ? (
-          <LoadingIndicator />
+        {filtered.length === 0 ? (
+          <div className="PicksEmptyState">{app.translator.trans('ernestdefoe-picks.admin.teams.no_teams')}</div>
         ) : (
-          <div className="PicksCardList">
-            <div className="PicksCardList-header">
-              <div>{app.translator.trans('ernestdefoe-picks.admin.teams.col_logo')}</div>
-              <div>{app.translator.trans('ernestdefoe-picks.admin.teams.col_name')}</div>
-              <div>{app.translator.trans('ernestdefoe-picks.admin.teams.col_conference')}</div>
-              <div>{app.translator.trans('ernestdefoe-picks.admin.teams.col_abbrev')}</div>
-              <div>{app.translator.trans('ernestdefoe-picks.admin.teams.col_logo_status')}</div>
-              <div></div>
-            </div>
-
-            {filtered.length === 0 ? (
-              <div className="PicksEmptyState">{app.translator.trans('ernestdefoe-picks.admin.teams.no_teams')}</div>
-            ) : (
-              filtered.map((team) => {
-                const id = parseInt(String(team.id()));
-                const status = this.logoStatus(team);
-                const logoUrl = team.logoUrl();
-                const logoDarkUrl = team.logoDarkUrl() || logoUrl;
-
-                return (
-                  <div key={String(team.id())} className="PicksCardList-row">
-                    <div className="PicksCardList-cell">
-                      {logoUrl ? (
-                        <>
-                          <img
-                            src={crestUrl(logoUrl, 36)}
-                            alt={team.name() || ''}
-                            className="PicksTeamLogo PicksTeamLogo--light"
-                            loading="lazy"
-                            decoding="async"
-                          />
-                          <img
-                            src={crestUrl(logoDarkUrl!, 36)}
-                            alt={team.name() || ''}
-                            className="PicksTeamLogo PicksTeamLogo--dark"
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        </>
-                      ) : (
-                        <div className="PicksTeamLogo PicksTeamLogo--placeholder">{(team.abbreviation() || team.name() || '?').charAt(0)}</div>
-                      )}
-                    </div>
-                    <div className="PicksCardList-cell PicksCardList-cell--primary">{team.name()}</div>
-                    <div className="PicksCardList-cell">{team.conference() || '—'}</div>
-                    <div className="PicksCardList-cell PicksCardList-cell--muted">{team.abbreviation() || '—'}</div>
-                    <div className="PicksCardList-cell">{this.logoStatusLabel(status)}</div>
-                    <div className="PicksCardList-cell PicksCardList-cell--actions">
-                      <Button
-                        className="Button Button--icon"
-                        icon="fas fa-edit"
-                        title={app.translator.trans('ernestdefoe-picks.admin.common.edit')}
-                        onclick={() => app.modal.show(TeamEditModal, { team, onsave: () => this.loadTeams() })}
-                      />
-                      {!team.logoCustom() && team.espnId() && (
-                        <Button
-                          className="Button Button--icon"
-                          icon="fas fa-sync"
-                          title={app.translator.trans('ernestdefoe-picks.admin.teams.refresh_logo')}
-                          loading={this.refreshingId === id}
-                          onclick={() => this.refreshLogo(team)}
-                        />
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+          filtered.map((team) => this.renderTeamRow(team))
         )}
+      </div>
+    );
+  }
+
+  private renderTeamRow(team: Team) {
+    const id = parseInt(String(team.id()));
+    const status = this.logoStatus(team);
+
+    return (
+      <div key={String(team.id())} className="PicksCardList-row">
+        {this.renderLogoCell(team)}
+        <div className="PicksCardList-cell PicksCardList-cell--primary">{team.name()}</div>
+        <div className="PicksCardList-cell">{team.conference() || '—'}</div>
+        <div className="PicksCardList-cell PicksCardList-cell--muted">{team.abbreviation() || '—'}</div>
+        <div className="PicksCardList-cell">{this.logoStatusLabel(status)}</div>
+        {this.renderActionsCell(team, id)}
       </div>
     );
   }

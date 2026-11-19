@@ -46,84 +46,94 @@ class LeaderboardContextController implements RequestHandlerInterface
         $actor->assertCan('picks.view');
 
         try {
-            // Season is active if there's a current (unfinished) week. Shared
-            // with the other picks endpoints via CurrentSeasonService.
-            $activeWeek = $this->currentSeason->getCurrentWeek();
-
-            if ($activeWeek) {
-                // Season is active — no off-season context needed
-                return new JsonResponse([
-                    'is_active' => true,
-                    'is_off_season' => false,
-                    'retention_expired' => false,
-                    'days_since_ended' => null,
-                    'last_week_id' => null,
-                    'last_season_id' => null,
-                    'last_season_name' => null,
-                ]);
-            }
-
-            // ── No active week — find the most recently completed season ───────
-            // The most recent season is the one with the highest year that has
-            // at least one finished event.
-            $lastSeason = Season::query()
-                ->whereHas('weeks.events', fn ($q) => $q->where('status', 'finished'))
-                ->orderByDesc('year')
-                ->first();
-
-            if (! $lastSeason) {
-                // No completed seasons at all — truly no data
-                return new JsonResponse([
-                    'is_active' => false,
-                    'is_off_season' => false,
-                    'retention_expired' => false,
-                    'days_since_ended' => null,
-                    'last_week_id' => null,
-                    'last_season_id' => null,
-                    'last_season_name' => null,
-                ]);
-            }
-
-            // ── When did this season end? ─────────────────────────────────────
-            // Use the MAX(updated_at) of finished events in the last season —
-            // this is set by ScorePicksJob when the final game is scored.
-            $lastFinishedAt = PickEvent::query()
-                ->where('status', 'finished')
-                ->whereHas('week', fn ($q) => $q->where('season_id', $lastSeason->id))
-                ->max('updated_at');
-
-            $daysSinceEnded = $lastFinishedAt
-                ? (int) Carbon::parse($lastFinishedAt)->diffInDays(Carbon::now())
-                : null;
-
-            $retentionExpired = $daysSinceEnded !== null && $daysSinceEnded > self::RETENTION_DAYS;
-
-            // ── Find the last week of that season ─────────────────────────────
-            // Use the week with the highest week_number that has finished events.
-            // Postseason takes precedence over regular season in display.
-            $lastWeek = Week::query()
-                ->where('season_id', $lastSeason->id)
-                ->whereHas('events', fn ($q) => $q->where('status', 'finished'))
-                ->orderByRaw(Week::seasonTypeOrder('postseason'))
-                ->orderBy('week_number', 'desc')
-                ->first();
-
-            return new JsonResponse([
-                'is_active' => false,
-                'is_off_season' => true,
-                'retention_expired' => $retentionExpired,
-                'days_since_ended' => $daysSinceEnded,
-                'last_week_id' => $lastWeek->id ?? null,
-                'last_season_id' => (int) $lastSeason->id,
-                'last_season_name' => $lastSeason->name,
-            ]);
+            return new JsonResponse($this->context());
         } catch (\Exception $e) {
             // Unexpected failure → 500 (the detail is logged). The valid
             // "no completed seasons / off-season" states are returned with 200
-            // from the normal path above.
+            // from the normal path in context().
             $this->log->error('[Picks] LeaderboardContext failed: '.$e->getMessage(), ['exception' => $e]);
 
             return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-picks.api.errors.leaderboard_context_failed')], 500);
         }
+    }
+
+    /** The leaderboard context payload. */
+    private function context(): array
+    {
+        // Season is active if there's a current (unfinished) week. Shared
+        // with the other picks endpoints via CurrentSeasonService.
+        $activeWeek = $this->currentSeason->getCurrentWeek();
+
+        if ($activeWeek) {
+            // Season is active — no off-season context needed
+            return $this->emptyContext(true);
+        }
+
+        // ── No active week — find the most recently completed season ───────
+        // The most recent season is the one with the highest year that has
+        // at least one finished event.
+        $lastSeason = Season::query()
+            ->whereHas('weeks.events', fn ($q) => $q->where('status', 'finished'))
+            ->orderByDesc('year')
+            ->first();
+
+        if (! $lastSeason) {
+            // No completed seasons at all — truly no data
+            return $this->emptyContext(false);
+        }
+
+        return $this->offSeasonContext($lastSeason);
+    }
+
+    /** No off-season context: the season is live, or there has never been one. */
+    private function emptyContext(bool $isActive): array
+    {
+        return [
+            'is_active' => $isActive,
+            'is_off_season' => false,
+            'retention_expired' => false,
+            'days_since_ended' => null,
+            'last_week_id' => null,
+            'last_season_id' => null,
+            'last_season_name' => null,
+        ];
+    }
+
+    /** The off-season context for the most recently completed season. */
+    private function offSeasonContext(Season $lastSeason): array
+    {
+        // ── When did this season end? ─────────────────────────────────────
+        // Use the MAX(updated_at) of finished events in the last season —
+        // this is set by ScorePicksJob when the final game is scored.
+        $lastFinishedAt = PickEvent::query()
+            ->where('status', 'finished')
+            ->whereHas('week', fn ($q) => $q->where('season_id', $lastSeason->id))
+            ->max('updated_at');
+
+        $daysSinceEnded = $lastFinishedAt
+            ? (int) Carbon::parse($lastFinishedAt)->diffInDays(Carbon::now())
+            : null;
+
+        $retentionExpired = $daysSinceEnded !== null && $daysSinceEnded > self::RETENTION_DAYS;
+
+        // ── Find the last week of that season ─────────────────────────────
+        // Use the week with the highest week_number that has finished events.
+        // Postseason takes precedence over regular season in display.
+        $lastWeek = Week::query()
+            ->where('season_id', $lastSeason->id)
+            ->whereHas('events', fn ($q) => $q->where('status', 'finished'))
+            ->orderByRaw(Week::seasonTypeOrder('postseason'))
+            ->orderBy('week_number', 'desc')
+            ->first();
+
+        return [
+            'is_active' => false,
+            'is_off_season' => true,
+            'retention_expired' => $retentionExpired,
+            'days_since_ended' => $daysSinceEnded,
+            'last_week_id' => $lastWeek->id ?? null,
+            'last_season_id' => (int) $lastSeason->id,
+            'last_season_name' => $lastSeason->name,
+        ];
     }
 }

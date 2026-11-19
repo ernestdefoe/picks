@@ -52,50 +52,13 @@ class TeamSyncService
         $errors = [];
 
         foreach ($apiTeams as $apiTeam) {
-            $cfbdId = Arr::get($apiTeam, 'id');
-            $name = Arr::get($apiTeam, 'school');
-            $abbrev = Arr::get($apiTeam, 'abbreviation');
-            $conference = Arr::get($apiTeam, 'conference');
+            $synced = $this->upsertTeam($apiTeam);
 
-            // CFBD returns logos as an array of URLs directly.
-            // Index 0 = standard, index 1 = dark variant.
-            $logoUrls = Arr::get($apiTeam, 'logos', []);
-            $logoUrl = $logoUrls[0] ?? null;
-            $logoDarkUrl = $logoUrls[1] ?? null;
-
-            // Extract the ESPN ID from the logo URL for storage reference.
-            // e.g. "https://a.espncdn.com/i/teamlogos/ncaa/500/333.png" -> 333
-            $espnId = null;
-            if ($logoUrl && preg_match('/\/(\d+)\.png$/', $logoUrl, $matches)) {
-                $espnId = (int) $matches[1];
-            }
-
-            if (! $cfbdId || ! $name) {
+            if ($synced === null) {
                 continue;
             }
 
-            $slug = Str::slug($name);
-
-            $team = Team::where('cfbd_id', $cfbdId)->first()
-                ?? Team::where('slug', $slug)->first();
-
-            $isNew = $team === null;
-
-            if ($isNew) {
-                $team = new Team();
-                $team->slug = $slug;
-            }
-
-            $team->name = $name;
-            $team->abbreviation = $abbrev;
-            $team->conference = $conference;
-            $team->cfbd_id = $cfbdId;
-
-            if ($espnId) {
-                $team->espn_id = $espnId;
-            }
-
-            $team->save();
+            [$team, $isNew, $logoUrl, $logoDarkUrl] = $synced;
 
             if ($isNew) {
                 $created++;
@@ -109,34 +72,9 @@ class TeamSyncService
                 && ($logoUrl || $logoDarkUrl)
                 && ! $team->logo_custom
                 && ($isNew || ! $team->logo_path)
+                && $this->downloadSyncedLogos($team, $logoUrl, $logoDarkUrl, $errors)
             ) {
-                try {
-                    $paths = $this->logoService->downloadFromUrls(
-                        $logoUrl,
-                        $logoDarkUrl,
-                        $team->slug
-                    );
-
-                    $dirty = false;
-
-                    if ($paths['logo_path'] !== null) {
-                        $team->logo_path = $paths['logo_path'];
-                        $dirty = true;
-                    }
-
-                    if ($paths['logo_dark_path'] !== null) {
-                        $team->logo_dark_path = $paths['logo_dark_path'];
-                        $dirty = true;
-                    }
-
-                    if ($dirty) {
-                        $team->save();
-                        $logos++;
-                    }
-                } catch (\Throwable $e) {
-                    $this->log->warning('[picks] logo download failed for '.$name.': '.$e->getMessage());
-                    $errors[] = "Logo download failed for {$name}: ".$e->getMessage();
-                }
+                $logos++;
             }
         }
 
@@ -295,5 +233,102 @@ class TeamSyncService
             $teamIds,
             $games->flatMap(fn ($g) => [(int) $g->home_team_id, (int) $g->away_team_id])->unique()->all()
         ));
+    }
+
+    /**
+     * Create or update one CFBD team row.
+     *
+     * @param array<string, mixed> $apiTeam
+     * @return array{0: Team, 1: bool, 2: string|null, 3: string|null}|null [team, isNew, logoUrl, logoDarkUrl]
+     */
+    protected function upsertTeam(array $apiTeam): ?array
+    {
+        $cfbdId = Arr::get($apiTeam, 'id');
+        $name = Arr::get($apiTeam, 'school');
+        $abbrev = Arr::get($apiTeam, 'abbreviation');
+        $conference = Arr::get($apiTeam, 'conference');
+
+        // CFBD returns logos as an array of URLs directly.
+        // Index 0 = standard, index 1 = dark variant.
+        $logoUrls = Arr::get($apiTeam, 'logos', []);
+        $logoUrl = $logoUrls[0] ?? null;
+        $logoDarkUrl = $logoUrls[1] ?? null;
+
+        // Extract the ESPN ID from the logo URL for storage reference.
+        // e.g. "https://a.espncdn.com/i/teamlogos/ncaa/500/333.png" -> 333
+        $espnId = null;
+        if ($logoUrl && preg_match('/\/(\d+)\.png$/', $logoUrl, $matches)) {
+            $espnId = (int) $matches[1];
+        }
+
+        if (! $cfbdId || ! $name) {
+            return null;
+        }
+
+        $slug = Str::slug($name);
+
+        $team = Team::where('cfbd_id', $cfbdId)->first()
+            ?? Team::where('slug', $slug)->first();
+
+        $isNew = $team === null;
+
+        if ($isNew) {
+            $team = new Team();
+            $team->slug = $slug;
+        }
+
+        $team->name = $name;
+        $team->abbreviation = $abbrev;
+        $team->conference = $conference;
+        $team->cfbd_id = $cfbdId;
+
+        if ($espnId) {
+            $team->espn_id = $espnId;
+        }
+
+        $team->save();
+
+        return [$team, $isNew, $logoUrl, $logoDarkUrl];
+    }
+
+    /**
+     * Download a synced team's logos. True when either path changed.
+     *
+     * @param string[] $errors
+     */
+    protected function downloadSyncedLogos(Team $team, ?string $logoUrl, ?string $logoDarkUrl, array &$errors): bool
+    {
+        $name = $team->name;
+
+        try {
+            $paths = $this->logoService->downloadFromUrls(
+                $logoUrl,
+                $logoDarkUrl,
+                $team->slug
+            );
+
+            $dirty = false;
+
+            if ($paths['logo_path'] !== null) {
+                $team->logo_path = $paths['logo_path'];
+                $dirty = true;
+            }
+
+            if ($paths['logo_dark_path'] !== null) {
+                $team->logo_dark_path = $paths['logo_dark_path'];
+                $dirty = true;
+            }
+
+            if ($dirty) {
+                $team->save();
+            }
+
+            return $dirty;
+        } catch (\Throwable $e) {
+            $this->log->warning('[picks] logo download failed for '.$name.': '.$e->getMessage());
+            $errors[] = "Logo download failed for {$name}: ".$e->getMessage();
+
+            return false;
+        }
     }
 }

@@ -143,152 +143,188 @@ export default class SeasonsTab extends Component {
           }}
         />
 
-        <div className="PicksTab-header">
-          <div>
-            <h3>
-              <i className="fas fa-calendar-alt" /> {app.translator.trans('ernestdefoe-picks.admin.nav.seasons')}
-            </h3>
-            <p className="PicksTab-meta">
-              {this.seasons.length} {app.translator.trans('ernestdefoe-picks.admin.seasons.seasons_label')}
-              {this.lastSync && (
-                <span>
-                  {' · '}
-                  {app.translator.trans('ernestdefoe-picks.admin.common.last_sync')}: {new Date(this.lastSync).toLocaleString()}
-                </span>
-              )}
-            </p>
-          </div>
-          <div className="PicksTab-actions">
-            <Button className="Button Button--primary" icon="fas fa-sync" loading={this.syncing} onclick={() => this.syncSchedule()}>
-              {app.translator.trans('ernestdefoe-picks.admin.seasons.sync_button')}
-            </Button>
-          </div>
+        {this.renderHeader()}
+
+        {this.renderSyncResult()}
+
+        {this.renderSeasonFilter()}
+
+        {this.renderBody()}
+      </div>
+    );
+  }
+
+  private renderHeader() {
+    return (
+      <div className="PicksTab-header">
+        <div>
+          <h3>
+            <i className="fas fa-calendar-alt" /> {app.translator.trans('ernestdefoe-picks.admin.nav.seasons')}
+          </h3>
+          <p className="PicksTab-meta">
+            {this.seasons.length} {app.translator.trans('ernestdefoe-picks.admin.seasons.seasons_label')}
+            {this.lastSync && (
+              <span>
+                {' · '}
+                {app.translator.trans('ernestdefoe-picks.admin.common.last_sync')}: {new Date(this.lastSync).toLocaleString()}
+              </span>
+            )}
+          </p>
         </div>
+        <div className="PicksTab-actions">
+          <Button className="Button Button--primary" icon="fas fa-sync" loading={this.syncing} onclick={() => this.syncSchedule()}>
+            {app.translator.trans('ernestdefoe-picks.admin.seasons.sync_button')}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-        {this.syncResult && <div className="PicksAlert PicksAlert--info">{this.syncResult}</div>}
+  private renderSyncResult() {
+    return this.syncResult && <div className="PicksAlert PicksAlert--info">{this.syncResult}</div>;
+  }
 
-        {this.seasons.length > 1 && (
-          <div className="PicksTab-filters">
-            <select
-              className="FormControl"
-              value={this.selectedSeasonId || ''}
-              onchange={(e: Event) => {
-                this.selectedSeasonId = (e.target as HTMLSelectElement).value;
-                this.filterAndSortWeeks();
+  private renderSeasonFilter() {
+    return (
+      this.seasons.length > 1 && (
+        <div className="PicksTab-filters">
+          <select
+            className="FormControl"
+            value={this.selectedSeasonId || ''}
+            onchange={(e: Event) => {
+              this.selectedSeasonId = (e.target as HTMLSelectElement).value;
+              this.filterAndSortWeeks();
+              m.redraw();
+            }}
+          >
+            {this.seasons.map((s) => (
+              <option key={String(s.id())} value={String(s.id())}>
+                {s.name()}
+              </option>
+            ))}
+          </select>
+        </div>
+      )
+    );
+  }
+
+  private renderWeekNameCell(week: Week, isEditing: boolean) {
+    return (
+      <div className="PicksCardList-cell">
+        {isEditing ? (
+          <input
+            className="FormControl FormControl--small"
+            type="text"
+            value={this.editingWeekName}
+            oninput={(e: InputEvent) => {
+              this.editingWeekName = (e.target as HTMLInputElement).value;
+            }}
+            onkeydown={(e: KeyboardEvent) => {
+              if (e.key === 'Enter') this.saveWeekName(week);
+              if (e.key === 'Escape') {
+                this.editingWeekId = null;
+                m.redraw();
+              }
+            }}
+          />
+        ) : (
+          week.name()
+        )}
+      </div>
+    );
+  }
+
+  private renderWeekActions(week: Week, isEditing: boolean) {
+    return (
+      <div className="PicksCardList-cell PicksCardList-cell--actions">
+        {/* Open/Close toggle */}
+        <Button
+          className={`Button Button--icon ${week.isOpen() ? 'Button--primary' : ''}`}
+          icon={week.isOpen() ? 'fas fa-lock-open' : 'fas fa-lock'}
+          title={extractText(week.isOpen() ? t('close_week') : t('open_week'))}
+          aria-label={extractText(week.isOpen() ? t('close_week') : t('open_week'))}
+          loading={this.togglingWeekId === String(week.id())}
+          onclick={() => this.toggleWeekOpen(week)}
+        />
+
+        {isEditing ? (
+          <>
+            <Button
+              className="Button Button--primary Button--icon"
+              icon="fas fa-check"
+              aria-label={extractText(t('save_name'))}
+              onclick={() => this.saveWeekName(week)}
+            />
+            <Button
+              className="Button Button--icon"
+              icon="fas fa-times"
+              aria-label={extractText(t('cancel_edit'))}
+              onclick={() => {
+                this.editingWeekId = null;
                 m.redraw();
               }}
-            >
-              {this.seasons.map((s) => (
-                <option key={String(s.id())} value={String(s.id())}>
-                  {s.name()}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {this.loading ? (
-          <LoadingIndicator />
-        ) : this.weeks.length === 0 ? (
-          <div className="PicksEmptyState">{app.translator.trans('ernestdefoe-picks.admin.seasons.no_weeks')}</div>
+            />
+          </>
         ) : (
-          <div className="PicksCardList">
-            <div className="PicksCardList-header PicksCardList-header--seasons">
-              <div>{app.translator.trans('ernestdefoe-picks.admin.seasons.col_week')}</div>
-              <div>{app.translator.trans('ernestdefoe-picks.admin.seasons.col_type')}</div>
-              <div>{app.translator.trans('ernestdefoe-picks.admin.seasons.col_dates')}</div>
-              <div>{app.translator.trans('ernestdefoe-picks.admin.seasons.col_name')}</div>
-              <div></div>
-            </div>
-
-            {this.weeks.map((week) => {
-              const isEditing = this.editingWeekId === String(week.id());
-
-              return (
-                <div key={String(week.id())} className="PicksCardList-row PicksCardList-row--seasons">
-                  <div className="PicksCardList-cell PicksCardList-cell--primary">
-                    {week.seasonType() === 'postseason' ? t('postseason_short') : t('week_short', { number: week.weekNumber() })}
-                  </div>
-
-                  <div className="PicksCardList-cell">
-                    <span className={`PicksBadge PicksBadge--${week.seasonType()}`}>
-                      {week.seasonType() === 'postseason' ? t('type_postseason') : t('type_regular')}
-                    </span>
-                  </div>
-
-                  <div className="PicksCardList-cell PicksCardList-cell--muted">
-                    {week.startDate() && week.endDate() ? `${week.startDate()} – ${week.endDate()}` : week.startDate() || '—'}
-                  </div>
-
-                  <div className="PicksCardList-cell">
-                    {isEditing ? (
-                      <input
-                        className="FormControl FormControl--small"
-                        type="text"
-                        value={this.editingWeekName}
-                        oninput={(e: InputEvent) => {
-                          this.editingWeekName = (e.target as HTMLInputElement).value;
-                        }}
-                        onkeydown={(e: KeyboardEvent) => {
-                          if (e.key === 'Enter') this.saveWeekName(week);
-                          if (e.key === 'Escape') {
-                            this.editingWeekId = null;
-                            m.redraw();
-                          }
-                        }}
-                      />
-                    ) : (
-                      week.name()
-                    )}
-                  </div>
-
-                  <div className="PicksCardList-cell PicksCardList-cell--actions">
-                    {/* Open/Close toggle */}
-                    <Button
-                      className={`Button Button--icon ${week.isOpen() ? 'Button--primary' : ''}`}
-                      icon={week.isOpen() ? 'fas fa-lock-open' : 'fas fa-lock'}
-                      title={extractText(week.isOpen() ? t('close_week') : t('open_week'))}
-                      aria-label={extractText(week.isOpen() ? t('close_week') : t('open_week'))}
-                      loading={this.togglingWeekId === String(week.id())}
-                      onclick={() => this.toggleWeekOpen(week)}
-                    />
-
-                    {isEditing ? (
-                      <>
-                        <Button
-                          className="Button Button--primary Button--icon"
-                          icon="fas fa-check"
-                          aria-label={extractText(t('save_name'))}
-                          onclick={() => this.saveWeekName(week)}
-                        />
-                        <Button
-                          className="Button Button--icon"
-                          icon="fas fa-times"
-                          aria-label={extractText(t('cancel_edit'))}
-                          onclick={() => {
-                            this.editingWeekId = null;
-                            m.redraw();
-                          }}
-                        />
-                      </>
-                    ) : (
-                      <Button
-                        className="Button Button--icon"
-                        icon="fas fa-edit"
-                        title={app.translator.trans('ernestdefoe-picks.admin.common.edit')}
-                        onclick={() => {
-                          this.editingWeekId = String(week.id());
-                          this.editingWeekName = week.name() || '';
-                          m.redraw();
-                        }}
-                      />
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <Button
+            className="Button Button--icon"
+            icon="fas fa-edit"
+            title={app.translator.trans('ernestdefoe-picks.admin.common.edit')}
+            onclick={() => {
+              this.editingWeekId = String(week.id());
+              this.editingWeekName = week.name() || '';
+              m.redraw();
+            }}
+          />
         )}
+      </div>
+    );
+  }
+
+  private renderBody() {
+    if (this.loading) return <LoadingIndicator />;
+
+    if (this.weeks.length === 0) {
+      return <div className="PicksEmptyState">{app.translator.trans('ernestdefoe-picks.admin.seasons.no_weeks')}</div>;
+    }
+
+    return (
+      <div className="PicksCardList">
+        <div className="PicksCardList-header PicksCardList-header--seasons">
+          <div>{app.translator.trans('ernestdefoe-picks.admin.seasons.col_week')}</div>
+          <div>{app.translator.trans('ernestdefoe-picks.admin.seasons.col_type')}</div>
+          <div>{app.translator.trans('ernestdefoe-picks.admin.seasons.col_dates')}</div>
+          <div>{app.translator.trans('ernestdefoe-picks.admin.seasons.col_name')}</div>
+          <div></div>
+        </div>
+
+        {this.weeks.map((week) => this.renderWeekRow(week))}
+      </div>
+    );
+  }
+
+  private renderWeekRow(week: Week) {
+    const isEditing = this.editingWeekId === String(week.id());
+
+    return (
+      <div key={String(week.id())} className="PicksCardList-row PicksCardList-row--seasons">
+        <div className="PicksCardList-cell PicksCardList-cell--primary">
+          {week.seasonType() === 'postseason' ? t('postseason_short') : t('week_short', { number: week.weekNumber() })}
+        </div>
+
+        <div className="PicksCardList-cell">
+          <span className={`PicksBadge PicksBadge--${week.seasonType()}`}>
+            {week.seasonType() === 'postseason' ? t('type_postseason') : t('type_regular')}
+          </span>
+        </div>
+
+        <div className="PicksCardList-cell PicksCardList-cell--muted">
+          {week.startDate() && week.endDate() ? `${week.startDate()} – ${week.endDate()}` : week.startDate() || '—'}
+        </div>
+
+        {this.renderWeekNameCell(week, isEditing)}
+
+        {this.renderWeekActions(week, isEditing)}
       </div>
     );
   }
